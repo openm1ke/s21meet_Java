@@ -38,10 +38,11 @@ openApiGenerate {
         mapOf(
             "dateLibrary" to "java8",  // Используем java.time (LocalDate, LocalDateTime)
             "useJakartaEe" to "true",  // Для использования Jakarta Persistence
-            "generateApis" to "false", // Не генерируем API-клиенты
+            "generateApis" to "true", // генерируем API-клиенты
             "generateModels" to "true", // Генерируем только модели
+            "apiPackage" to "ru.school21.edu.generated.api",
             "modelPackage" to "ru.school21.edu.generated.model", // Пакет для DTO
-            "additionalModelTypeAnnotations" to "@jakarta.persistence.Entity\n@jakarta.persistence.Table(name=\"${'$'}{classname}\")" // Сущности JPA
+            //"additionalModelTypeAnnotations" to "@jakarta.persistence.Entity\n@jakarta.persistence.Table(name=\"${'$'}{classname}\")", // Сущности JPA
             //"additionalModelTypeAnnotations" to "@jakarta.persistence.Entity\n@jakarta.persistence.Table(name=\"${'$'}{classname}\")\n@jakarta.persistence.Id\n@jakarta.persistence.GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)"
         )
     )
@@ -55,10 +56,10 @@ springBoot {
     mainClass.set("ru.school21.edu.Application")  // Указываем путь к главному классу
 }
 
-sourceSets {
-    main {
-        java {
-            srcDirs("src/main/java", "$buildDir/generated/src")
-        }
-    }
-}
+//sourceSets {
+//    main {
+//        java {
+//            srcDirs("src/main/java", "$buildDir/generated/src")
+//        }
+//    }
+//}
