@@ -1,5 +1,8 @@
-package edu.auth;
+package edu.controller;
 
+import edu.model.TokenEntity;
+import edu.dto.TokenRequest;
+import edu.service.TokenService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,10 +40,7 @@ public class TokenController {
     public ResponseEntity<String> getToken(@RequestParam String login) {
         try {
             Optional<TokenEntity> tokenEntityOpt  = tokenService.findByLogin(login);
-            if (tokenEntityOpt.isPresent()) {
-                return ResponseEntity.ok(tokenEntityOpt.get().getAccessToken());
-            }
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return tokenEntityOpt.map(tokenEntity -> ResponseEntity.ok(tokenEntity.getAccessToken())).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
         } catch (Exception e) {
             log.error("Ошибка получения токена для {}: {}", login, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

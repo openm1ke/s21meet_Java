@@ -1,5 +1,8 @@
-package edu.auth;
+package edu.service;
 
+import edu.repository.TokenRepository;
+import edu.dto.TokenResponse;
+import edu.model.TokenEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,9 +20,6 @@ public class TokenService {
 
     private final TokenRepository tokenRepository;
     private final WebClient webClient;
-
-    // URL для запроса токена (будет дописываться к baseUrl из WebClientConfig)
-    private final String tokenUri = "/auth/realms/EduPowerKeycloak/protocol/openid-connect/token";
 
     public TokenService(TokenRepository tokenRepository, WebClient webClient) {
         this.tokenRepository = tokenRepository;
@@ -64,6 +64,8 @@ public class TokenService {
         form.add("password", password);
         form.add("grant_type", "password");
         try {
+            // URL для запроса токена (будет дописываться к baseUrl из WebClientConfig)
+            String tokenUri = "/auth/realms/EduPowerKeycloak/protocol/openid-connect/token";
             TokenResponse tokenResponse = webClient.post()
                     .uri(tokenUri)
                     .body(BodyInserters.fromFormData(form))

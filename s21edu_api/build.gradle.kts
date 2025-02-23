@@ -10,21 +10,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-logging")
     implementation("org.openapitools:openapi-generator-gradle-plugin:7.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.10.0") // Добавляем OkHttp
-    implementation("com.squareup.okhttp3:logging-interceptor:4.10.0") // Для логирования запросов
-    implementation("com.google.code.gson:gson:2.8.9")
-    // https://mvnrepository.com/artifact/io.gsonfire/gson-fire
-    implementation("io.gsonfire:gson-fire:1.9.0")
-    // https://mvnrepository.com/artifact/org.openapitools/jackson-databind-nullable
     implementation("org.openapitools:jackson-databind-nullable:0.2.6")
-
-
-
     implementation("org.postgresql:postgresql")
     //runtimeOnly("org.postgresql:postgresql")
 
-    // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
-    implementation("org.junit.jupiter:junit-jupiter-api:5.12.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.12.0")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.12.0")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.12.0")
 }

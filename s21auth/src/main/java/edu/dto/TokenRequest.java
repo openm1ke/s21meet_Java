@@ -1,4 +1,4 @@
-package edu.auth;
+package edu.dto;
 
 import lombok.Getter;
 

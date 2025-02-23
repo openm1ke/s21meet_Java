@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@EntityScan(basePackages = "edu.auth")
+@EntityScan(basePackages = "edu.model")
 @EnableScheduling
 public class Application {
 

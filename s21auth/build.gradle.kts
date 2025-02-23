@@ -15,5 +15,5 @@ dependencies {
 }
 
 springBoot {
-    mainClass.set("edu.Application")  // Указываем путь к главному классу
+    mainClass.set("edu.Application")
 }

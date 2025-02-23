@@ -16,7 +16,6 @@ spring:
       enabled: true
       path: /h2-console
 
-# Настройка порта приложения (опционально)
 server:
   port: 8080
 
