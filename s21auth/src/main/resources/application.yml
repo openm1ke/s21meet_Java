@@ -23,3 +23,7 @@ logging:
   level:
     root: INFO
     org.hibernate.SQL: DEBUG
+
+edu:
+  login: quarkron
+  password: Sber21pass!1

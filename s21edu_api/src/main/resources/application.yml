@@ -1,3 +1,5 @@
+server:
+  port: 8082
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres  # Укажите URL вашей БД
@@ -12,3 +14,7 @@ spring:
     properties:
       hibernate:
         format_sql: true  # Форматировать SQL-запросы для удобства
+
+edu:
+  login: quarkron
+  password: Sber21pass!1

@@ -4,12 +4,14 @@ import edu.repository.TokenRepository;
 import edu.dto.TokenResponse;
 import edu.model.TokenEntity;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.yaml.snakeyaml.introspector.Property;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -18,10 +20,18 @@ import java.util.Optional;
 @Service
 public class TokenService {
 
+    private final String defaultLogin;
+    private final String defaultPassword;
     private final TokenRepository tokenRepository;
     private final WebClient webClient;
 
-    public TokenService(TokenRepository tokenRepository, WebClient webClient) {
+    public TokenService(
+            @Value("${edu.login}") String defaultLogin,
+            @Value("${edu.password}") String defaultPassword,
+            TokenRepository tokenRepository,
+            WebClient webClient) {
+        this.defaultLogin = defaultLogin;
+        this.defaultPassword = defaultPassword;
         this.tokenRepository = tokenRepository;
         this.webClient = webClient;
     }
@@ -80,6 +90,15 @@ public class TokenService {
         } catch (Exception e) {
             log.error("Ошибка запроса нового токена для пользователя {}: {}", login, e.getMessage());
             throw new RuntimeException("Не удалось получить токен", e);
+        }
+    }
+
+    public String getDefaultAccessToken() {
+        try {
+            return getAccessToken(defaultLogin, defaultPassword);
+        } catch (Exception e) {
+            log.error("Ошибка получения access token для пользователя {}: {}", defaultLogin, e.getMessage());
+            return null;
         }
     }
 

@@ -15,5 +15,5 @@ dependencies {
 }
 
 springBoot {
-    mainClass.set("edu.Application")
+    mainClass.set("edu.AuthApplication")
 }
