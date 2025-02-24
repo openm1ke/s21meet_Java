@@ -10,8 +10,6 @@ public class CampusApiConfig {
 
     @Bean
     public ApiClient campusApiClient() {
-        //apiClient.setBasePath("https://edu-api.21-school.ru/services/21-school/api");
-        // можно установить дефолтные заголовки здесь, если необходимо
         return new ApiClient();
     }
 

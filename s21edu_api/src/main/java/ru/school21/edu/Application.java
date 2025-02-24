@@ -9,9 +9,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 @SpringBootApplication
-@EntityScan(basePackages = {"ru.school21.edu.generated.model", "ru.school21.edu.model"})
-@ComponentScan(basePackages = {"edu", "ru.school21.edu"})
-@EnableJpaRepositories(basePackages = {"edu.repository", "ru.school21.edu.repository"})
+@EntityScan(basePackages = "ru.school21.edu.model")
+@EnableJpaRepositories(basePackages = "ru.school21.edu.repository")
 @EnableScheduling
 public class Application {
 

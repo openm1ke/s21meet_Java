@@ -16,5 +16,4 @@ spring:
         format_sql: true  # Форматировать SQL-запросы для удобства
 
 edu:
-  login: quarkron
-  password: Sber21pass!1
+  tokenEndpoint: "http://localhost:8080/api/tokens/default"

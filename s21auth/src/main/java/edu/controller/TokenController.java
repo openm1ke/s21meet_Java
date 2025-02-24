@@ -36,6 +36,21 @@ public class TokenController {
         }
     }
 
+    @GetMapping("/default")
+    public ResponseEntity<String> getDefaultTokenController() {
+        try {
+            String accessToken = tokenService.getDefaultAccessToken();
+            if (accessToken == null) {
+                log.error("Не удалось сгенерировать токен");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+            return ResponseEntity.ok(accessToken);
+        } catch (Exception e) {
+            log.error("Ошибка генерации токена для: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @GetMapping
     public ResponseEntity<String> getToken(@RequestParam String login) {
         try {
