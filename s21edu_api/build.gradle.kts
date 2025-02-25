@@ -23,6 +23,10 @@ dependencies {
     implementation("org.postgresql:postgresql")
     implementation("com.google.code.gson:gson:2.12.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // https://mvnrepository.com/artifact/io.github.resilience4j/resilience4j-ratelimiter
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.0")
     //runtimeOnly("org.postgresql:postgresql")
