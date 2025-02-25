@@ -22,6 +22,10 @@ resilience4j:
   ratelimiter:
     instances:
       campusApi:
-        limitForPeriod: 10
-        limitRefreshPeriod: 1s
-        timeoutDuration: 500ms
+        limitForPeriod: 5  # Разрешаем 1 запрос за период
+        limitRefreshPeriod: 2s  # Обновляем лимит раз в 2 секунды
+        timeoutDuration: 2s  # Ждем 2 секунды, если лимит превышен
+
+logging:
+  level:
+    io.github.resilience4j: DEBUG

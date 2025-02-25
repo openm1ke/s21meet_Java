@@ -2,7 +2,9 @@ package ru.school21.edu.service;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,16 +30,18 @@ public class CampusService {
     private final CampusRepository campusRepository;
     private final ParticipantRepository participantRepository;
     private final CoalitionRepository coalitionRepository;
+    private final ApplicationContext applicationContext;
 
     public CampusService(CampusApi campusApi,
                          CampusMapper campusMapper,
                          CampusRepository campusRepository, ParticipantRepository participantRepository, CoalitionRepository coalitionRepository,
-                         @Value("${edu.tokenEndpoint}") String tokenEndpoint) {
+                         @Value("${edu.tokenEndpoint}") String tokenEndpoint, ApplicationContext applicationContext) {
         this.campusApi = campusApi;
         this.campusMapper = campusMapper;
         this.campusRepository = campusRepository;
         this.participantRepository = participantRepository;
         this.coalitionRepository = coalitionRepository;
+        this.applicationContext = applicationContext;
 
         RestTemplate restTemplate = new RestTemplate();
         // Отправляем GET запрос к эндпоинту токена
@@ -96,7 +100,12 @@ public class CampusService {
 
         UUID campusIdStr = UUID.fromString(campusId);
         log.info("GET COALITIONS FOR CAMPUS {}", campusIdStr);
-        var response = getCoalitionsByCampusWrapper(campusIdStr, limit, offset);
+
+        // Получаем текущий бин из контекста (чтобы обойти циклическую зависимость)
+        CampusService self = applicationContext.getBean(CampusService.class);
+        CoalitionsV1DTO response = self.getCoalitionsByCampusWrapper(campusIdStr, limit, offset);
+
+        //var response = getCoalitionsByCampusWrapper(campusIdStr, limit, offset);
         if (response != null && !response.getCoalitions().isEmpty()) {
             List<CoalitionV1DTO> coalitions = response.getCoalitions();
             log.info("Получено {} коалиций для кампуса {} на странице с offset {}", coalitions.size(), campusIdStr, offset);

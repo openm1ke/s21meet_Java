@@ -26,6 +26,8 @@ dependencies {
 
     // https://mvnrepository.com/artifact/io.github.resilience4j/resilience4j-ratelimiter
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:2.2.0")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.0")
