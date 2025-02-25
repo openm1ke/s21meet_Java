@@ -55,6 +55,13 @@ public class CampusService {
         campusApi.getApiClient().setApiKeyPrefix("Bearer");
     }
 
+    @Scheduled(fixedDelay = 300000)
+    public void startParsing() throws ApiException {
+        getCampuses();
+        getAllCoalitions();
+        getAllParticipants();
+    }
+
     //@Scheduled(fixedDelay = 300000)
     public void getCampuses() throws ru.school21.edu.ApiException {
         var campuses = campusApi.getCampuses().getCampuses();
@@ -73,7 +80,7 @@ public class CampusService {
         }
     }
 
-    @Scheduled(fixedDelay = 300000)
+    //@Scheduled(fixedDelay = 300000)
     public void getAllCoalitions() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
