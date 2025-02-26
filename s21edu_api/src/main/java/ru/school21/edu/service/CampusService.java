@@ -9,10 +9,7 @@ import org.springframework.web.client.RestTemplate;
 import ru.school21.edu.ApiException;
 import ru.school21.edu.mapper.CampusMapper;
 import ru.school21.edu.model.*;
-import ru.school21.edu.repository.CampusRepository;
-import ru.school21.edu.repository.ClusterRepository;
-import ru.school21.edu.repository.CoalitionRepository;
-import ru.school21.edu.repository.ParticipantRepository;
+import ru.school21.edu.repository.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,25 +19,31 @@ import java.util.UUID;
 public class CampusService {
 
     private final CampusApiProxy campusApi;
+    private final ClusterApiProxy clusterApi;
     private final CampusMapper campusMapper;
     private final CampusRepository campusRepository;
     private final ParticipantRepository participantRepository;
     private final CoalitionRepository coalitionRepository;
     private final ClusterRepository clusterRepository;
+    private final WorkplaceRepository workplaceRepository;
 
     public CampusService(CampusApiProxy campusApi,
+                         ClusterApiProxy clusterApi,
                          CampusMapper campusMapper,
                          CampusRepository campusRepository,
                          ParticipantRepository participantRepository,
                          CoalitionRepository coalitionRepository,
                          @Value("${edu.tokenEndpoint}") String tokenEndpoint,
-                         ClusterRepository clusterRepository) {
+                         ClusterRepository clusterRepository,
+                         WorkplaceRepository workplaceRepository) {
         this.campusApi = campusApi;
+        this.clusterApi = clusterApi;
         this.campusMapper = campusMapper;
         this.campusRepository = campusRepository;
         this.participantRepository = participantRepository;
         this.coalitionRepository = coalitionRepository;
         this.clusterRepository = clusterRepository;
+        this.workplaceRepository = workplaceRepository;
 
         RestTemplate restTemplate = new RestTemplate();
         // Отправляем GET запрос к эндпоинту токена
@@ -52,17 +55,50 @@ public class CampusService {
         // Устанавливаем токен в ApiClient перед запросом:
         campusApi.getApiClient().setApiKey(token);
         campusApi.getApiClient().setApiKeyPrefix("Bearer");
+
+        clusterApi.getApiClient().setApiKey(token);
+        clusterApi.getApiClient().setApiKeyPrefix("Bearer");
     }
 
     @Scheduled(fixedDelay = 300000)
     public void startParsing() throws ApiException {
-        getCampuses();
+        getAllCampuses();
         getAllCoalitions();
         getAllParticipants();
-        getClusters();
+        getAllClusters();
+        getAllParticipantsByCluster();
     }
 
-    public void getClusters() throws ApiException {
+    public void getAllParticipantsByCluster() throws ApiException {
+        var clusters = clusterRepository.findAll();
+        for (var cluster : clusters) {
+            getParticipantsByCluster(cluster.getClusterId());
+        }
+    }
+
+    public void getParticipantsByCluster(Long clusterId) throws ApiException {
+
+        log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
+        int offset = 0;
+        final int limit = 1000;
+
+        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, limit, offset, null);
+        if(response != null && !response.getClusterMap().isEmpty()) {
+            var clusterMap = response.getClusterMap();
+            log.info("Получено {} участников для кластера {} на странице с offset {}", clusterMap.size(), clusterId, offset);
+            // Для каждого полученного логина маппим в сущность и сохраняем
+            for (var workplace : clusterMap) {
+                log.info("Добавляем участника {} из кластера {}", workplace.getLogin(), clusterId);
+                WorkplaceId workplaceId = new WorkplaceId(clusterId, workplace.getRow(), workplace.getNumber());
+                Workplace workplaceEntity = new Workplace();
+                workplaceEntity.setId(workplaceId);
+                workplaceEntity.setLogin(workplace.getLogin());
+                workplaceRepository.save(workplaceEntity);
+            }
+        }
+    }
+
+    public void getAllClusters() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
             getClustersByCampus(UUID.fromString(campus.getId()));
@@ -83,7 +119,7 @@ public class CampusService {
         }
     }
 
-    public void getCampuses() throws ApiException {
+    public void getAllCampuses() throws ApiException {
         var campuses = campusApi.getCampuses().getCampuses();
         for (var campus : campuses) {
             var entity = campusMapper.toEntity(campus);
