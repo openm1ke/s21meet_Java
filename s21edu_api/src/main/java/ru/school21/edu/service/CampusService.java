@@ -8,11 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.school21.edu.ApiException;
 import ru.school21.edu.mapper.CampusMapper;
-import ru.school21.edu.model.Coalition;
-import ru.school21.edu.model.CoalitionV1DTO;
-import ru.school21.edu.model.Participant;
-import ru.school21.edu.model.ParticipantLoginsV1DTO;
+import ru.school21.edu.model.*;
 import ru.school21.edu.repository.CampusRepository;
+import ru.school21.edu.repository.ClusterRepository;
 import ru.school21.edu.repository.CoalitionRepository;
 import ru.school21.edu.repository.ParticipantRepository;
 
@@ -28,18 +26,21 @@ public class CampusService {
     private final CampusRepository campusRepository;
     private final ParticipantRepository participantRepository;
     private final CoalitionRepository coalitionRepository;
+    private final ClusterRepository clusterRepository;
 
     public CampusService(CampusApiProxy campusApi,
                          CampusMapper campusMapper,
                          CampusRepository campusRepository,
                          ParticipantRepository participantRepository,
                          CoalitionRepository coalitionRepository,
-                         @Value("${edu.tokenEndpoint}") String tokenEndpoint) {
+                         @Value("${edu.tokenEndpoint}") String tokenEndpoint,
+                         ClusterRepository clusterRepository) {
         this.campusApi = campusApi;
         this.campusMapper = campusMapper;
         this.campusRepository = campusRepository;
         this.participantRepository = participantRepository;
         this.coalitionRepository = coalitionRepository;
+        this.clusterRepository = clusterRepository;
 
         RestTemplate restTemplate = new RestTemplate();
         // Отправляем GET запрос к эндпоинту токена
@@ -58,9 +59,31 @@ public class CampusService {
         getCampuses();
         getAllCoalitions();
         getAllParticipants();
+        getClusters();
     }
 
-    public void getCampuses() throws ru.school21.edu.ApiException {
+    public void getClusters() throws ApiException {
+        var campuses = campusRepository.findAll();
+        for (var campus : campuses) {
+            getClustersByCampus(UUID.fromString(campus.getId()));
+        }
+    }
+
+    public void getClustersByCampus(UUID campusId) throws ApiException {
+        var clusters = campusApi.getClustersByCampus(campusId).getClusters();
+        for (var cluster : clusters) {
+            Cluster clusterEntity = new Cluster();
+            clusterEntity.setClusterId(cluster.getId());
+            clusterEntity.setName(cluster.getName());
+            clusterEntity.setCapacity(cluster.getCapacity());
+            clusterEntity.setAvailableCapacity(cluster.getAvailableCapacity());
+            clusterEntity.setFloor(cluster.getFloor());
+            clusterEntity.setCampusId(campusId.toString());
+            clusterRepository.save(clusterEntity);
+        }
+    }
+
+    public void getCampuses() throws ApiException {
         var campuses = campusApi.getCampuses().getCampuses();
         for (var campus : campuses) {
             var entity = campusMapper.toEntity(campus);

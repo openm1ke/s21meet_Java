@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.school21.edu.ApiException;
 import ru.school21.edu.api.CampusApi;
+import ru.school21.edu.api.ClusterApi;
 import ru.school21.edu.model.CampusesV1DTO;
+import ru.school21.edu.model.ClustersV1DTO;
 import ru.school21.edu.model.CoalitionsV1DTO;
 import ru.school21.edu.model.ParticipantLoginsV1DTO;
 
@@ -19,9 +21,6 @@ public class CampusApiProxy extends CampusApi {
         super();
     }
 
-    /**
-     * 🔹 Ограничиваем получение кампусов
-     */
     @Override
     @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetCampuses")
     public CampusesV1DTO getCampuses() throws ApiException {
@@ -29,9 +28,6 @@ public class CampusApiProxy extends CampusApi {
         return super.getCampuses();
     }
 
-    /**
-     * 🔹 Ограничиваем получение коалиций по кампусу
-     */
     @Override
     @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetCoalitionsByCampus")
     public CoalitionsV1DTO getCoalitionsByCampus(UUID campusId, Integer limit, Integer offset) throws ApiException {
@@ -39,9 +35,6 @@ public class CampusApiProxy extends CampusApi {
         return super.getCoalitionsByCampus(campusId, limit, offset);
     }
 
-    /**
-     * 🔹 Ограничиваем получение участников по кампусу
-     */
     @Override
     @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetParticipantsByCampus")
     public ParticipantLoginsV1DTO getParticipantsByCampusId(UUID campusId, Long limit, Long offset) throws ApiException {
@@ -49,25 +42,28 @@ public class CampusApiProxy extends CampusApi {
         return super.getParticipantsByCampusId(campusId, limit, offset);
     }
 
-    /**
-     * 🔹 Фолбэк для `getCampuses()`
-     */
+    @Override
+    @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetClustersByCampus")
+    public ClustersV1DTO getClustersByCampus(UUID campusId) throws ApiException {
+        log.info("📡 Запрос кластеров для кампуса {}...", campusId);
+        return super.getClustersByCampus(campusId);
+    }
+
+    public ClustersV1DTO fallbackGetClustersByCampus(UUID campusId, Throwable t) {
+        log.warn("⚠️ RateLimiter сработал! Пропускаем кластеры для кампуса {}. Ошибка: {}", campusId, t.getMessage());
+        return new ClustersV1DTO();
+    }
+
     public CampusesV1DTO fallbackGetCampuses(Throwable t) {
         log.warn("⚠️ RateLimiter сработал! Пропускаем загрузку кампусов. Ошибка: {}", t.getMessage());
         return new CampusesV1DTO();
     }
 
-    /**
-     * 🔹 Фолбэк для `getCoalitionsByCampus()`
-     */
     public CoalitionsV1DTO fallbackGetCoalitionsByCampus(UUID campusId, Integer limit, Integer offset, Throwable t) {
         log.warn("⚠️ RateLimiter сработал! Пропускаем коалиции для кампуса {}. Ошибка: {}", campusId, t.getMessage());
         return new CoalitionsV1DTO();
     }
 
-    /**
-     * 🔹 Фолбэк для `getParticipantsByCampusId()`
-     */
     public ParticipantLoginsV1DTO fallbackGetParticipantsByCampus(UUID campusId, Long limit, Long offset, Throwable t) {
         log.warn("⚠️ RateLimiter сработал! Пропускаем участников для кампуса {}. Ошибка: {}", campusId, t.getMessage());
         return new ParticipantLoginsV1DTO();
