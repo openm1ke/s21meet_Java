@@ -1,19 +1,17 @@
 package ru.school21.edu.service;
 
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.school21.edu.ApiException;
-import ru.school21.edu.api.CampusApi;
 import ru.school21.edu.mapper.CampusMapper;
-import ru.school21.edu.model.*;
+import ru.school21.edu.model.Coalition;
+import ru.school21.edu.model.CoalitionV1DTO;
+import ru.school21.edu.model.Participant;
+import ru.school21.edu.model.ParticipantLoginsV1DTO;
 import ru.school21.edu.repository.CampusRepository;
 import ru.school21.edu.repository.CoalitionRepository;
 import ru.school21.edu.repository.ParticipantRepository;
@@ -25,23 +23,23 @@ import java.util.UUID;
 @Service
 public class CampusService {
 
-    private final CampusApi campusApi;
+    private final CampusApiProxy campusApi;
     private final CampusMapper campusMapper;
     private final CampusRepository campusRepository;
     private final ParticipantRepository participantRepository;
     private final CoalitionRepository coalitionRepository;
-    private final ApplicationContext applicationContext;
 
-    public CampusService(CampusApi campusApi,
+    public CampusService(CampusApiProxy campusApi,
                          CampusMapper campusMapper,
-                         CampusRepository campusRepository, ParticipantRepository participantRepository, CoalitionRepository coalitionRepository,
-                         @Value("${edu.tokenEndpoint}") String tokenEndpoint, ApplicationContext applicationContext) {
+                         CampusRepository campusRepository,
+                         ParticipantRepository participantRepository,
+                         CoalitionRepository coalitionRepository,
+                         @Value("${edu.tokenEndpoint}") String tokenEndpoint) {
         this.campusApi = campusApi;
         this.campusMapper = campusMapper;
         this.campusRepository = campusRepository;
         this.participantRepository = participantRepository;
         this.coalitionRepository = coalitionRepository;
-        this.applicationContext = applicationContext;
 
         RestTemplate restTemplate = new RestTemplate();
         // Отправляем GET запрос к эндпоинту токена
@@ -62,7 +60,6 @@ public class CampusService {
         getAllParticipants();
     }
 
-    //@Scheduled(fixedDelay = 300000)
     public void getCampuses() throws ru.school21.edu.ApiException {
         var campuses = campusApi.getCampuses().getCampuses();
         for (var campus : campuses) {
@@ -71,7 +68,6 @@ public class CampusService {
         }
     }
 
-    //@Scheduled(fixedDelay = 300000)
     public void getAllParticipants() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
@@ -80,23 +76,12 @@ public class CampusService {
         }
     }
 
-    //@Scheduled(fixedDelay = 300000)
     public void getAllCoalitions() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
             log.info("Обновление коалиций для кампуса: {}", campus.getId());
             getCampusCoalitions(campus.getId());
         }
-    }
-
-    @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetCoalitionsByCampus")
-    public CoalitionsV1DTO getCoalitionsByCampusWrapper(UUID campusId, int limit, int offset) throws ApiException {
-        return campusApi.getCoalitionsByCampus(campusId, limit, offset);
-    }
-
-    public CoalitionsV1DTO fallbackGetCoalitionsByCampus(UUID campusId, int limit, int offset, Throwable t) {
-        log.error("RateLimiter сработал, запрос к кампусу {} ограничен. Ошибка: {}", campusId, t.getMessage());
-        return new CoalitionsV1DTO(); // Возвращаем пустой объект вместо исключения
     }
 
     public void getCampusCoalitions(String campusId) throws ApiException {
@@ -109,10 +94,7 @@ public class CampusService {
         log.info("GET COALITIONS FOR CAMPUS {}", campusIdStr);
 
         // Получаем текущий бин из контекста (чтобы обойти циклическую зависимость)
-        CampusService self = applicationContext.getBean(CampusService.class);
-        CoalitionsV1DTO response = self.getCoalitionsByCampusWrapper(campusIdStr, limit, offset);
-
-        //var response = getCoalitionsByCampusWrapper(campusIdStr, limit, offset);
+        var response = campusApi.getCoalitionsByCampus(campusIdStr, limit, offset);
         if (response != null && !response.getCoalitions().isEmpty()) {
             List<CoalitionV1DTO> coalitions = response.getCoalitions();
             log.info("Получено {} коалиций для кампуса {} на странице с offset {}", coalitions.size(), campusIdStr, offset);
