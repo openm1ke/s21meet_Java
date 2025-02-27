@@ -5,12 +5,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EntityScan(basePackages = "ru.school21.edu.model")
 @EnableJpaRepositories(basePackages = "ru.school21.edu.repository")
 @EnableScheduling
+@EnableRetry
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class Application {
 

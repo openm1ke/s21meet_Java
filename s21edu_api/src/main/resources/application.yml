@@ -10,7 +10,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update  # Автоматически обновлять схему БД на основе сущностей
-    show-sql: true  # Логирование SQL-запросов
+    show-sql: false  # Логирование SQL-запросов
     properties:
       hibernate:
         format_sql: false  # Форматировать SQL-запросы для удобства
@@ -23,7 +23,7 @@ resilience4j:
     instances:
       campusApi:
         limitForPeriod: 10
-        limitRefreshPeriod: 100ms
+        limitRefreshPeriod: 200ms
         timeoutDuration: 1s
 
 logging:
