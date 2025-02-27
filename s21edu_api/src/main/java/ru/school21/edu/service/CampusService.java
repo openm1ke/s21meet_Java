@@ -1,6 +1,7 @@
 package ru.school21.edu.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.school21.edu.ApiClient;
@@ -12,6 +13,7 @@ import ru.school21.edu.repository.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -54,18 +56,34 @@ public class CampusService {
         // каждый раз обновляем токен на актуальный для всех клиентов
         apiClient.setApiKey(tokenService.getToken());
 
-        getAllCampuses(); // получаем uuid всех кампусов
-        getAllCoalitions(); // по ним парсим названия трайбов
-        getAllParticipants(); // так же по кампусам получаем логины всех пиров
-        getAllClusters(); // далее в каждом кампусе парсим кластеры
-        getAllParticipantsByCluster(); // и теперь по каждому кампусу получаем занятые места по кластерам
+        boolean result = getAllCampuses(); // получаем uuid всех кампусов
+        if (result) {
+            log.info("Кампусы обновлены");
+
+            CompletableFuture<Void> coalitionsFuture = getAllCoalitions(); // по ним парсим названия трайбов
+            CompletableFuture<Void> participantsFuture = getAllParticipants(); // так же по кампусам получаем логины всех пиров
+            CompletableFuture<Void> clustersFuture = getAllClusters(); // далее в каждом кампусе парсим кластеры
+            CompletableFuture<Void> workplacesFutureByClusters = clustersFuture.thenCompose(v -> {
+                try {
+                    return getAllParticipantsByCluster();
+                } catch (ApiException e) {
+                    return CompletableFuture.failedFuture(e);
+                }
+            }); // и теперь по каждому кампусу получаем занятые места по кластерам
+
+            CompletableFuture.allOf(coalitionsFuture, participantsFuture, clustersFuture, workplacesFutureByClusters).join();
+        }
+        log.info("Обновление всех данных для кампусов завершено");
     }
 
-    public void getAllParticipantsByCluster() throws ApiException {
+    @Async("taskExecutor")
+    public CompletableFuture<Void> getAllParticipantsByCluster() throws ApiException {
         var clusters = clusterRepository.findAll();
         for (var cluster : clusters) {
             getParticipantsByCluster(cluster.getClusterId());
         }
+        log.info("Данные участников по кластерам обновлены.");
+        return CompletableFuture.completedFuture(null);
     }
 
     public void getParticipantsByCluster(Long clusterId) throws ApiException {
@@ -93,11 +111,14 @@ public class CampusService {
         }
     }
 
-    public void getAllClusters() throws ApiException {
+    @Async("taskExecutor")
+    public CompletableFuture<Void> getAllClusters() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
             getClustersByCampus(UUID.fromString(campus.getId()));
         }
+        log.info("Кластеры обновлены");
+        return CompletableFuture.completedFuture(null);
     }
 
     public void getClustersByCampus(UUID campusId) throws ApiException {
@@ -115,10 +136,10 @@ public class CampusService {
             clusterEntities.add(clusterEntity);
         }
         log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
-        clusterRepository.saveAll(clusterEntities);
+        clusterRepository.saveAllAndFlush(clusterEntities);
     }
 
-    public void getAllCampuses() throws ApiException {
+    public boolean getAllCampuses() throws ApiException {
         var campuses = campusApi.getCampuses().getCampuses();
         ArrayList<Campus> campusEntities = new ArrayList<>();
         for (var campus : campuses) {
@@ -127,22 +148,29 @@ public class CampusService {
         }
         // сохраняем все кампусы в базу и сразу делаем записи доступными для чтения
         campusRepository.saveAllAndFlush(campusEntities);
+        return true;
     }
 
-    public void getAllParticipants() throws ApiException {
+    @Async("taskExecutor")
+    public CompletableFuture<Void> getAllParticipants() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
-            log.info("Обновление участников для кампуса: {}", campus.getId());
+            //log.info("Обновление участников для кампуса: {}", campus.getId());
             getCampusParticipants(campus.getId());
         }
+        log.info("Участники обновлены");
+        return CompletableFuture.completedFuture(null);
     }
 
-    public void getAllCoalitions() throws ApiException {
+    @Async("taskExecutor")
+    public CompletableFuture<Void> getAllCoalitions() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
-            log.info("Обновление коалиций для кампуса: {}", campus.getId());
+            //log.info("Обновление коалиций для кампуса: {}", campus.getId());
             getCampusCoalitions(campus.getId());
         }
+        log.info("Коалиции обновлены");
+        return CompletableFuture.completedFuture(null);
     }
 
     public void getCampusCoalitions(String campusId) throws ApiException {

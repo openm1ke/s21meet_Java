@@ -97,7 +97,7 @@ public class TokenService {
         try {
             return getAccessToken(defaultLogin, defaultPassword);
         } catch (Exception e) {
-            log.error("Ошибка получения access token для пользователя {}: {}", defaultLogin, e.getMessage());
+            log.error("Ошибка получения default access token для пользователя {}: {}", defaultLogin, e.getMessage());
             return null;
         }
     }

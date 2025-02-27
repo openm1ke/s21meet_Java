@@ -15,7 +15,7 @@ public class TokenService {
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<String> tokenResponse = restTemplate.getForEntity(tokenEndpoint, String.class);
         String token = tokenResponse.getBody();
-        if (token == null || token.isEmpty()) {
+        if (token.isEmpty()) {
             throw new RuntimeException("Не удалось получить access token");
         }
         return token;
