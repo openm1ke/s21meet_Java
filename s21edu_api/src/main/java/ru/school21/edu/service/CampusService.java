@@ -51,8 +51,41 @@ public class CampusService {
         this.tokenService = tokenService;
     }
 
-    @Scheduled(fixedDelay = 300000)
-    public void startParsing() throws ApiException {
+    @Scheduled(fixedDelay = 30000)
+    public void parseMskKznNsk() {
+        apiClient.setApiKey(tokenService.getToken());
+
+        List<String> campuses = List.of(
+                "6bfe3c56-0211-4fe1-9e59-51616caac4dd", // MSK
+                "7c293c9c-f28c-4b10-be29-560e4b000a34", // KZN
+                "46e7d965-21e9-4936-bea9-f5ea0d1fddf2"  // NSK
+        );
+
+        log.info("Получение кластеров для Москвы, Казани и Новосибирска");
+        campuses.parallelStream().forEach(campus -> {
+            try {
+                getClustersByCampus(UUID.fromString(campus));
+            } catch (ApiException e) {
+                log.error("Ошибка получения кластеров для кампуса {}", campus, e);
+            }
+        });
+
+        List<Cluster> clusters = clusterRepository.findAll();
+
+        clusters.parallelStream().forEach(cluster -> {
+            try {
+                getParticipantsByCluster(cluster.getClusterId());
+            } catch (ApiException e) {
+                log.error("Ошибка получения участников для кластера {}", cluster.getClusterId(), e);
+            }
+        });
+
+        log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
+    }
+
+    //@Scheduled(fixedDelay = 300000)
+    @Deprecated
+    public void startParsingAll() throws ApiException {
         // каждый раз обновляем токен на актуальный для всех клиентов
         apiClient.setApiKey(tokenService.getToken());
 
@@ -76,7 +109,7 @@ public class CampusService {
         log.info("Обновление всех данных для кампусов завершено");
     }
 
-    @Async("taskExecutor")
+    @Async
     public CompletableFuture<Void> getAllParticipantsByCluster() throws ApiException {
         var clusters = clusterRepository.findAll();
         for (var cluster : clusters) {
@@ -99,7 +132,7 @@ public class CampusService {
             // Для каждого полученного логина маппим в сущность и сохраняем
             ArrayList<Workplace> workplaces = new ArrayList<>();
             for (var workplace : clusterMap) {
-                log.info("Добавляем участника {} из кластера {}", workplace.getLogin(), clusterId);
+                //log.info("Добавляем участника {} из кластера {}", workplace.getLogin(), clusterId);
                 WorkplaceId workplaceId = new WorkplaceId(clusterId, workplace.getRow(), workplace.getNumber());
                 Workplace workplaceEntity = new Workplace();
                 workplaceEntity.setId(workplaceId);
@@ -111,7 +144,7 @@ public class CampusService {
         }
     }
 
-    @Async("taskExecutor")
+    @Async
     public CompletableFuture<Void> getAllClusters() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
@@ -151,7 +184,7 @@ public class CampusService {
         return true;
     }
 
-    @Async("taskExecutor")
+    @Async
     public CompletableFuture<Void> getAllParticipants() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
@@ -162,7 +195,7 @@ public class CampusService {
         return CompletableFuture.completedFuture(null);
     }
 
-    @Async("taskExecutor")
+    @Async
     public CompletableFuture<Void> getAllCoalitions() throws ApiException {
         var campuses = campusRepository.findAll();
         for (var campus : campuses) {
@@ -188,7 +221,7 @@ public class CampusService {
             // Для каждой полученной коалиции маппим в сущность и сохраняем
             ArrayList<Coalition> coalitionEntities = new ArrayList<>();
             for (CoalitionV1DTO coalition : coalitions) {
-                log.info("Добавляем коалицию {} в кампус {}", coalition.getCoalitionId(), campusIdStr);
+                //log.info("Добавляем коалицию {} в кампус {}", coalition.getCoalitionId(), campusIdStr);
                 Coalition coalitionEntity = new Coalition();
                 coalitionEntity.setCoalitionId(coalition.getCoalitionId());
                 coalitionEntity.setName(coalition.getName());
