@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface FriendsRepository extends JpaRepository<Friends, UUID> {
     @Query("SELECT DISTINCT f.login FROM Friends f WHERE f.isSubscribe = true")
     List<String> findDistinctLogins();
+
+    List<Friends> findByLoginAndIsSubscribeTrue(String login);
 }

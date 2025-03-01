@@ -10,4 +10,6 @@ import ru.school21.edu.model.WorkplaceId;
 public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceId> {
     @Transactional
     void deleteByIdClusterId(Long clusterId);
+
+    boolean existsByLogin(String login);
 }

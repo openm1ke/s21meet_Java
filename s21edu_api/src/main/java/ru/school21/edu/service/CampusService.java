@@ -1,6 +1,7 @@
 package ru.school21.edu.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.school21.edu.ApiClient;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "campus.service.enabled", havingValue = "true", matchIfMissing = true)
 public class CampusService {
 
     private final CampusApiProxy campusApi;

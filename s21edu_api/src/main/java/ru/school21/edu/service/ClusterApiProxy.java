@@ -3,6 +3,7 @@ package ru.school21.edu.service;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import ru.school21.edu.model.ClusterMapV1DTO;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "cluster.api.enabled", havingValue = "true", matchIfMissing = true)
 public class ClusterApiProxy extends ClusterApi {
 
     @Autowired

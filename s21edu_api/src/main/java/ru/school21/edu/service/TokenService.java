@@ -1,11 +1,13 @@
 package ru.school21.edu.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Service
+@ConditionalOnProperty(name = "token.service.enabled", havingValue = "true", matchIfMissing = true)
 public class TokenService {
 
     @Value("${edu.tokenEndpoint}")
