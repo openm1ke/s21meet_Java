@@ -5,18 +5,19 @@ plugins {
     id("org.openapi.generator") version "7.11.0"
 }
 
+val springBootVersion: String by project
+val junitJupiterVersion: String by project
+val testcontainersVersion: String by project
+
 dependencies {
     implementation(project(":s21auth"))
 
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-logging")
+    implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa:$springBootVersion")
+    implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
     implementation("org.openapitools:openapi-generator-gradle-plugin:7.11.0")
     implementation("org.openapitools:jackson-databind-nullable:0.2.6")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.14.1")
-    implementation("com.fasterxml.jackson.core:jackson-core:2.14.1")
-    implementation("com.fasterxml.jackson.core:jackson-annotations:2.14.1")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.1")
+
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
     // https://mvnrepository.com/artifact/com.squareup.okhttp3/logging-interceptor
@@ -28,25 +29,29 @@ dependencies {
     implementation("com.google.code.gson:gson:2.12.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
-    implementation("io.github.resilience4j:resilience4j-ratelimiter:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:2.3.0")
     implementation("org.springframework.retry:spring-retry:2.0.11")
-    implementation("org.springframework.boot:spring-boot-starter-aop")
+    implementation("org.springframework.boot:spring-boot-starter-aop:$springBootVersion")
 
     // Зависимости Spring Boot для JPA и тестирования
-    implementation("org.springframework.boot:spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter:$springBootVersion")
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
+        exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
+    }
 
-    testImplementation("org.testcontainers:testcontainers:1.19.8")
-    testImplementation("org.apache.commons:commons-compress:1.26.0")
-    testImplementation("org.testcontainers:postgresql:1.19.8")
-    testImplementation("org.testcontainers:junit-jupiter:1.19.8")
+    testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-compress
+    testImplementation("org.apache.commons:commons-compress:1.27.1")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3")
-    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.3")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.3")
+    testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
+    testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion")
 }
 
 openApiGenerate {
@@ -68,6 +73,14 @@ openApiGenerate {
         )
     )
 }
+
+configurations.all {
+    resolutionStrategy {
+        // Фиксируем версию, чтобы не подтягивалась старая версия junit-platform-commons
+        force("org.junit.platform:junit-platform-commons:1.11.4")
+    }
+}
+
 
 tasks.named("openApiGenerate") {
     doLast {
