@@ -27,7 +27,7 @@ public class CampusApiProxy extends CampusApi {
 
     @Override
     @Retryable(backoff = @Backoff(delay = 2000))
-    @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetCampuses")
+    @RateLimiter(name = "campusApi")
     public CampusesV1DTO getCampuses() throws ApiException {
         log.info("📡 Запрос списка кампусов...");
         return super.getCampuses();
@@ -35,7 +35,7 @@ public class CampusApiProxy extends CampusApi {
 
     @Override
     @Retryable(backoff = @Backoff(delay = 2000))
-    @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetCoalitionsByCampus")
+    @RateLimiter(name = "campusApi")
     public CoalitionsV1DTO getCoalitionsByCampus(UUID campusId, Integer limit, Integer offset) throws ApiException {
         log.info("📡 Запрос коалиций для кампуса {}...", campusId);
         return super.getCoalitionsByCampus(campusId, limit, offset);
@@ -43,7 +43,7 @@ public class CampusApiProxy extends CampusApi {
 
     @Override
     @Retryable(backoff = @Backoff(delay = 2000))
-    @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetParticipantsByCampus")
+    @RateLimiter(name = "campusApi")
     public ParticipantLoginsV1DTO getParticipantsByCampusId(UUID campusId, Long limit, Long offset) throws ApiException {
         log.info("📡 Запрос участников для кампуса {}...", campusId);
         return super.getParticipantsByCampusId(campusId, limit, offset);
@@ -51,29 +51,9 @@ public class CampusApiProxy extends CampusApi {
 
     @Override
     @Retryable(backoff = @Backoff(delay = 2000))
-    @RateLimiter(name = "campusApi", fallbackMethod = "fallbackGetClustersByCampus")
+    @RateLimiter(name = "campusApi")
     public ClustersV1DTO getClustersByCampus(UUID campusId) throws ApiException {
         log.info("📡 Запрос кластеров для кампуса {}...", campusId);
         return super.getClustersByCampus(campusId);
-    }
-
-    public ClustersV1DTO fallbackGetClustersByCampus(UUID campusId, Throwable t) throws ApiException {
-        log.warn("⚠️ RateLimiter сработал! Произошла ошибка при загрузке кластеров для кампуса {}. Ошибка: {}", campusId, t.getMessage());
-        throw new ApiException(t.getMessage());
-    }
-
-    public CampusesV1DTO fallbackGetCampuses(Throwable t) throws ApiException {
-        log.warn("⚠️ RateLimiter сработал! Произошла ошибка при загрузке кампусов. Ошибка: {}", t.getMessage());
-        throw new ApiException(t.getMessage());
-    }
-
-    public CoalitionsV1DTO fallbackGetCoalitionsByCampus(UUID campusId, Integer limit, Integer offset, Throwable t) throws ApiException {
-        log.warn("⚠️ RateLimiter сработал! Произошла ошибка при загрузке коалиции для кампуса {}. Ошибка: {}", campusId, t.getMessage());
-        throw new ApiException(t.getMessage());
-    }
-
-    public ParticipantLoginsV1DTO fallbackGetParticipantsByCampus(UUID campusId, Long limit, Long offset, Throwable t) throws ApiException {
-        log.warn("⚠️ RateLimiter сработал! Произошла ошибка при загрузке участников для кампуса {}. Ошибка: {}", campusId, t.getMessage());
-        throw new ApiException(t.getMessage());
     }
 }

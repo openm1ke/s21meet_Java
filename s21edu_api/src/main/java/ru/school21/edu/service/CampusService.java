@@ -51,8 +51,8 @@ public class CampusService {
         this.tokenService = tokenService;
     }
 
-    @Scheduled(fixedDelay = 30000)
-    public void parseMskKznNsk() {
+    //@Scheduled(fixedDelay = 30000)
+    public void parseMskKznNskSlow() throws ApiException {
         apiClient.setApiKey(tokenService.getToken());
 
         List<String> campuses = List.of(
@@ -60,13 +60,35 @@ public class CampusService {
                 "7c293c9c-f28c-4b10-be29-560e4b000a34", // KZN
                 "46e7d965-21e9-4936-bea9-f5ea0d1fddf2"  // NSK
         );
+        log.info("Получение кластеров для Москвы, Казани и Новосибирска");
+        for(String campus : campuses) {
+            getClustersByCampus(UUID.fromString(campus));
+        }
+
+        List<Cluster> clusters = clusterRepository.findAll();
+
+        for(Cluster cluster : clusters) {
+            getParticipantsByCluster(cluster.getClusterId());
+        }
+        log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    public void parseMskKznNsk() throws ApiException {
+        apiClient.setApiKey(tokenService.getToken());
+
+        List<String> campuses = List.of(
+            "6bfe3c56-0211-4fe1-9e59-51616caac4dd", // MSK
+            "7c293c9c-f28c-4b10-be29-560e4b000a34", // KZN
+            "46e7d965-21e9-4936-bea9-f5ea0d1fddf2"  // NSK
+        );
 
         log.info("Получение кластеров для Москвы, Казани и Новосибирска");
         campuses.parallelStream().forEach(campus -> {
             try {
                 getClustersByCampus(UUID.fromString(campus));
             } catch (ApiException e) {
-                log.error("Ошибка получения кластеров для кампуса {}", campus, e);
+                log.info("Ошибка получения кластеров для кампуса {}", campus);
             }
         });
 
@@ -76,7 +98,7 @@ public class CampusService {
             try {
                 getParticipantsByCluster(cluster.getClusterId());
             } catch (ApiException e) {
-                log.error("Ошибка получения участников для кластера {}", cluster.getClusterId(), e);
+                log.info("Ошибка получения участников для кластера {}", cluster.getClusterId());
             }
         });
 
@@ -84,7 +106,7 @@ public class CampusService {
     }
 
     //@Scheduled(fixedDelay = 300000)
-    @Deprecated
+    //@Deprecated
     public void startParsingAll() throws ApiException {
         // каждый раз обновляем токен на актуальный для всех клиентов
         apiClient.setApiKey(tokenService.getToken());
@@ -119,31 +141,6 @@ public class CampusService {
         return CompletableFuture.completedFuture(null);
     }
 
-    public void getParticipantsByCluster(Long clusterId) throws ApiException {
-
-        log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
-        int offset = 0;
-        final int limit = 1000;
-
-        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, limit, offset, null);
-        if(response != null && !response.getClusterMap().isEmpty()) {
-            var clusterMap = response.getClusterMap();
-            log.info("Получено {} участников для кластера {} на странице с offset {}", clusterMap.size(), clusterId, offset);
-            // Для каждого полученного логина маппим в сущность и сохраняем
-            ArrayList<Workplace> workplaces = new ArrayList<>();
-            for (var workplace : clusterMap) {
-                //log.info("Добавляем участника {} из кластера {}", workplace.getLogin(), clusterId);
-                WorkplaceId workplaceId = new WorkplaceId(clusterId, workplace.getRow(), workplace.getNumber());
-                Workplace workplaceEntity = new Workplace();
-                workplaceEntity.setId(workplaceId);
-                workplaceEntity.setLogin(workplace.getLogin());
-                workplaces.add(workplaceEntity);
-            }
-            log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
-            workplaceRepository.saveAllAndFlush(workplaces);
-        }
-    }
-
     @Async
     public CompletableFuture<Void> getAllClusters() throws ApiException {
         var campuses = campusRepository.findAll();
@@ -152,36 +149,6 @@ public class CampusService {
         }
         log.info("Кластеры обновлены");
         return CompletableFuture.completedFuture(null);
-    }
-
-    public void getClustersByCampus(UUID campusId) throws ApiException {
-        log.info("Получение списка кластеров для кампуса {}", campusId);
-        var clusters = campusApi.getClustersByCampus(campusId).getClusters();
-        ArrayList<Cluster> clusterEntities = new ArrayList<>();
-        for (var cluster : clusters) {
-            Cluster clusterEntity = new Cluster();
-            clusterEntity.setClusterId(cluster.getId());
-            clusterEntity.setName(cluster.getName());
-            clusterEntity.setCapacity(cluster.getCapacity());
-            clusterEntity.setAvailableCapacity(cluster.getAvailableCapacity());
-            clusterEntity.setFloor(cluster.getFloor());
-            clusterEntity.setCampusId(campusId.toString());
-            clusterEntities.add(clusterEntity);
-        }
-        log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
-        clusterRepository.saveAllAndFlush(clusterEntities);
-    }
-
-    public boolean getAllCampuses() throws ApiException {
-        var campuses = campusApi.getCampuses().getCampuses();
-        ArrayList<Campus> campusEntities = new ArrayList<>();
-        for (var campus : campuses) {
-            var entity = campusMapper.toEntity(campus);
-            campusEntities.add(entity);
-        }
-        // сохраняем все кампусы в базу и сразу делаем записи доступными для чтения
-        campusRepository.saveAllAndFlush(campusEntities);
-        return true;
     }
 
     @Async
@@ -204,6 +171,61 @@ public class CampusService {
         }
         log.info("Коалиции обновлены");
         return CompletableFuture.completedFuture(null);
+    }
+
+    public boolean getAllCampuses() throws ApiException {
+        var campuses = campusApi.getCampuses().getCampuses();
+        ArrayList<Campus> campusEntities = new ArrayList<>();
+        for (var campus : campuses) {
+            var entity = campusMapper.toEntity(campus);
+            campusEntities.add(entity);
+        }
+        // сохраняем все кампусы в базу и сразу делаем записи доступными для чтения
+        campusRepository.saveAllAndFlush(campusEntities);
+        return true;
+    }
+
+    public void getParticipantsByCluster(Long clusterId) throws ApiException {
+
+        //log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
+        int offset = 0;
+        final int limit = 1000;
+
+        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, limit, offset, null);
+        if(response != null && !response.getClusterMap().isEmpty()) {
+            var clusterMap = response.getClusterMap();
+            //log.info("Получено {} участников для кластера {} на странице с offset {}", clusterMap.size(), clusterId, offset);
+            // Для каждого полученного логина маппим в сущность и сохраняем
+            ArrayList<Workplace> workplaces = new ArrayList<>();
+            for (var workplace : clusterMap) {
+                //log.info("Добавляем участника {} из кластера {}", workplace.getLogin(), clusterId);
+                WorkplaceId workplaceId = new WorkplaceId(clusterId, workplace.getRow(), workplace.getNumber());
+                Workplace workplaceEntity = new Workplace();
+                workplaceEntity.setId(workplaceId);
+                workplaceEntity.setLogin(workplace.getLogin());
+                workplaces.add(workplaceEntity);
+            }
+            //log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
+            workplaceRepository.saveAllAndFlush(workplaces);
+        }
+    }
+
+    public void getClustersByCampus(UUID campusId) throws ApiException {
+        //log.info("Получение списка кластеров для кампуса {}", campusId);
+        var clusters = campusApi.getClustersByCampus(campusId).getClusters();
+        ArrayList<Cluster> clusterEntities = new ArrayList<>();
+        for (var cluster : clusters) {
+            Cluster clusterEntity = new Cluster();
+            clusterEntity.setClusterId(cluster.getId());
+            clusterEntity.setName(cluster.getName());
+            clusterEntity.setCapacity(cluster.getCapacity());
+            clusterEntity.setAvailableCapacity(cluster.getAvailableCapacity());
+            clusterEntity.setFloor(cluster.getFloor());
+            clusterEntity.setCampusId(campusId.toString());
+            clusterEntities.add(clusterEntity);
+        }
+        //log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
+        clusterRepository.saveAllAndFlush(clusterEntities);
     }
 
     public void getCampusCoalitions(String campusId) throws ApiException {
