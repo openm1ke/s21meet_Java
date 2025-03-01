@@ -8,6 +8,7 @@ plugins {
 val springBootVersion: String by project
 val junitJupiterVersion: String by project
 val testcontainersVersion: String by project
+val resilience4jVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
@@ -20,17 +21,16 @@ dependencies {
 
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
-    // https://mvnrepository.com/artifact/com.squareup.okhttp3/logging-interceptor
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    // https://mvnrepository.com/artifact/io.gsonfire/gson-fire
+
     implementation("io.gsonfire:gson-fire:1.8.1")
 
     implementation("org.postgresql:postgresql")
     implementation("com.google.code.gson:gson:2.12.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
-    implementation("io.github.resilience4j:resilience4j-ratelimiter:2.3.0")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:$resilience4jVersion")
     implementation("org.springframework.retry:spring-retry:2.0.11")
     implementation("org.springframework.boot:spring-boot-starter-aop:$springBootVersion")
 
@@ -85,7 +85,7 @@ configurations.all {
 tasks.named("openApiGenerate") {
     doLast {
         val stubFile = file("src/main/resources/stub/JSON.java")
-        val generatedFile = file("${buildDir}/generated/src/main/java/ru/school21/edu/JSON.java")
+        val generatedFile = layout.buildDirectory.dir("generated/src/main/java/ru/school21/edu/JSON.java").get().asFile
         if (stubFile.exists()) {
             println("Перезаписываем сгенерированный JSON.java на версию-стаб из: ${stubFile.absolutePath}")
             stubFile.copyTo(generatedFile, overwrite = true)
