@@ -53,7 +53,7 @@ public class CampusApiProxy extends CampusApi {
     @Retryable(backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public ClustersV1DTO getClustersByCampus(UUID campusId) throws ApiException {
-        log.info("📡 Запрос кластеров для кампуса {}...", campusId);
+        //log.info("📡 Запрос кластеров для кампуса {}...", campusId);
         return super.getClustersByCampus(campusId);
     }
 }

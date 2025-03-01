@@ -24,7 +24,7 @@ public class ClusterApiProxy extends ClusterApi {
     @Retryable(maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public ClusterMapV1DTO getParticipantsByCoalitionId1(Long clusterId, Integer limit, Integer offset, Boolean occupied) throws ApiException {
-        log.info("📡 Запрос участников для кластера {}...", clusterId);
+        //log.info("📡 Запрос участников для кластера {}...", clusterId);
         return super.getParticipantsByCoalitionId1(clusterId, limit, offset, occupied);
     }
 }
