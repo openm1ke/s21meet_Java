@@ -1,19 +1,20 @@
 package ru.school21.edu.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.school21.edu.ApiClient;
 import ru.school21.edu.ApiException;
-import ru.school21.edu.mapper.CampusMapper;
-import ru.school21.edu.model.*;
-import ru.school21.edu.repository.*;
+import ru.school21.edu.model.Cluster;
+import ru.school21.edu.model.Workplace;
+import ru.school21.edu.model.WorkplaceId;
+import ru.school21.edu.repository.ClusterRepository;
+import ru.school21.edu.repository.WorkplaceRepository;
+import ru.school21.edu.utils.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -21,10 +22,6 @@ public class CampusService {
 
     private final CampusApiProxy campusApi;
     private final ClusterApiProxy clusterApi;
-    private final CampusMapper campusMapper;
-    private final CampusRepository campusRepository;
-    private final ParticipantRepository participantRepository;
-    private final CoalitionRepository coalitionRepository;
     private final ClusterRepository clusterRepository;
     private final WorkplaceRepository workplaceRepository;
     private final ApiClient apiClient;
@@ -32,51 +29,23 @@ public class CampusService {
 
     public CampusService(CampusApiProxy campusApi,
                          ClusterApiProxy clusterApi,
-                         CampusMapper campusMapper,
-                         CampusRepository campusRepository,
-                         ParticipantRepository participantRepository,
-                         CoalitionRepository coalitionRepository,
                          ClusterRepository clusterRepository,
                          WorkplaceRepository workplaceRepository,
-                         ApiClient apiClient, TokenService tokenService) {
+                         ApiClient apiClient,
+                         TokenService tokenService) {
         this.campusApi = campusApi;
         this.clusterApi = clusterApi;
-        this.campusMapper = campusMapper;
-        this.campusRepository = campusRepository;
-        this.participantRepository = participantRepository;
-        this.coalitionRepository = coalitionRepository;
         this.clusterRepository = clusterRepository;
         this.workplaceRepository = workplaceRepository;
         this.apiClient = apiClient;
         this.tokenService = tokenService;
     }
 
-    //@Scheduled(fixedDelay = 30000)
-    public void parseMskKznNskSlow() throws ApiException {
-        apiClient.setApiKey(tokenService.getToken());
-
-        List<String> campuses = List.of(
-                "6bfe3c56-0211-4fe1-9e59-51616caac4dd", // MSK
-                "7c293c9c-f28c-4b10-be29-560e4b000a34", // KZN
-                "46e7d965-21e9-4936-bea9-f5ea0d1fddf2"  // NSK
-        );
-        log.info("Получение кластеров для Москвы, Казани и Новосибирска");
-        for(String campus : campuses) {
-            getClustersByCampus(UUID.fromString(campus));
-        }
-
-        List<Cluster> clusters = clusterRepository.findAll();
-
-        for(Cluster cluster : clusters) {
-            getParticipantsByCluster(cluster.getClusterId());
-        }
-        log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
-    }
-
     @Scheduled(fixedDelay = 30000)
-    public void parseMskKznNsk() throws ApiException {
+    public void parseMskKznNsk() {
+        // установка токена для всех клиентов
         apiClient.setApiKey(tokenService.getToken());
-
+        // список целевых кампусов
         List<String> campuses = List.of(
             "6bfe3c56-0211-4fe1-9e59-51616caac4dd", // MSK
             "7c293c9c-f28c-4b10-be29-560e4b000a34", // KZN
@@ -105,93 +74,18 @@ public class CampusService {
         log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
     }
 
-    //@Scheduled(fixedDelay = 300000)
-    //@Deprecated
-    public void startParsingAll() throws ApiException {
-        // каждый раз обновляем токен на актуальный для всех клиентов
-        apiClient.setApiKey(tokenService.getToken());
-
-        boolean result = getAllCampuses(); // получаем uuid всех кампусов
-        if (result) {
-            log.info("Кампусы обновлены");
-
-            CompletableFuture<Void> coalitionsFuture = getAllCoalitions(); // по ним парсим названия трайбов
-            CompletableFuture<Void> participantsFuture = getAllParticipants(); // так же по кампусам получаем логины всех пиров
-            CompletableFuture<Void> clustersFuture = getAllClusters(); // далее в каждом кампусе парсим кластеры
-            CompletableFuture<Void> workplacesFutureByClusters = clustersFuture.thenCompose(v -> {
-                try {
-                    return getAllParticipantsByCluster();
-                } catch (ApiException e) {
-                    return CompletableFuture.failedFuture(e);
-                }
-            }); // и теперь по каждому кампусу получаем занятые места по кластерам
-
-            CompletableFuture.allOf(coalitionsFuture, participantsFuture, clustersFuture, workplacesFutureByClusters).join();
-        }
-        log.info("Обновление всех данных для кампусов завершено");
-    }
-
-    @Async
-    public CompletableFuture<Void> getAllParticipantsByCluster() throws ApiException {
-        var clusters = clusterRepository.findAll();
-        for (var cluster : clusters) {
-            getParticipantsByCluster(cluster.getClusterId());
-        }
-        log.info("Данные участников по кластерам обновлены.");
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Async
-    public CompletableFuture<Void> getAllClusters() throws ApiException {
-        var campuses = campusRepository.findAll();
-        for (var campus : campuses) {
-            getClustersByCampus(UUID.fromString(campus.getId()));
-        }
-        log.info("Кластеры обновлены");
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Async
-    public CompletableFuture<Void> getAllParticipants() throws ApiException {
-        var campuses = campusRepository.findAll();
-        for (var campus : campuses) {
-            //log.info("Обновление участников для кампуса: {}", campus.getId());
-            getCampusParticipants(campus.getId());
-        }
-        log.info("Участники обновлены");
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Async
-    public CompletableFuture<Void> getAllCoalitions() throws ApiException {
-        var campuses = campusRepository.findAll();
-        for (var campus : campuses) {
-            //log.info("Обновление коалиций для кампуса: {}", campus.getId());
-            getCampusCoalitions(campus.getId());
-        }
-        log.info("Коалиции обновлены");
-        return CompletableFuture.completedFuture(null);
-    }
-
-    public boolean getAllCampuses() throws ApiException {
-        var campuses = campusApi.getCampuses().getCampuses();
-        ArrayList<Campus> campusEntities = new ArrayList<>();
-        for (var campus : campuses) {
-            var entity = campusMapper.toEntity(campus);
-            campusEntities.add(entity);
-        }
-        // сохраняем все кампусы в базу и сразу делаем записи доступными для чтения
-        campusRepository.saveAllAndFlush(campusEntities);
-        return true;
-    }
-
+    /**
+     * Метод получения списка занятых рабочих мест по кластерам
+     * @param clusterId айди кластера определенного кампуса
+     * @throws ApiException исключение
+     */
     public void getParticipantsByCluster(Long clusterId) throws ApiException {
 
         //log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
         int offset = 0;
         final int limit = 1000;
 
-        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, limit, offset, null);
+        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, limit, offset, true);
         if(response != null && !response.getClusterMap().isEmpty()) {
             var clusterMap = response.getClusterMap();
             //log.info("Получено {} участников для кластера {} на странице с offset {}", clusterMap.size(), clusterId, offset);
@@ -202,14 +96,20 @@ public class CampusService {
                 WorkplaceId workplaceId = new WorkplaceId(clusterId, workplace.getRow(), workplace.getNumber());
                 Workplace workplaceEntity = new Workplace();
                 workplaceEntity.setId(workplaceId);
-                workplaceEntity.setLogin(workplace.getLogin());
+                workplaceEntity.setLogin(StringUtils.extractLogin(workplace.getLogin()));
                 workplaces.add(workplaceEntity);
             }
             //log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
+            workplaceRepository.deleteByIdClusterId(clusterId);
             workplaceRepository.saveAllAndFlush(workplaces);
         }
     }
 
+    /**
+     * Получение списка кластеров для кампуса
+     * @param campusId айди кампуса
+     * @throws ApiException исключение
+     */
     public void getClustersByCampus(UUID campusId) throws ApiException {
         //log.info("Получение списка кластеров для кампуса {}", campusId);
         var clusters = campusApi.getClustersByCampus(campusId).getClusters();
@@ -226,70 +126,5 @@ public class CampusService {
         }
         //log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
         clusterRepository.saveAllAndFlush(clusterEntities);
-    }
-
-    public void getCampusCoalitions(String campusId) throws ApiException {
-        log.info("Обновление коалиций для кампуса: {}", campusId);
-
-        int offset = 0;
-        final int limit = 1000;
-
-        UUID campusIdStr = UUID.fromString(campusId);
-        log.info("Получение списка коалиций для кампуса {}", campusIdStr);
-        var response = campusApi.getCoalitionsByCampus(campusIdStr, limit, offset);
-        if (response != null && !response.getCoalitions().isEmpty()) {
-            List<CoalitionV1DTO> coalitions = response.getCoalitions();
-            log.info("Получено {} коалиций для кампуса {} на странице с offset {}", coalitions.size(), campusIdStr, offset);
-            // Для каждой полученной коалиции маппим в сущность и сохраняем
-            ArrayList<Coalition> coalitionEntities = new ArrayList<>();
-            for (CoalitionV1DTO coalition : coalitions) {
-                //log.info("Добавляем коалицию {} в кампус {}", coalition.getCoalitionId(), campusIdStr);
-                Coalition coalitionEntity = new Coalition();
-                coalitionEntity.setCoalitionId(coalition.getCoalitionId());
-                coalitionEntity.setName(coalition.getName());
-                coalitionEntity.setCampusId(campusId);
-                coalitionEntities.add(coalitionEntity);
-            }
-            log.info("Сохраняем {} коалиций для кампуса {}", coalitionEntities.size(), campusIdStr);
-            coalitionRepository.saveAll(coalitionEntities);
-        }
-    }
-
-    public void getCampusParticipants(String campusId) throws ApiException {
-        log.info("Обновление участников для кампуса: {}", campusId);
-
-        UUID campusIdStr = UUID.fromString(campusId);
-
-        int offset = 0;
-        final int limit = 1000;
-        boolean hasMore = true;
-
-        while (hasMore) {
-            ParticipantLoginsV1DTO response = campusApi.getParticipantsByCampusId(campusIdStr, (long) limit, (long) offset);
-            if (response != null && !response.getParticipants().isEmpty()) {
-                List<String> logins = response.getParticipants();
-                log.info("Получено {} участников для кампуса {} на странице с offset {}", logins.size(), campusIdStr, offset);
-                // Для каждого полученного логина маппим в сущность и сохраняем
-                ArrayList<Participant> participantEntities = new ArrayList<>();
-                for (String login : logins) {
-                    //log.info("Добавляем участника {} в кампус {}", login, campusIdStr);
-                    Participant participant = new Participant();
-                    participant.setLogin(login);
-                    participant.setCampusId(campusId);
-                    participantEntities.add(participant);
-                }
-                log.info("Сохраняем {} участников для кампуса {}", participantEntities.size(), campusIdStr);
-                participantRepository.saveAll(participantEntities);
-
-                // Если получено ровно limit записей, то возможно есть следующая страница
-                if (logins.size() == limit) {
-                    offset += limit;
-                } else {
-                    hasMore = false;
-                }
-            } else {
-                hasMore = false;
-            }
-        }
     }
 }
