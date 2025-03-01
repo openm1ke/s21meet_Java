@@ -80,12 +80,11 @@ public class CampusService {
      * @throws ApiException исключение
      */
     public void getParticipantsByCluster(Long clusterId) throws ApiException {
-
         //log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
-        int offset = 0;
-        final int limit = 1000;
-
-        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, limit, offset, true);
+        // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максиум)
+        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);
+        // надо удалять старые записи даже если нам ничего не пришло
+        workplaceRepository.deleteByIdClusterId(clusterId);
         if(response != null && !response.getClusterMap().isEmpty()) {
             var clusterMap = response.getClusterMap();
             //log.info("Получено {} участников для кластера {} на странице с offset {}", clusterMap.size(), clusterId, offset);
@@ -100,7 +99,6 @@ public class CampusService {
                 workplaces.add(workplaceEntity);
             }
             //log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
-            workplaceRepository.deleteByIdClusterId(clusterId);
             workplaceRepository.saveAllAndFlush(workplaces);
         }
     }
