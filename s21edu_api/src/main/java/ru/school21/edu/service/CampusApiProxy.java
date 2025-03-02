@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import ru.school21.edu.ApiClient;
 import ru.school21.edu.ApiException;
 import ru.school21.edu.api.CampusApi;
+import ru.school21.edu.exception.RetryableApiException;
 import ru.school21.edu.model.CampusesV1DTO;
 import ru.school21.edu.model.ClustersV1DTO;
 import ru.school21.edu.model.CoalitionsV1DTO;
@@ -28,7 +29,7 @@ public class CampusApiProxy extends CampusApi {
     }
 
     @Override
-    @Retryable(backoff = @Backoff(delay = 2000))
+    @Retryable(retryFor = {RetryableApiException.class}, maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public CampusesV1DTO getCampuses() throws ApiException {
         log.info("📡 Запрос списка кампусов...");
@@ -36,7 +37,7 @@ public class CampusApiProxy extends CampusApi {
     }
 
     @Override
-    @Retryable(backoff = @Backoff(delay = 2000))
+    @Retryable(retryFor = {RetryableApiException.class}, maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public CoalitionsV1DTO getCoalitionsByCampus(UUID campusId, Integer limit, Integer offset) throws ApiException {
         log.info("📡 Запрос коалиций для кампуса {}...", campusId);
@@ -44,7 +45,7 @@ public class CampusApiProxy extends CampusApi {
     }
 
     @Override
-    @Retryable(backoff = @Backoff(delay = 2000))
+    @Retryable(retryFor = {RetryableApiException.class}, maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public ParticipantLoginsV1DTO getParticipantsByCampusId(UUID campusId, Long limit, Long offset) throws ApiException {
         log.info("📡 Запрос участников для кампуса {}...", campusId);
@@ -52,7 +53,7 @@ public class CampusApiProxy extends CampusApi {
     }
 
     @Override
-    @Retryable(backoff = @Backoff(delay = 2000))
+    @Retryable(retryFor = {RetryableApiException.class}, maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public ClustersV1DTO getClustersByCampus(UUID campusId) throws ApiException {
         //log.info("📡 Запрос кластеров для кампуса {}...", campusId);

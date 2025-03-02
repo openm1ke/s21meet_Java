@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import ru.school21.edu.ApiClient;
 import ru.school21.edu.ApiException;
 import ru.school21.edu.api.ClusterApi;
+import ru.school21.edu.exception.RetryableApiException;
 import ru.school21.edu.model.ClusterMapV1DTO;
 
 @Slf4j
@@ -23,7 +24,7 @@ public class ClusterApiProxy extends ClusterApi {
     }
 
     @Override
-    @Retryable(maxAttempts = 5, backoff = @Backoff(delay = 2000))
+    @Retryable(retryFor = {RetryableApiException.class}, maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public ClusterMapV1DTO getParticipantsByCoalitionId1(Long clusterId, Integer limit, Integer offset, Boolean occupied) throws ApiException {
         //log.info("📡 Запрос участников для кластера {}...", clusterId);

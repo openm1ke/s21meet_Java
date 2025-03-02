@@ -44,6 +44,9 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
     // https://mvnrepository.com/artifact/org.apache.commons/commons-compress
     testImplementation("org.apache.commons:commons-compress:1.27.1")
+    // https://mvnrepository.com/artifact/org.mockito/mockito-core
+    testImplementation("org.mockito:mockito-core:5.14.2")
+
 
     testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
