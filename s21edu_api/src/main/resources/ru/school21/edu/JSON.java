@@ -182,7 +182,7 @@ public class JSON {
         public byte[] read(JsonReader in) throws IOException {
             if (in.peek() == NULL) {
                 in.nextNull();
-                return null;
+                return new byte[0];
             } else {
                 String bytesAsBase64 = in.nextString();
                 ByteString byteString = ByteString.decodeBase64(bytesAsBase64);
@@ -365,6 +365,13 @@ public class JSON {
             }
         }
 
+        private Date parseDate(String date) throws JsonParseException, ParseException {
+            if (dateFormat != null) {
+                return dateFormat.parse(date);
+            }
+            return ISO8601Utils.parse(date, new ParsePosition(0));
+        }
+
         @Override
         public Date read(JsonReader in) throws IOException {
             try {
@@ -373,14 +380,7 @@ public class JSON {
                     return null;
                 }
                 String date = in.nextString();
-                try {
-                    if (dateFormat != null) {
-                        return dateFormat.parse(date);
-                    }
-                    return ISO8601Utils.parse(date, new ParsePosition(0));
-                } catch (ParseException e) {
-                    throw new JsonParseException(e);
-                }
+                return parseDate(date);
             } catch (IllegalArgumentException e) {
                 throw new JsonParseException(e);
             }

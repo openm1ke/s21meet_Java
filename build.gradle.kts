@@ -53,3 +53,12 @@ tasks.jacocoTestReport {
         xml.required = true
     }
 }
+
+sonarqube {
+    properties {
+        property("sonar.projectKey", "openm1ke_s21meet_Java")
+        property("sonar.organization", "openm1ke")
+        property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.login", project.findProperty("sonar.login") ?: "your_token_here")
+    }
+}
