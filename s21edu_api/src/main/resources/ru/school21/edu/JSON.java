@@ -53,13 +53,13 @@ public class JSON {
         return new GsonBuilder();
     }
 
-    private static String getDiscriminatorValue(JsonElement readElement, String discriminatorField) {
-        JsonElement element = readElement.getAsJsonObject().get(discriminatorField);
-        if (null == element) {
-            throw new IllegalArgumentException("missing discriminator field: <" + discriminatorField + ">");
-        }
-        return element.getAsString();
-    }
+//    private static String getDiscriminatorValue(JsonElement readElement, String discriminatorField) {
+//        JsonElement element = readElement.getAsJsonObject().get(discriminatorField);
+//        if (null == element) {
+//            throw new IllegalArgumentException("missing discriminator field: <" + discriminatorField + ">");
+//        }
+//        return element.getAsString();
+//    }
 
     /**
      * Returns the Java class that implements the OpenAPI schema for the specified discriminator value.
@@ -68,13 +68,13 @@ public class JSON {
      * @param discriminatorValue The value of the OpenAPI discriminator in the input data.
      * @return The Java class that implements the OpenAPI schema
      */
-    private static Class getClassByDiscriminator(Map classByDiscriminatorValue, String discriminatorValue) {
-        Class clazz = (Class) classByDiscriminatorValue.get(discriminatorValue);
-        if (null == clazz) {
-            throw new IllegalArgumentException("cannot determine model class of name: <" + discriminatorValue + ">");
-        }
-        return clazz;
-    }
+//    private static Class<?> getClassByDiscriminator(Map<String, Class<?>> classByDiscriminatorValue, String discriminatorValue) {
+//        Class clazz = (Class) classByDiscriminatorValue.get(discriminatorValue);
+//        if (null == clazz) {
+//            throw new IllegalArgumentException("cannot determine model class of name: <" + discriminatorValue + ">");
+//        }
+//        return clazz;
+//    }
 
     static {
         GsonBuilder gsonBuilder = createGson();
@@ -205,14 +205,13 @@ public class JSON {
 
         @Override
         public byte[] read(JsonReader in) throws IOException {
-            switch (in.peek()) {
-                case NULL:
-                    in.nextNull();
-                    return null;
-                default:
-                    String bytesAsBase64 = in.nextString();
-                    ByteString byteString = ByteString.decodeBase64(bytesAsBase64);
-                    return byteString.toByteArray();
+            if (in.peek() == NULL) {
+                in.nextNull();
+                return null;
+            } else {
+                String bytesAsBase64 = in.nextString();
+                ByteString byteString = ByteString.decodeBase64(bytesAsBase64);
+                return byteString.toByteArray();
             }
         }
     }
