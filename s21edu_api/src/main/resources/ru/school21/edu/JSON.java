@@ -46,6 +46,8 @@ public class JSON {
     private static LocalDateTypeAdapter localDateTypeAdapter = new LocalDateTypeAdapter();
     private static ByteArrayAdapter byteArrayAdapter = new ByteArrayAdapter();
 
+    private JSON() {}
+
     @SuppressWarnings("unchecked")
     public static GsonBuilder createGson() {
         return new GsonBuilder();
