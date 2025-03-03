@@ -1,5 +1,6 @@
 package edu.service;
 
+import edu.exception.TokenResponseException;
 import edu.repository.TokenRepository;
 import edu.dto.TokenResponse;
 import edu.model.TokenEntity;
@@ -52,9 +53,9 @@ public class TokenService {
             TokenEntity newEntity = new TokenEntity();
             newEntity.setLogin(login);
             newEntity.setPassword(password);
-            newEntity.setAccessToken(tokenResponse.getAccess_token());
-            newEntity.setRefreshToken(tokenResponse.getRefresh_token());
-            newEntity.setExpiresAt(LocalDateTime.now().plusSeconds(tokenResponse.getExpires_in()));
+            newEntity.setAccessToken(tokenResponse.getAccessToken());
+            newEntity.setRefreshToken(tokenResponse.getRefreshToken());
+            newEntity.setExpiresAt(LocalDateTime.now().plusSeconds(tokenResponse.getExpiresIn()));
 
             tokenRepository.save(newEntity);
             return newEntity.getAccessToken();
@@ -84,12 +85,12 @@ public class TokenService {
                     .block(); // Получаем результат синхронно
 
             if (tokenResponse == null) {
-                throw new RuntimeException("Получен пустой ответ от сервера токенов");
+                throw new TokenResponseException("Получен пустой ответ от сервера токенов");
             }
             return tokenResponse;
         } catch (Exception e) {
             log.error("Ошибка запроса нового токена для пользователя {}: {}", login, e.getMessage());
-            throw new RuntimeException("Не удалось получить токен", e);
+            throw new TokenResponseException("Не удалось получить токен", e);
         }
     }
 
@@ -114,9 +115,9 @@ public class TokenService {
                         tokenEntity.getExpiresAt().isBefore(LocalDateTime.now().plusMinutes(1))) {
                     try {
                         TokenResponse tokenResponse = requestNewToken(tokenEntity.getLogin(), tokenEntity.getPassword());
-                        tokenEntity.setAccessToken(tokenResponse.getAccess_token());
-                        tokenEntity.setRefreshToken(tokenResponse.getRefresh_token());
-                        tokenEntity.setExpiresAt(LocalDateTime.now().plusSeconds(tokenResponse.getExpires_in()));
+                        tokenEntity.setAccessToken(tokenResponse.getAccessToken());
+                        tokenEntity.setRefreshToken(tokenResponse.getRefreshToken());
+                        tokenEntity.setExpiresAt(LocalDateTime.now().plusSeconds(tokenResponse.getExpiresIn()));
                         tokenRepository.save(tokenEntity);
                         log.info("Токен для {} успешно обновлён.", tokenEntity.getLogin());
                     } catch (Exception e) {
