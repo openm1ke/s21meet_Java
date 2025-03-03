@@ -40,8 +40,8 @@ public class NotifyService {
                     newRecord.setIsOnline(false);
                     return newRecord;
                 });
-
-            if (inCampus && !onlineRecord.getIsOnline()) {
+            boolean isOnline = onlineRecord.getIsOnline();
+            if (inCampus && !isOnline) {
                 onlineRecord.setIsOnline(true);
                 onlineRepository.save(onlineRecord);
 
@@ -50,7 +50,7 @@ public class NotifyService {
                         .map(Friends::getTelegramId)
                         .toList();
                 messageSender.sendOnlineNotification(login, telegramIds);
-            } else if (!inCampus && onlineRecord.getIsOnline()) {
+            } else if (!inCampus && isOnline) {
                 onlineRecord.setIsOnline(false);
                 onlineRepository.save(onlineRecord);
 

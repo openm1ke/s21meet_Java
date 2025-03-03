@@ -7,6 +7,8 @@ import ru.school21.edu.BaseTestContainer;
 
 import java.util.List;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 @TestPropertySource(properties = "message.service.enabled=true")
 class MessageSenderTest extends BaseTestContainer {
     @Autowired
@@ -18,10 +20,12 @@ class MessageSenderTest extends BaseTestContainer {
     @Test
     void sendOnlineNotification() {
         messageSender.sendOnlineNotification(login, telegramIds);
+        assertThat(telegramIds.size()).isEqualTo(2);
     }
 
     @Test
     void sendOfflineNotification() {
         messageSender.sendOfflineNotification(login, telegramIds);
+        assertThat(telegramIds.size()).isEqualTo(2);
     }
 }

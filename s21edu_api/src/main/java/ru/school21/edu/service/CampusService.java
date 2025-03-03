@@ -82,25 +82,24 @@ public class CampusService {
      * @throws ApiException исключение
      */
     public void getParticipantsByCluster(Long clusterId) throws ApiException {
-        //log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
+        log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
         // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максиум)
         var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);
         // надо удалять старые записи даже если нам ничего не пришло
         workplaceRepository.deleteByIdClusterId(clusterId);
         if(response != null && !response.getClusterMap().isEmpty()) {
             var clusterMap = response.getClusterMap();
-            //log.info("Получено {} участников для кластера {} на странице с offset {}", clusterMap.size(), clusterId, offset);
+            log.info("Получено {} участников для кластера {} на странице", clusterMap.size(), clusterId);
             // Для каждого полученного логина маппим в сущность и сохраняем
             ArrayList<Workplace> workplaces = new ArrayList<>();
             for (var workplace : clusterMap) {
-                //log.info("Добавляем участника {} из кластера {}", workplace.getLogin(), clusterId);
                 WorkplaceId workplaceId = new WorkplaceId(clusterId, workplace.getRow(), workplace.getNumber());
                 Workplace workplaceEntity = new Workplace();
                 workplaceEntity.setId(workplaceId);
                 workplaceEntity.setLogin(StringUtils.extractLogin(workplace.getLogin()));
                 workplaces.add(workplaceEntity);
             }
-            //log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
+            log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
             workplaceRepository.saveAllAndFlush(workplaces);
         }
     }
@@ -111,7 +110,7 @@ public class CampusService {
      * @throws ApiException исключение
      */
     public void getClustersByCampus(UUID campusId) throws ApiException {
-        //log.info("Получение списка кластеров для кампуса {}", campusId);
+        log.info("Получение списка кластеров для кампуса {}", campusId);
         var clusters = campusApi.getClustersByCampus(campusId).getClusters();
         ArrayList<Cluster> clusterEntities = new ArrayList<>();
         for (var cluster : clusters) {
@@ -124,7 +123,7 @@ public class CampusService {
             clusterEntity.setCampusId(campusId.toString());
             clusterEntities.add(clusterEntity);
         }
-        //log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
+        log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
         clusterRepository.saveAllAndFlush(clusterEntities);
     }
 }

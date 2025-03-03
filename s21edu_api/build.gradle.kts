@@ -9,48 +9,38 @@ val springBootVersion: String by project
 val junitJupiterVersion: String by project
 val testcontainersVersion: String by project
 val resilience4jVersion: String by project
+val mockitoVersion: String by project
+val mapstructVersion: String by project
+val openApiVersion: String by project
+val gsonVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
-
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
-    implementation("org.openapitools:openapi-generator-gradle-plugin:7.11.0")
+    implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
     implementation("org.openapitools:jackson-databind-nullable:0.2.6")
-
-    implementation("org.mapstruct:mapstruct:1.5.5.Final")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-
     implementation("io.gsonfire:gson-fire:1.8.1")
-
     implementation("org.postgresql:postgresql")
-    implementation("com.google.code.gson:gson:2.12.1")
+    implementation("com.google.code.gson:gson:$gsonVersion")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
     implementation("io.github.resilience4j:resilience4j-ratelimiter:$resilience4jVersion")
     implementation("org.springframework.retry:spring-retry:2.0.11")
     implementation("org.springframework.boot:spring-boot-starter-aop:$springBootVersion")
-
-    // Зависимости Spring Boot для JPA и тестирования
     implementation("org.springframework.boot:spring-boot-starter:$springBootVersion")
-
-    testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
+    annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
+     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
-
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
-    // https://mvnrepository.com/artifact/org.apache.commons/commons-compress
     testImplementation("org.apache.commons:commons-compress:1.27.1")
-    // https://mvnrepository.com/artifact/org.mockito/mockito-core
-    testImplementation("org.mockito:mockito-core:5.14.2")
-
-
+    testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
-
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
