@@ -4,6 +4,7 @@ plugins {
     id("org.sonarqube") version "6.0.1.5171"
     id("org.springframework.boot") version "3.4.3"
     id("io.spring.dependency-management") version "1.1.7"
+    id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
 
 allprojects {
@@ -56,9 +57,9 @@ tasks.jacocoTestReport {
 
 sonarqube {
     properties {
-        property("sonar.projectKey", "openm1ke_s21meet_Java")
-        property("sonar.organization", "openm1ke")
-        property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.token", project.findProperty("sonar.token") ?: "your_token_here")
+        property("sonar.projectKey", env.SONAR_PROJECT_KEY)
+        property("sonar.organization", env.SONAR_ORGANIZATION)
+        property("sonar.host.url", env.SONAR_HOST_URL)
+        property("sonar.token", env.SONAR_TOKEN)
     }
 }

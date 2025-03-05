@@ -22,8 +22,8 @@ resilience4j:
   ratelimiter:
     instances:
       campusApi:
-        limitForPeriod: 10
-        limitRefreshPeriod: 200ms
+        limitForPeriod: 5
+        limitRefreshPeriod: 100ms
         timeoutDuration: 1s
 
 
