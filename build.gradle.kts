@@ -1,6 +1,7 @@
 plugins {
     java
     id("jacoco")
+    id("jacoco-report-aggregation")
     id("org.sonarqube") version "6.0.1.5171"
     id("org.springframework.boot") version "3.4.3"
     id("io.spring.dependency-management") version "1.1.7"
@@ -23,6 +24,7 @@ repositories {
 subprojects {
     apply(plugin = "java")
     apply(plugin = "io.spring.dependency-management")
+    apply(plugin = "jacoco")
 
     java {
         toolchain {
@@ -47,19 +49,34 @@ subprojects {
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
     }
-}
 
-tasks.jacocoTestReport {
-    reports {
-        xml.required = true
+    plugins.withId("jacoco") {
+        jacoco {
+            toolVersion = "0.8.12" // укажите актуальную версию
+        }
+
+        tasks.withType<Test> {
+            // После выполнения тестов запускаем генерацию отчёта
+            finalizedBy(tasks.named("jacocoTestReport"))
+        }
+
+        tasks.named<JacocoReport>("jacocoTestReport") {
+            reports {
+                xml.required.set(true)  // XML-отчёт нужен Sonar
+                html.required.set(true)
+                csv.required.set(false)
+            }
+        }
     }
 }
 
 sonarqube {
     properties {
-        property("sonar.projectKey", env.SONAR_PROJECT_KEY)
-        property("sonar.organization", env.SONAR_ORGANIZATION)
-        property("sonar.host.url", env.SONAR_HOST_URL)
-        property("sonar.token", env.SONAR_TOKEN)
+        property("sonar.projectKey", "openm1ke_s21meet_Java")
+        property("sonar.organization", "openm1ke")
+        property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.token", "cca3e759a8364ae08e243995e3c3439d1b3bf19f")
+        property("sonar.coverage.jacoco.xmlReportPaths", "build/test-results/test/TEST-*.xml")
+        property("sonar.scm.disabled", "true")
     }
 }
