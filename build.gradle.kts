@@ -76,7 +76,10 @@ sonarqube {
         property("sonar.organization", "openm1ke")
         property("sonar.host.url", "https://sonarcloud.io")
         property("sonar.token", "REMOVED_SONAR_TOKEN")
-        property("sonar.coverage.jacoco.xmlReportPaths", "build/test-results/test/TEST-*.xml")
+        property("sonar.coverage.jacoco.xmlReportPaths", "s21auth/build/reports/jacoco/test/jacocoTestReport.xml," +
+                "s21edu_api/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
+        property("sonar.exclusions", "**/generated/**, **/openapi/**")
+        property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**")
     }
 }
