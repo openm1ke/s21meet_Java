@@ -19,6 +19,8 @@ val gsonfireVersion: String by project
 val springRetryVersion: String by project
 val apacheCommonsVersion: String by project
 val springDotEnvVersion: String by project
+val wireMockVersion: String by project
+val jettyServerVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
@@ -27,18 +29,18 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
     implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
     implementation("org.openapitools:jackson-databind-nullable:$jacksonDatabind")
-    implementation("com.squareup.okhttp3:logging-interceptor:$squareupOkhttpVersion")
-    implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
-    implementation("io.gsonfire:gson-fire:$gsonfireVersion")
-    implementation("org.postgresql:postgresql")
-    implementation("com.google.code.gson:gson:$gsonVersion")
-    implementation("org.mapstruct:mapstruct:$mapstructVersion")
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
-    implementation("io.github.resilience4j:resilience4j-ratelimiter:$resilience4jVersion")
     implementation("org.springframework.retry:spring-retry:$springRetryVersion")
     implementation("org.springframework.boot:spring-boot-starter-aop:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter:$springBootVersion")
-    //implementation("me.paulschwarz:spring-dotenv:$springDotEnvVersion")
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    implementation("org.postgresql:postgresql")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:$resilience4jVersion")
+    implementation("io.gsonfire:gson-fire:$gsonfireVersion")
+    implementation("com.squareup.okhttp3:logging-interceptor:$squareupOkhttpVersion")
+    implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
+    implementation("com.google.code.gson:gson:$gsonVersion")
+
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
      testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
@@ -108,9 +110,6 @@ sourceSets {
     main {
         java {
             srcDirs("src/main/java", layout.buildDirectory.dir("generated/src/main/java").get().asFile)
-        }
-        resources {
-            //include("**/*.env")
         }
     }
 }
