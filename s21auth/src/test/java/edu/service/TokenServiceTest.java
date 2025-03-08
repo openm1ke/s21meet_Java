@@ -1,12 +1,14 @@
 package edu.service;
 
 import edu.dto.TokenResponse;
+import edu.exception.TokenResponseException;
 import edu.model.TokenEntity;
 import edu.repository.TokenRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -38,6 +40,7 @@ class TokenServiceTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
+    @InjectMocks
     private TokenService tokenService;
 
     // Значения для defaultLogin/defaultPassword
@@ -47,6 +50,182 @@ class TokenServiceTest {
     @BeforeEach
     void setUp() {
         tokenService = new TokenService(defaultLogin, defaultPassword, tokenRepository, webClient);
+    }
+
+    @Test
+    void testGetAccessToken_ReturnsExistingToken() {
+        // Подготовка: создаем сущность с токеном, который не истек
+        TokenEntity tokenEntity = new TokenEntity();
+        tokenEntity.setLogin("user1");
+        tokenEntity.setPassword("pass1");
+        tokenEntity.setAccessToken("existingAccessToken");
+        tokenEntity.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+
+        when(tokenRepository.findById("user1")).thenReturn(Optional.of(tokenEntity));
+
+        // Выполнение тестируемого метода
+        String token = tokenService.getAccessToken("user1", "pass1");
+
+        // Проверка: должен вернуть существующий токен, а сохранение в репозитории не должно вызываться
+        assertEquals("existingAccessToken", token);
+        verify(tokenRepository, never()).save(any(TokenEntity.class));
+    }
+
+    @Test
+    void testGetAccessToken_FetchesNewToken() {
+        // Подготовка: токен не найден в репозитории
+        when(tokenRepository.findById("user2")).thenReturn(Optional.empty());
+
+        // Подготовка мока для WebClient
+        TokenResponse tokenResponse = new TokenResponse();
+        tokenResponse.setAccessToken("newAccessToken");
+        tokenResponse.setRefreshToken("newRefreshToken");
+        tokenResponse.setExpiresIn(3600);
+
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(BodyInserters.FormInserter.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(TokenResponse.class)).thenReturn(Mono.just(tokenResponse));
+
+        // Выполнение тестируемого метода
+        String token = tokenService.getAccessToken("user2", "pass2");
+
+        // Проверка: возвращается новый токен и вызывается метод сохранения
+        assertEquals("newAccessToken", token);
+        verify(tokenRepository, times(1)).save(any(TokenEntity.class));
+    }
+
+    @Test
+    void testGetAccessToken_ThrowsExceptionOnError() {
+        // Подготовка: репозиторий возвращает пустой результат
+        when(tokenRepository.findById("user3")).thenReturn(Optional.empty());
+
+        // Настраиваем WebClient так, чтобы он возвращал пустой Mono (или выбрасывал исключение)
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(BodyInserters.FormInserter.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(TokenResponse.class)).thenReturn(Mono.empty());
+
+        // Выполнение и проверка выброшенного исключения
+        TokenResponseException thrown = assertThrows(TokenResponseException.class, () -> {
+            tokenService.getAccessToken("user3", "pass3");
+        });
+        // Проверяем сообщение внешнего исключения
+        assertEquals("Не удалось получить токен", thrown.getMessage());
+        // Проверяем сообщение внутреннего исключения (cause)
+        assertNotNull(thrown.getCause());
+        assertEquals("Получен пустой ответ от сервера токенов", thrown.getCause().getMessage());
+    }
+
+    @Test
+    void testGetAccessToken_requestsNewToken_whenTokenExpiresSoon() {
+        // Создаем токен, который скоро истечет (expiresAt меньше, чем LocalDateTime.now().plusMinutes(1))
+        TokenEntity soonExpiringToken = new TokenEntity();
+        soonExpiringToken.setLogin("userSoon");
+        soonExpiringToken.setPassword("passSoon");
+        soonExpiringToken.setAccessToken("soonExpiringToken");
+        soonExpiringToken.setExpiresAt(LocalDateTime.now().plusSeconds(30)); // менее 1 минуты до истечения
+
+        when(tokenRepository.findById("userSoon")).thenReturn(Optional.of(soonExpiringToken));
+
+        // Настраиваем WebClient для возврата нового токена
+        TokenResponse tokenResponse = new TokenResponse();
+        tokenResponse.setAccessToken("newTokenDueToSoonExpire");
+        tokenResponse.setRefreshToken("newRefresh");
+        tokenResponse.setExpiresIn(3600);
+
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(BodyInserters.FormInserter.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(TokenResponse.class)).thenReturn(Mono.just(tokenResponse));
+
+        // Действие
+        String token = tokenService.getAccessToken("userSoon", "passSoon");
+
+        // Проверка: т.к. существующий токен скоро истекает, должен быть запрошен новый
+        assertEquals("newTokenDueToSoonExpire", token);
+        verify(tokenRepository).save(any(TokenEntity.class));
+    }
+
+    @Test
+    void testGetDefaultAccessToken_ThrowsException() {
+        // Подготовка: для дефолтного пользователя в репозитории ничего нет
+        when(tokenRepository.findById(defaultLogin)).thenReturn(Optional.empty());
+
+        // Настройка WebClient, чтобы возвращался пустой Mono, что вызовет исключение
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(BodyInserters.FormInserter.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(TokenResponse.class)).thenReturn(Mono.empty());
+
+        // Действие и проверка: метод getDefaultAccessToken должен выбросить исключение
+        TokenResponseException ex = assertThrows(TokenResponseException.class, () -> {
+            tokenService.getDefaultAccessToken();
+        });
+        assertEquals("Не удалось получить токен", ex.getMessage());
+    }
+
+    @Test
+    void refreshTokens_updatesToken_whenExpiresAtIsNull() {
+        // Сценарий: у токена отсутствует время истечения
+        TokenEntity tokenWithNullExpires = new TokenEntity();
+        tokenWithNullExpires.setLogin("userNull");
+        tokenWithNullExpires.setPassword("passNull");
+        tokenWithNullExpires.setAccessToken("oldToken");
+        tokenWithNullExpires.setExpiresAt(null);
+
+        when(tokenRepository.findAll()).thenReturn(Collections.singletonList(tokenWithNullExpires));
+
+        // Настраиваем WebClient для получения нового токена
+        TokenResponse tokenResponse = new TokenResponse();
+        tokenResponse.setAccessToken("updatedTokenFromNull");
+        tokenResponse.setRefreshToken("updatedRefresh");
+        tokenResponse.setExpiresIn(3600);
+
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(BodyInserters.FormInserter.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(TokenResponse.class)).thenReturn(Mono.just(tokenResponse));
+
+        // Действие
+        tokenService.refreshTokens();
+
+        // Проверка: убедимся, что новый токен сохранен
+        ArgumentCaptor<TokenEntity> captor = ArgumentCaptor.forClass(TokenEntity.class);
+        verify(tokenRepository).save(captor.capture());
+        TokenEntity savedEntity = captor.getValue();
+        assertEquals("updatedTokenFromNull", savedEntity.getAccessToken());
+    }
+
+    @Test
+    void refreshTokens_handlesException_whenTokenRepositoryFindAllThrows() {
+        // Симулируем ошибку в методе findAll, которая должна быть поймана и не выброшена наружу
+        when(tokenRepository.findAll()).thenThrow(new RuntimeException("Simulated repository error"));
+
+        // Действие: метод refreshTokens не должен выбрасывать исключение наружу
+        assertDoesNotThrow(() -> tokenService.refreshTokens());
+    }
+
+    @Test
+    void testFindByLogin_ReturnsTokenEntity() {
+        // Создаем сущность для пользователя
+        TokenEntity tokenEntity = new TokenEntity();
+        tokenEntity.setLogin("testUser");
+        tokenEntity.setAccessToken("testToken");
+
+        when(tokenRepository.findById("testUser")).thenReturn(Optional.of(tokenEntity));
+
+        // Действие
+        Optional<TokenEntity> result = tokenService.findByLogin("testUser");
+
+        // Проверка: убедимся, что Optional содержит нужный объект
+        assertTrue(result.isPresent());
+        assertEquals("testToken", result.get().getAccessToken());
     }
 
     @Test
@@ -183,24 +362,6 @@ class TokenServiceTest {
     }
 
     @Test
-    void getAccessToken_returnsNull_whenWebClientThrowsException() {
-        when(tokenRepository.findById("userX")).thenReturn(Optional.empty());
-
-        // Настраиваем цепочку вызовов WebClient
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any(BodyInserters.FormInserter.class)))
-                .thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(TokenResponse.class))
-                .thenReturn(Mono.error(new RuntimeException("Simulated error")));
-
-        String result = tokenService.getAccessToken("userX", "passX");
-
-        assertNull(result);
-    }
-
-    @Test
     void refreshTokens_handlesException_whenTokenRefreshFails() {
         TokenEntity expiredToken = new TokenEntity();
         expiredToken.setLogin("userY");
@@ -221,22 +382,5 @@ class TokenServiceTest {
         assertDoesNotThrow(() -> tokenService.refreshTokens());
 
         verify(tokenRepository, never()).save(any());
-    }
-
-    @Test
-    void getDefaultAccessToken_returnsNull_whenExceptionOccurs() {
-        when(tokenRepository.findById(defaultLogin)).thenReturn(Optional.empty());
-
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any(BodyInserters.FormInserter.class)))
-                .thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(TokenResponse.class))
-                .thenReturn(Mono.error(new RuntimeException("Simulated error for default user")));
-
-        String result = tokenService.getDefaultAccessToken();
-
-        assertNull(result);
     }
 }
