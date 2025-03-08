@@ -38,7 +38,7 @@ dependencies {
     implementation("org.springframework.retry:spring-retry:$springRetryVersion")
     implementation("org.springframework.boot:spring-boot-starter-aop:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter:$springBootVersion")
-    implementation("me.paulschwarz:spring-dotenv:$springDotEnvVersion")
+    //implementation("me.paulschwarz:spring-dotenv:$springDotEnvVersion")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
      testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
@@ -110,7 +110,7 @@ sourceSets {
             srcDirs("src/main/java", layout.buildDirectory.dir("generated/src/main/java").get().asFile)
         }
         resources {
-            include("**/*.env")
+            //include("**/*.env")
         }
     }
 }

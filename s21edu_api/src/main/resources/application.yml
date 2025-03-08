@@ -2,10 +2,10 @@ server:
   port: 8082
 spring:
   datasource:
-    url: ${DATA_SOURCE_URL}
-    username: ${DATA_SOURCE_USERNAME}
-    password: ${DATA_SOURCE_PASSWORD}
-    driver-class-name: ${DATA_SOURCE_DRIVER}
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -16,7 +16,7 @@ spring:
         format_sql: false  # Форматировать SQL-запросы для удобства
 
 edu:
-  tokenEndpoint: "http://localhost:8080/api/tokens/default"
+  tokenEndpoint: http://localhost:8080/api/tokens/default
 
 resilience4j:
   ratelimiter:
