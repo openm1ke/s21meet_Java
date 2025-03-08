@@ -1,11 +1,11 @@
 package ru.school21.edu.service;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import ru.school21.edu.ApiException;
-import ru.school21.edu.BaseTestContainer;
+import ru.school21.edu.config.TestClusterApiProxyConfig;
 import ru.school21.edu.exception.NonRetryableApiException;
 import ru.school21.edu.exception.RetryableApiException;
 
@@ -13,14 +13,19 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
+@SpringBootTest(classes = {ru.school21.edu.Application.class, TestClusterApiProxyConfig.class})
+@TestPropertySource(properties = {
+        "cluster.api.enabled=true",
+        "api.client.enabled=true",
+        "token.service.enabled=true",
+        "spring.main.allow-bean-definition-overriding=true"
+})
+class ClusterApiProxyTest {
 
-@TestPropertySource(properties = {"cluster.api.enabled=true", "api.client.enabled=true", "token.service.enabled=true"})
-class ClusterApiProxyTest extends BaseTestContainer {
-
-    @SpyBean
+    @Autowired
     private ClusterApiProxy clusterApiProxy;
 
-    @MockBean
+    @Autowired
     private TokenService tokenService;
 
     @Test
