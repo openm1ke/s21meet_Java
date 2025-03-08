@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import ru.school21.edu.ApiException;
+import ru.school21.edu.BaseTestContainer;
 import ru.school21.edu.config.TestClusterApiProxyConfig;
 import ru.school21.edu.exception.NonRetryableApiException;
 import ru.school21.edu.exception.RetryableApiException;
@@ -20,7 +21,7 @@ import static org.mockito.Mockito.*;
         "token.service.enabled=true",
         "spring.main.allow-bean-definition-overriding=true"
 })
-class ClusterApiProxyTest {
+class ClusterApiProxyTest extends BaseTestContainer {
 
     @Autowired
     private ClusterApiProxy clusterApiProxy;
