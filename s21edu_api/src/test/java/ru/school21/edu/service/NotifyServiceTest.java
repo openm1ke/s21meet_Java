@@ -1,6 +1,5 @@
 package ru.school21.edu.service;
 
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +9,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import ru.school21.edu.BaseTestContainer;
 import ru.school21.edu.model.Online;
-import ru.school21.edu.repository.FriendsRepository;
 import ru.school21.edu.repository.OnlineRepository;
-import ru.school21.edu.repository.WorkplaceRepository;
 
 import java.util.Optional;
 
@@ -46,7 +43,7 @@ class NotifyServiceTest extends BaseTestContainer {
 
         // Проверяем, что для "lucankri" вызвано уведомление об online
         verify(messageSender, atLeastOnce())
-                .sendOnlineNotification(eq("lucankri"), eq(java.util.List.of("703226616")));
+                .sendOnlineNotification("lucankri", java.util.List.of("703226616"));
 
         Online updatedLucankri = onlineRepository.findByLogin("lucankri").orElseThrow();
         assertTrue(updatedLucankri.getIsOnline(), "Статус для lucankri должен стать TRUE");
