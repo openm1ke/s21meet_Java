@@ -3,6 +3,7 @@ package ru.school21.edu.config;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 import ru.school21.edu.ApiClient;
 import ru.school21.edu.service.CampusApiProxy;
 import ru.school21.edu.service.ClusterApiProxy;
@@ -18,6 +19,11 @@ public class ApiClientConfig {
         apiClient.setApiKey(tokenService.getToken());
         apiClient.setApiKeyPrefix("Bearer");
         return apiClient;
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 
     @Bean

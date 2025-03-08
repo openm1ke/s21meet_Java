@@ -1,9 +1,9 @@
 package edu.service;
 
-import edu.exception.TokenResponseException;
-import edu.repository.TokenRepository;
 import edu.dto.TokenResponse;
+import edu.exception.TokenResponseException;
 import edu.model.TokenEntity;
+import edu.repository.TokenRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -12,7 +12,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.yaml.snakeyaml.introspector.Property;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -42,12 +41,14 @@ public class TokenService {
      * Если токен отсутствует или устарел, запрашивает новый.
      */
     public String getAccessToken(String login, String password) {
+
+        TokenEntity tokenEntity = tokenRepository.findById(login).orElse(null);
+        if (tokenEntity != null && tokenEntity.getExpiresAt() != null &&
+                tokenEntity.getExpiresAt().isAfter(LocalDateTime.now().plusMinutes(1))) {
+            return tokenEntity.getAccessToken();
+        }
+
         try {
-            TokenEntity tokenEntity = tokenRepository.findById(login).orElse(null);
-            if (tokenEntity != null && tokenEntity.getExpiresAt() != null &&
-                    tokenEntity.getExpiresAt().isAfter(LocalDateTime.now().plusMinutes(1))) {
-                return tokenEntity.getAccessToken();
-            }
             TokenResponse tokenResponse = requestNewToken(login, password);
 
             TokenEntity newEntity = new TokenEntity();
@@ -59,9 +60,9 @@ public class TokenService {
 
             tokenRepository.save(newEntity);
             return newEntity.getAccessToken();
-        } catch (Exception e) {
-            log.error("Ошибка получения access token для пользователя {}: {}", login, e.getMessage());
-            return null;
+        } catch (TokenResponseException e) {
+            log.error("Ошибка получения access token для пользователя {}: {}", login, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -85,11 +86,13 @@ public class TokenService {
                     .block(); // Получаем результат синхронно
 
             if (tokenResponse == null) {
-                throw new TokenResponseException("Получен пустой ответ от сервера токенов");
+                String emptyTokenResponse = "Получен пустой ответ от сервера токенов";
+                log.error(emptyTokenResponse);
+                throw new TokenResponseException(emptyTokenResponse);
             }
             return tokenResponse;
         } catch (Exception e) {
-            log.error("Ошибка запроса нового токена для пользователя {}: {}", login, e.getMessage());
+            log.error("Ошибка запроса нового токена для пользователя {}: {}", login, e.getMessage(), e);
             throw new TokenResponseException("Не удалось получить токен", e);
         }
     }
@@ -97,9 +100,9 @@ public class TokenService {
     public String getDefaultAccessToken() {
         try {
             return getAccessToken(defaultLogin, defaultPassword);
-        } catch (Exception e) {
-            log.error("Ошибка получения default access token для пользователя {}: {}", defaultLogin, e.getMessage());
-            return null;
+        } catch (TokenResponseException e) {
+            log.error("Ошибка получения default access token для пользователя {}: {}", defaultLogin, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -109,24 +112,26 @@ public class TokenService {
      */
     @Scheduled(fixedDelay = 300000)
     public void refreshTokens() {
+        LocalDateTime now = LocalDateTime.now();
         try {
             tokenRepository.findAll().forEach(tokenEntity -> {
                 if (tokenEntity.getExpiresAt() == null ||
-                        tokenEntity.getExpiresAt().isBefore(LocalDateTime.now().plusMinutes(1))) {
+                        tokenEntity.getExpiresAt().isBefore(now.plusMinutes(1))) {
                     try {
                         TokenResponse tokenResponse = requestNewToken(tokenEntity.getLogin(), tokenEntity.getPassword());
                         tokenEntity.setAccessToken(tokenResponse.getAccessToken());
                         tokenEntity.setRefreshToken(tokenResponse.getRefreshToken());
-                        tokenEntity.setExpiresAt(LocalDateTime.now().plusSeconds(tokenResponse.getExpiresIn()));
+
+                        tokenEntity.setExpiresAt(now.plusSeconds(tokenResponse.getExpiresIn()));
                         tokenRepository.save(tokenEntity);
                         log.info("Токен для {} успешно обновлён.", tokenEntity.getLogin());
                     } catch (Exception e) {
-                        log.error("Ошибка обновления токена для {}: {}", tokenEntity.getLogin(), e.getMessage());
+                        log.error("Ошибка обновления токена для {}: {}", tokenEntity.getLogin(), e.getMessage(), e);
                     }
                 }
             });
         } catch (Exception e) {
-            log.error("Ошибка обновления токенов: {}", e.getMessage());
+            log.error("Ошибка обновления токенов: {}", e.getMessage(), e);
         }
     }
 

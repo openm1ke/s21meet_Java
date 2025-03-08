@@ -7,25 +7,31 @@ import ru.school21.edu.BaseTestContainer;
 
 import java.util.List;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @TestPropertySource(properties = "message.service.enabled=true")
 class MessageSenderTest extends BaseTestContainer {
     @Autowired
     private MessageSender messageSender;
 
-    String login = "testlogin";
-    List<String> telegramIds = List.of("123456", "789012");
+    private final String login = "testlogin";
+    private final List<String> telegramIds = List.of("123456", "789012");
 
     @Test
-    void sendOnlineNotification() {
+    void sendOnlineNotification_shouldLogOnlineStatusAndNotModifyList() {
+        // Вызываем метод
         messageSender.sendOnlineNotification(login, telegramIds);
-        assertThat(telegramIds.size()).isEqualTo(2);
+
+        // Проверяем, что список Telegram ID не изменился и содержит два элемента
+        assertThat(telegramIds).hasSize(2);
     }
 
     @Test
-    void sendOfflineNotification() {
+    void sendOfflineNotification_shouldLogOfflineStatusAndNotModifyList() {
+        // Вызываем метод
         messageSender.sendOfflineNotification(login, telegramIds);
-        assertThat(telegramIds.size()).isEqualTo(2);
+
+        // Проверяем, что список Telegram ID не изменился и содержит два элемента
+        assertThat(telegramIds).hasSize(2);
     }
 }

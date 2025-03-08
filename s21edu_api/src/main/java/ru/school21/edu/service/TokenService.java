@@ -14,8 +14,13 @@ public class TokenService {
     @Value("${edu.tokenEndpoint}")
     private String tokenEndpoint;
 
+    private final RestTemplate restTemplate;
+
+    public TokenService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
     public String getToken() {
-        RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<String> tokenResponse = restTemplate.getForEntity(tokenEndpoint, String.class);
         String token = tokenResponse.getBody();
         if (token == null || token.isEmpty()) {

@@ -32,7 +32,22 @@ public class NotifyService {
 
         for (String login : subscribeLogins) {
             boolean inCampus = workplaceRepository.existsByLogin(login);
-            Online onlineRecord = onlineRepository.findByLogin(login)
+            Online onlineRecord = getOrCreateOnlineRecord(login);
+            boolean currentOnlineStatus = onlineRecord.getIsOnline();
+
+            if (inCampus && !currentOnlineStatus) {
+                updateStatusAndNotify(login, onlineRecord, true);
+            } else if (!inCampus && currentOnlineStatus) {
+                updateStatusAndNotify(login, onlineRecord, false);
+            }
+        }
+    }
+
+    /**
+     * Возвращает существующую запись о состоянии пользователя или создаёт новую, если её нет.
+     */
+    private Online getOrCreateOnlineRecord(String login) {
+        return onlineRepository.findByLogin(login)
                 .orElseGet(() -> {
                     Online newRecord = new Online();
                     newRecord.setId(UUID.randomUUID());
@@ -40,26 +55,37 @@ public class NotifyService {
                     newRecord.setIsOnline(false);
                     return newRecord;
                 });
-            boolean isOnline = onlineRecord.getIsOnline();
-            if (inCampus && !isOnline) {
-                onlineRecord.setIsOnline(true);
-                onlineRepository.save(onlineRecord);
+    }
 
-                List<Friends> subscribers = friendsRepository.findByLoginAndIsSubscribeTrue(login);
-                List<String> telegramIds = subscribers.stream()
-                        .map(Friends::getTelegramId)
-                        .toList();
-                messageSender.sendOnlineNotification(login, telegramIds);
-            } else if (!inCampus && isOnline) {
-                onlineRecord.setIsOnline(false);
-                onlineRepository.save(onlineRecord);
+    /**
+     * Обновляет статус пользователя, сохраняет запись и отправляет уведомление.
+     *
+     * @param login       логин пользователя
+     * @param onlineRecord запись о состоянии пользователя
+     * @param newStatus   новый статус: true - online, false - offline
+     */
+    private void updateStatusAndNotify(String login, Online onlineRecord, boolean newStatus) {
+        Online freshRecord = onlineRepository.findByLogin(login).orElse(onlineRecord);
+        freshRecord.setIsOnline(newStatus);
+        onlineRepository.saveAndFlush(freshRecord);
+        sendNotification(login, newStatus);
+    }
 
-                List<Friends> subscribers = friendsRepository.findByLoginAndIsSubscribeTrue(login);
-                List<String> telegramIds = subscribers.stream()
-                        .map(Friends::getTelegramId)
-                        .toList();
-                messageSender.sendOfflineNotification(login, telegramIds);
-            }
+    /**
+     * Получает подписчиков для пользователя и отправляет соответствующее уведомление.
+     *
+     * @param login  логин пользователя
+     * @param online новый статус, определяющий тип уведомления
+     */
+    private void sendNotification(String login, boolean online) {
+        List<Friends> subscribers = friendsRepository.findByLoginAndIsSubscribeTrue(login);
+        List<String> telegramIds = subscribers.stream()
+                .map(Friends::getTelegramId)
+                .toList();
+        if (online) {
+            messageSender.sendOnlineNotification(login, telegramIds);
+        } else {
+            messageSender.sendOfflineNotification(login, telegramIds);
         }
     }
 }

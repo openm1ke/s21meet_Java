@@ -13,6 +13,14 @@ val mockitoVersion: String by project
 val mapstructVersion: String by project
 val openApiVersion: String by project
 val gsonVersion: String by project
+val jacksonDatabind: String by project
+val squareupOkhttpVersion: String by project
+val gsonfireVersion: String by project
+val springRetryVersion: String by project
+val apacheCommonsVersion: String by project
+val springDotEnvVersion: String by project
+val wireMockVersion: String by project
+val jettyServerVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
@@ -20,24 +28,25 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
     implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
-    implementation("org.openapitools:jackson-databind-nullable:0.2.6")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    implementation("io.gsonfire:gson-fire:1.8.1")
-    implementation("org.postgresql:postgresql")
-    implementation("com.google.code.gson:gson:$gsonVersion")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.mapstruct:mapstruct:$mapstructVersion")
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
-    implementation("io.github.resilience4j:resilience4j-ratelimiter:$resilience4jVersion")
-    implementation("org.springframework.retry:spring-retry:2.0.11")
+    implementation("org.openapitools:jackson-databind-nullable:$jacksonDatabind")
+    implementation("org.springframework.retry:spring-retry:$springRetryVersion")
     implementation("org.springframework.boot:spring-boot-starter-aop:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter:$springBootVersion")
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    implementation("org.postgresql:postgresql")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:$resilience4jVersion")
+    implementation("io.gsonfire:gson-fire:$gsonfireVersion")
+    implementation("com.squareup.okhttp3:logging-interceptor:$squareupOkhttpVersion")
+    implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
+    implementation("com.google.code.gson:gson:$gsonVersion")
+
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
      testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
-    testImplementation("org.apache.commons:commons-compress:1.27.1")
+    testImplementation("org.apache.commons:commons-compress:$apacheCommonsVersion")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
