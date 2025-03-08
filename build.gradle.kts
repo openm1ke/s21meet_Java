@@ -72,10 +72,10 @@ subprojects {
 
 sonarqube {
     properties {
-        property("sonar.projectKey", "openm1ke_s21meet_Java")
-        property("sonar.organization", "openm1ke")
-        property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.token", "cca3e759a8364ae08e243995e3c3439d1b3bf19f")
+        property("sonar.projectKey", env.SONAR_PROJECT_KEY.value)
+        property("sonar.organization", env.SONAR_ORGANIZATION.value)
+        property("sonar.host.url", env.SONAR_HOST_URL.value)
+        property("sonar.token", env.SONAR_TOKEN.value)
         property("sonar.coverage.jacoco.xmlReportPaths", "s21auth/build/reports/jacoco/test/jacocoTestReport.xml," +
                 "s21edu_api/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
