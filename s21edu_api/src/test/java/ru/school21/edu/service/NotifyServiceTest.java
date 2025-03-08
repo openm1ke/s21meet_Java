@@ -4,10 +4,10 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import ru.school21.edu.BaseTestContainer;
+import ru.school21.edu.config.NotifyServiceConfig;
 import ru.school21.edu.model.Online;
 import ru.school21.edu.repository.OnlineRepository;
 
@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
+@SpringBootTest (classes = {ru.school21.edu.Application.class, NotifyServiceConfig.class})
 @Sql(scripts = {"/friends_import.sql", "/online_import.sql", "/workplace_import.sql"})
-@TestPropertySource(properties = "notify.service.enabled=true")
+@TestPropertySource(properties = {"notify.service.enabled=true", "message.service.enabled = true"})
 @Transactional
 class NotifyServiceTest extends BaseTestContainer {
 
@@ -30,7 +30,7 @@ class NotifyServiceTest extends BaseTestContainer {
     @Autowired
     private OnlineRepository onlineRepository;
 
-    @MockBean
+    @Autowired
     private MessageSender messageSender;
 
     @Test
