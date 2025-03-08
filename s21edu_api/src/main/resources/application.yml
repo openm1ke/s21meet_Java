@@ -2,10 +2,10 @@ server:
   port: 8082
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres  # Укажите URL вашей БД
-    username: postgres  # Ваше имя пользователя
-    password: postgres  # Ваш пароль
-    driver-class-name: org.postgresql.Driver
+    url: ${DATA_SOURCE_URL}
+    username: ${DATA_SOURCE_USERNAME}
+    password: ${DATA_SOURCE_PASSWORD}
+    driver-class-name: ${DATA_SOURCE_DRIVER}
 
   jpa:
     hibernate:
