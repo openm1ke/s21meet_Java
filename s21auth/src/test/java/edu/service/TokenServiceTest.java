@@ -14,10 +14,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -94,5 +94,64 @@ class TokenServiceTest {
         );
 
         verify(tokenRepository, never()).save(any(TokenEntity.class)); // Токен не должен быть сохранен
+    }
+
+    @Test
+    void refreshTokens_shouldUpdateExpiredTokens() {
+        TokenEntity expiredToken = new TokenEntity();
+        expiredToken.setLogin(TEST_LOGIN);
+        expiredToken.setAccessToken("expiredToken");
+        expiredToken.setExpiresAt(LocalDateTime.now().minusMinutes(5)); // Истёк
+
+        TokenResponse tokenResponse = new TokenResponse();
+        tokenResponse.setAccessToken(ACCESS_TOKEN);
+        tokenResponse.setRefreshToken(REFRESH_TOKEN);
+        tokenResponse.setExpiresIn(3600);
+
+        when(tokenRepository.findAll()).thenReturn(List.of(expiredToken));
+        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(TokenResponse.class)))
+                .thenReturn(ResponseEntity.ok(tokenResponse));
+
+        tokenService.refreshTokens();
+
+        verify(tokenRepository).save(any(TokenEntity.class));
+    }
+
+    @Test
+    void refreshTokens_shouldNotUpdateValidTokens() {
+        TokenEntity validToken = new TokenEntity();
+        validToken.setLogin(TEST_LOGIN);
+        validToken.setAccessToken(ACCESS_TOKEN);
+        validToken.setExpiresAt(LocalDateTime.now().plusMinutes(10)); // Ещё не истёк
+
+        when(tokenRepository.findAll()).thenReturn(List.of(validToken));
+
+        tokenService.refreshTokens();
+
+        verify(restTemplate, never()).postForEntity(anyString(), any(), eq(TokenResponse.class));
+        verify(tokenRepository, never()).save(any());
+    }
+
+    @Test
+    void findByLogin_shouldReturnTokenIfExists() {
+        TokenEntity tokenEntity = new TokenEntity();
+        tokenEntity.setLogin(TEST_LOGIN);
+        tokenEntity.setAccessToken(ACCESS_TOKEN);
+
+        when(tokenRepository.findById(TEST_LOGIN)).thenReturn(Optional.of(tokenEntity));
+
+        Optional<TokenEntity> result = tokenService.findByLogin(TEST_LOGIN);
+
+        assertTrue(result.isPresent(), "Токен должен быть найден");
+        assertEquals(ACCESS_TOKEN, result.get().getAccessToken(), "Токен должен совпадать");
+    }
+
+    @Test
+    void findByLogin_shouldReturnEmptyIfNotExists() {
+        when(tokenRepository.findById(TEST_LOGIN)).thenReturn(Optional.empty());
+
+        Optional<TokenEntity> result = tokenService.findByLogin(TEST_LOGIN);
+
+        assertFalse(result.isPresent(), "Токен не должен быть найден");
     }
 }
