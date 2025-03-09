@@ -8,14 +8,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.school21.edu.ApiClient;
 import ru.school21.edu.ApiException;
+import ru.school21.edu.model.ClusterMapV1DTO;
 import ru.school21.edu.model.ClusterV1DTO;
 import ru.school21.edu.model.ClustersV1DTO;
+import ru.school21.edu.model.WorkplaceV1DTO;
 import ru.school21.edu.repository.ClusterRepository;
 import ru.school21.edu.repository.WorkplaceRepository;
 
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,5 +73,77 @@ public class CampusServiceTest {
         campusService.getClustersByCampus(CAMPUS_ID);
 
         verify(clusterRepository).saveAllAndFlush(anyList());
+    }
+
+    @Test
+    void getParticipantsByCluster_shouldDeleteOldRecords_whenApiReturnsNull() throws ApiException {
+        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true)).thenReturn(null);
+
+        campusService.getParticipantsByCluster(CLUSTER_ID);
+
+        verify(workplaceRepository).deleteByIdClusterId(CLUSTER_ID);
+        verify(workplaceRepository, never()).saveAllAndFlush(anyList());
+    }
+
+    @Test
+    void getParticipantsByCluster_shouldDeleteOldRecords_whenApiReturnsEmptyList() throws ApiException {
+        ClusterMapV1DTO emptyResponse = new ClusterMapV1DTO();
+        emptyResponse.setClusterMap(List.of());
+
+        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true)).thenReturn(emptyResponse);
+
+        campusService.getParticipantsByCluster(CLUSTER_ID);
+
+        verify(workplaceRepository).deleteByIdClusterId(CLUSTER_ID);
+        verify(workplaceRepository, never()).saveAllAndFlush(anyList());
+    }
+
+    @Test
+    void getParticipantsByCluster_shouldSaveParticipants_whenApiReturnsParticipants() throws ApiException {
+        ClusterMapV1DTO response = new ClusterMapV1DTO();
+        WorkplaceV1DTO participant1 = new WorkplaceV1DTO();
+        participant1.setRow("A");
+        participant1.setNumber(5);
+        participant1.setLogin("user1");
+
+        WorkplaceV1DTO participant2 = new WorkplaceV1DTO();
+        participant2.setRow("B");
+        participant2.setNumber(3);
+        participant2.setLogin("user2");
+
+        response.setClusterMap(List.of(participant1, participant2));
+
+        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true)).thenReturn(response);
+
+        campusService.getParticipantsByCluster(CLUSTER_ID);
+
+        verify(workplaceRepository).deleteByIdClusterId(CLUSTER_ID);
+        verify(workplaceRepository).saveAllAndFlush(anyList());
+    }
+
+    @Test
+    void getParticipantsByCluster_shouldHandleApiException() throws ApiException {
+        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true))
+                .thenThrow(new ApiException(500, "Internal Server Error"));
+
+        // Проверяем, что аспект выбросит RetryableApiException
+        assertThrows(ApiException.class, () ->
+                campusService.getParticipantsByCluster(CLUSTER_ID)
+        );
+
+        verify(workplaceRepository, never()).saveAllAndFlush(anyList());
+    }
+
+    @Test
+    void getParticipantsByCluster_shouldThrowNonRetryableException_whenApiReturns400() throws ApiException {
+        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true))
+                .thenThrow(new ApiException(400, "Bad Request"));
+
+        // Проверяем, что аспект выбросит NonRetryableApiException
+        assertThrows(ApiException.class, () ->
+                campusService.getParticipantsByCluster(CLUSTER_ID)
+        );
+
+        verify(workplaceRepository, never()).saveAllAndFlush(anyList());
     }
 }
