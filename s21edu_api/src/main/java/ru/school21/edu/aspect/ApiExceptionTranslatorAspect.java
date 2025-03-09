@@ -21,10 +21,10 @@ public class ApiExceptionTranslatorAspect {
         } catch (ApiException e) {
             int code = e.getCode();
             if (code == 429 || code == 500) {
-                log.warn("Retryable error in {}: {}", joinPoint.getSignature(), e.getMessage());
+                log.warn("Retryable error in {}: {}", joinPoint.getSignature(), e.getCode());
                 throw new RetryableApiException(code, e.getMessage(), e);
             } else {
-                log.warn("Non-retryable error in {}: {}", joinPoint.getSignature(), e.getMessage());
+                log.warn("Non-retryable error in {}: {}", joinPoint.getSignature(), e.getCode());
                 throw new NonRetryableApiException(code, e.getMessage(), e);
             }
         }

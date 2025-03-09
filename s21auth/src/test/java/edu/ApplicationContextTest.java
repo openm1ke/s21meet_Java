@@ -1,6 +1,6 @@
 package edu;
 
-import edu.config.WebClientConfig;
+import edu.config.RestTemplateConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,7 +22,7 @@ class ApplicationContextTest {
     @Test
     void myConfigBeanIsLoaded() {
         // Пытаемся получить бин конфигурации из контекста
-        WebClientConfig myConfig = context.getBean(WebClientConfig.class);
-        assertNotNull(myConfig, "Бин WebClientConfig должен быть загружен в контексте");
+        RestTemplateConfig myConfig = context.getBean(RestTemplateConfig.class);
+        assertNotNull(myConfig, "Бин RestTemplateConfig должен быть загружен в контексте");
     }
 }
