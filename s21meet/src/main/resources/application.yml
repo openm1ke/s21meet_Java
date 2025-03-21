@@ -1,0 +1,14 @@
+spring:
+  application:
+      name: s21meet
+
+bot:
+  join:
+    url: https://t.me/+lHNmfxVwg11hZmUy
+  admin_id: ${BOT_ADMIN}
+  token: ${BOT_TOKEN}
+  username: PigSnout_bot
+
+logging:
+  level:
+    io.github.resilience4j: INFO
