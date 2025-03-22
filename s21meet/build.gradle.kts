@@ -29,7 +29,13 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
     implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
 
-    implementation("org.telegram:telegrambots:6.9.7.1")
+    implementation("org.telegram:telegrambots-meta:8.2.0")
+    implementation("org.telegram:telegrambots-longpolling:8.2.0")
+    implementation("org.telegram:telegrambots-client:8.2.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // https://mvnrepository.com/artifact/me.paulschwarz/spring-dotenv
+    implementation("me.paulschwarz:spring-dotenv:4.0.0")
 
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
