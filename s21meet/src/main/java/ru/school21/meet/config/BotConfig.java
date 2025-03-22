@@ -1,12 +1,14 @@
 package ru.school21.meet.config;
 
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.telegram.telegrambots.meta.TelegramBotsApi;
-import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-import ru.school21.meet.bot.S21MeetBot;
+import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
+import org.telegram.telegrambots.longpolling.BotSession;
+import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
+import ru.school21.meet.bot.SimpleBot;
 
 @Slf4j
 @Configuration
@@ -15,25 +17,25 @@ public class BotConfig {
     @Value("${bot.token}")
     private String botToken;
 
-    @Value("${bot.username}")
-    private String botUsername;
-
     @Bean
-    public S21MeetBot s21MeetBot() {
-        return new S21MeetBot();
+    public OkHttpTelegramClient telegramClient() {
+        return new OkHttpTelegramClient(botToken);
     }
 
-    /**
-     * Registers the bot with the Telegram API and initializes the command menu.
-     * @param s21MeetBot The bot to register.
-     * @return The TelegramBotsApi instance.
-     * @throws Exception If there is an error registering the bot.
-     */
     @Bean
-    public TelegramBotsApi telegramBotsApi(S21MeetBot s21MeetBot) throws Exception {
-        TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
-        telegramBotsApi.registerBot(s21MeetBot);
-        s21MeetBot.initializeCommandMenu();
-        return telegramBotsApi;
+    public TelegramBotsLongPollingApplication botsApplication() {
+        return new TelegramBotsLongPollingApplication();
+    }
+
+    @Bean
+    public SimpleBot simpleBot(OkHttpTelegramClient telegramClient) {
+        return new SimpleBot(telegramClient);
+    }
+
+    @Bean
+    public BotSession botSession(TelegramBotsLongPollingApplication botsApplication, SimpleBot simpleBot) throws Exception {
+        BotSession session = botsApplication.registerBot(botToken, simpleBot);
+        log.info("✅ Telegram бот успешно запущен: {}", session.isRunning());
+        return session;
     }
 }
