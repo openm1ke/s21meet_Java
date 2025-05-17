@@ -5,6 +5,7 @@ import org.mockito.ArgumentCaptor;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.chat.Chat;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -22,11 +23,14 @@ class SimpleBotTest {
         // Arrange
         Update update = mock(Update.class);
         Message message = mock(Message.class);
+        Chat chat = mock(Chat.class);
 
         when(update.hasMessage()).thenReturn(true);
         when(update.getMessage()).thenReturn(message);
         when(message.hasText()).thenReturn(true);
         when(message.getChatId()).thenReturn(12345L);
+        when(message.getChat()).thenReturn(chat);
+        when(chat.getType()).thenReturn("private");
         when(message.getText()).thenReturn("Привет, бот!");
 
         // Act
