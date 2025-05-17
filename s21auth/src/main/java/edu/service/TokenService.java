@@ -86,15 +86,19 @@ public class TokenService {
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
         try {
             ResponseEntity<TokenResponse> response = restTemplate.postForEntity(tokenUri, requestEntity, TokenResponse.class);
-            if (response.hasBody() && response.getBody().getAccessToken() != null) {
-                log.info("Получен новый токен для {}: {}", login, response.getBody().getAccessToken().substring(0, 10) + "...");
-                return response.getBody();
+            if (response.hasBody()) {
+                TokenResponse tokenResponse = response.getBody();
+                if (tokenResponse != null && tokenResponse.getAccessToken() != null) {
+                    log.info("Получен новый токен для {}: {}", login, tokenResponse.getAccessToken().substring(0, 10) + "...");
+                    return tokenResponse;
+                }
             }
+            log.warn("Пустой ответ при получении токена для {}", login);
+            throw new TokenResponseException("Не удалось получить токен — пустой ответ");
         } catch (Exception e) {
-            log.error("Ошибка запроса нового токена для {}: null response", login);
-            throw new TokenResponseException("Не удалось получить токен");
+            log.error("Ошибка запроса нового токена для {}: {}", login, e.getMessage(), e);
+            throw new TokenResponseException("Не удалось получить токен", e);
         }
-        throw new TokenResponseException("Не удалось получить токен");
     }
 
     public String getDefaultAccessToken() {
