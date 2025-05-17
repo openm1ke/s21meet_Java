@@ -86,7 +86,7 @@ public class TokenService {
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
         try {
             ResponseEntity<TokenResponse> response = restTemplate.postForEntity(tokenUri, requestEntity, TokenResponse.class);
-            if (response != null && response.hasBody()) {
+            if (response.hasBody() && response.getBody().getAccessToken() != null) {
                 log.info("Получен новый токен для {}: {}", login, response.getBody().getAccessToken().substring(0, 10) + "...");
                 return response.getBody();
             }
