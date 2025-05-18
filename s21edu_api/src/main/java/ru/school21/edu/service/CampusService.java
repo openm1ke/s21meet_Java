@@ -59,7 +59,7 @@ public class CampusService {
             try {
                 getClustersByCampus(UUID.fromString(campus));
             } catch (ApiException e) {
-                log.info("Ошибка получения кластеров для кампуса {}", campus);
+                log.error("Ошибка получения кластеров для кампуса {}", campus);
             }
         });
 
@@ -69,7 +69,7 @@ public class CampusService {
             try {
                 getParticipantsByCluster(cluster.getClusterId());
             } catch (ApiException e) {
-                log.info("Ошибка получения участников для кластера {}", cluster.getClusterId());
+                log.error("Ошибка получения участников для кластера {}", cluster.getClusterId());
             }
         });
 
@@ -91,7 +91,7 @@ public class CampusService {
             var clusterMap = response.getClusterMap();
             log.info("Получено {} участников для кластера {} на странице", clusterMap.size(), clusterId);
             // Для каждого полученного логина маппим в сущность и сохраняем
-            ArrayList<Workplace> workplaces = new ArrayList<>();
+            ArrayList<Workplace> workplaces = new ArrayList<>(clusterMap.size());
             for (var workplace : clusterMap) {
                 WorkplaceId workplaceId = new WorkplaceId(clusterId, workplace.getRow(), workplace.getNumber());
                 Workplace workplaceEntity = new Workplace();
@@ -111,8 +111,14 @@ public class CampusService {
      */
     public void getClustersByCampus(UUID campusId) throws ApiException {
         log.info("Получение списка кластеров для кампуса {}", campusId);
-        var clusters = campusApi.getClustersByCampus(campusId).getClusters();
-        ArrayList<Cluster> clusterEntities = new ArrayList<>();
+        var response = campusApi.getClustersByCampus(campusId);
+
+        if (response == null) {
+            log.warn("API вернул null для кампуса {}", campusId);
+            return; // Выход без ошибки
+        }
+        var clusters = response.getClusters();
+        ArrayList<Cluster> clusterEntities = new ArrayList<>(clusters.size());
         for (var cluster : clusters) {
             Cluster clusterEntity = new Cluster();
             clusterEntity.setClusterId(cluster.getId());
