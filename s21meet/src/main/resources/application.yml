@@ -1,0 +1,10 @@
+spring:
+  application:
+      name: s21meet
+
+bot:
+  token: ${BOT_TOKEN}
+
+logging:
+  level:
+    io.github.resilience4j: INFO

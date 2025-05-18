@@ -32,10 +32,8 @@ subprojects {
         }
     }
 
-    configurations {
-        compileOnly {
-            extendsFrom(configurations.annotationProcessor.get())
-        }
+    tasks.withType<JavaCompile> {
+        options.annotationProcessorPath = configurations.annotationProcessor.get()
     }
 
     dependencies {

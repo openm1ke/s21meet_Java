@@ -6,7 +6,7 @@ import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestTemplate;
 
 
 @ActiveProfiles("test")
@@ -20,8 +20,8 @@ public class TokenControllerConfig {
         String defaultPassword = "dummyPassword";
         // Мокаем зависимости
         TokenRepository tokenRepository = Mockito.mock(TokenRepository.class);
-        WebClient webClient = Mockito.mock(WebClient.class);
+        RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
         // Возвращаем spy, чтобы можно было переопределить отдельные методы
-        return Mockito.spy(new TokenService(defaultLogin, defaultPassword, tokenRepository, webClient));
+        return Mockito.spy(new TokenService(defaultLogin, defaultPassword, tokenRepository, restTemplate));
     }
 }
