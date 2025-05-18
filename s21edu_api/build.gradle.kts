@@ -18,9 +18,6 @@ val squareupOkhttpVersion: String by project
 val gsonfireVersion: String by project
 val springRetryVersion: String by project
 val apacheCommonsVersion: String by project
-val springDotEnvVersion: String by project
-val wireMockVersion: String by project
-val jettyServerVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
@@ -102,8 +99,19 @@ tasks.compileJava {
     dependsOn(tasks.openApiGenerate)
 }
 
+
+tasks.getByName<Jar>("jar") {
+    enabled = true
+}
+
+tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    enabled = true
+    archiveFileName.set("${project.name}.jar")
+    mainClass.set("ru.school21.edu.Application")
+}
+
 springBoot {
-    mainClass.set("ru.school21.edu.Application")  // Указываем путь к главному классу
+    mainClass.set("ru.school21.edu.Application")
 }
 
 sourceSets {
