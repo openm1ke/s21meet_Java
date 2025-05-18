@@ -1,0 +1,38 @@
+{
+  "properties": [
+    {
+      "name": "api.client.enabled",
+      "type": "java.lang.String",
+      "description": "Description for api.client.enabled."
+    },
+    {
+      "name": "campus.api.enabled",
+      "type": "java.lang.String",
+      "description": "Description for campus.api.enabled."
+    },
+    {
+      "name": "token.service.enabled",
+      "type": "java.lang.String",
+      "description": "Description for token.service.enabled."
+    },
+    {
+      "name": "message.service.enabled",
+      "type": "java.lang.String",
+      "description": "Description for message.service.enabled."
+    },
+    {
+      "name": "campus.service.enabled",
+      "type": "java.lang.String",
+      "description": "Description for campus.service.enabled."
+    },
+    {
+      "name": "notify.service.enabled",
+      "type": "java.lang.String",
+      "description": "Description for notify.service.enabled."
+    },
+    {
+      "name": "cluster.api.enabled",
+      "type": "java.lang.String",
+      "description": "Description for cluster.api.enabled."
+    }
+  ] }

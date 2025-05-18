@@ -26,7 +26,15 @@ resilience4j:
         limitRefreshPeriod: 100ms
         timeoutDuration: 1s
 
-
 logging:
   level:
     io.github.resilience4j: INFO
+
+notify.service.enabled: true
+message.service.enabled: true
+token.service.enabled: true
+cluster.api.enabled: true
+api.client.enabled: true
+campus:
+  api.enabled: true
+  service.enabled: true
