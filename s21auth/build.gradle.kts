@@ -17,6 +17,16 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-webflux")
 }
 
+tasks.getByName<Jar>("jar") {
+    enabled = true
+}
+
+tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    enabled = true
+    archiveFileName.set("${project.name}.jar")
+    mainClass.set("edu.AuthApplication")
+}
+
 springBoot {
     mainClass.set("edu.AuthApplication")
 }

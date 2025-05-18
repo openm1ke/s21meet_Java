@@ -81,3 +81,14 @@ sonarqube {
         property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**")
     }
 }
+
+tasks.register("buildAllJars") {
+    group = "build"
+    description = "Собирает bootJar для всех модулей"
+
+    dependsOn(
+        ":s21auth:bootJar",
+        ":s21edu_api:bootJar",
+        ":s21meet:bootJar"
+    )
+}
