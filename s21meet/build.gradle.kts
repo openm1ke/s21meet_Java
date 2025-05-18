@@ -5,23 +5,15 @@ plugins {
     id("org.openapi.generator") version "7.11.0"
 }
 
-
 val springBootVersion: String by project
 val junitJupiterVersion: String by project
 val testcontainersVersion: String by project
-val resilience4jVersion: String by project
 val mockitoVersion: String by project
 val mapstructVersion: String by project
 val openApiVersion: String by project
-val gsonVersion: String by project
-val jacksonDatabind: String by project
 val squareupOkhttpVersion: String by project
-val gsonfireVersion: String by project
-val springRetryVersion: String by project
 val apacheCommonsVersion: String by project
 val springDotEnvVersion: String by project
-val wireMockVersion: String by project
-val jettyServerVersion: String by project
 val telegramBotsVersion: String by project
 
 dependencies {
@@ -61,6 +53,11 @@ configurations.all {
     }
 }
 
+tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    enabled = true
+    archiveFileName.set("${project.name}.jar")
+    mainClass.set("ru.school21.meet.Application")
+}
 
 springBoot {
     mainClass.set("ru.school21.meet.Application")
