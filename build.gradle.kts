@@ -28,7 +28,7 @@ subprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(21)
         }
     }
 
@@ -75,7 +75,7 @@ sonarqube {
         property("sonar.host.url", env.SONAR_HOST_URL.value)
         property("sonar.token", env.SONAR_TOKEN.value)
         property("sonar.coverage.jacoco.xmlReportPaths", "s21auth/build/reports/jacoco/test/jacocoTestReport.xml," +
-                "s21edu_api/build/reports/jacoco/test/jacocoTestReport.xml")
+                "s21edu/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
         property("sonar.exclusions", "**/generated/**, **/openapi/**")
         property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**")
@@ -88,7 +88,7 @@ tasks.register("buildAllJars") {
 
     dependsOn(
         ":s21auth:bootJar",
-        ":s21edu_api:bootJar",
-        ":s21meet:bootJar"
+        ":s21edu:bootJar",
+        ":s21bot:bootJar"
     )
 }
