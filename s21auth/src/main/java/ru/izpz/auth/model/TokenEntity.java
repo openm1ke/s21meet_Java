@@ -17,10 +17,8 @@ import java.time.LocalDateTime;
 public class TokenEntity {
 
     @Id
-    private String login; // Используем логин как первичный ключ
+    private String login;
 
-    // Для простоты здесь пароль сохраняется в открытом виде,
-    // но в реальном приложении это не рекомендуется.
     private String password;
 
     @Column(columnDefinition = "TEXT")
@@ -29,6 +27,5 @@ public class TokenEntity {
     @Column(columnDefinition = "TEXT")
     private String refreshToken;
 
-    // Время истечения срока действия access token
     private LocalDateTime expiresAt;
 }

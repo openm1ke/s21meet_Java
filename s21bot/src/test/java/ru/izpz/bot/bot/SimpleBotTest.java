@@ -20,7 +20,6 @@ class SimpleBotTest {
 
     @Test
     void consume_ShouldSendCorrectResponse_WhenUpdateHasTextMessage() throws TelegramApiException {
-        // Arrange
         Update update = mock(Update.class);
         Message message = mock(Message.class);
         Chat chat = mock(Chat.class);
@@ -33,10 +32,8 @@ class SimpleBotTest {
         when(chat.getType()).thenReturn("private");
         when(message.getText()).thenReturn("Привет, бот!");
 
-        // Act
         simpleBot.consume(update);
 
-        // Assert
         ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
         verify(telegramClient, times(1)).execute(captor.capture());
 
@@ -47,7 +44,6 @@ class SimpleBotTest {
 
     @Test
     void consume_ShouldNotSendMessage_WhenUpdateHasNoTextMessage() throws TelegramApiException {
-        // Arrange
         Update update = mock(Update.class);
         Message message = mock(Message.class);
 
@@ -55,16 +51,13 @@ class SimpleBotTest {
         when(update.getMessage()).thenReturn(message);
         when(message.hasText()).thenReturn(false);
 
-        // Act
         simpleBot.consume(update);
 
-        // Assert
         verify(telegramClient, never()).execute((SendDocument) any());
     }
 
     @Test
     void consume_ShouldHandleException_WhenTelegramClientThrowsException() throws TelegramApiException {
-        // Arrange
         Update update = new Update();
         Message message = mock(Message.class);
         when(message.getChatId()).thenReturn(12345L);
@@ -74,7 +67,6 @@ class SimpleBotTest {
         doThrow(new TelegramApiException("API error"))
                 .when(telegramClient).execute((SendDocument) any());
 
-        // Act & Assert (просто проверяем, что исключение не бросается дальше)
         assertDoesNotThrow(() -> simpleBot.consume(update));
     }
 }

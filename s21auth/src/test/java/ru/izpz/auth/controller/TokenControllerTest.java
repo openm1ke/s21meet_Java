@@ -62,7 +62,6 @@ class TokenControllerTest {
         request.setLogin("user1");
         request.setPassword("pass1");
 
-        // Подменяем результат без вызова реального метода
         doReturn(null).when(tokenService).getAccessToken("user1", "pass1");
 
         mockMvc.perform(post("/api/tokens")
