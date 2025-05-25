@@ -38,6 +38,7 @@ subprojects {
 
     dependencies {
         implementation("org.springframework.boot:spring-boot-starter")
+        implementation("com.squareup.okhttp3:okhttp:4.11.0")
         compileOnly("org.projectlombok:lombok")
         annotationProcessor("org.projectlombok:lombok")
         testImplementation("org.springframework.boot:spring-boot-starter-test")
