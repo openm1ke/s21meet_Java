@@ -10,7 +10,7 @@ import ru.izpz.edu.BaseTestContainer;
 import ru.izpz.edu.config.NotifyServiceConfig;
 import ru.izpz.edu.model.Online;
 import ru.izpz.edu.repository.OnlineRepository;
-import ru.izpz.edu.s21EduApplication;
+import ru.izpz.edu.S21EduApplication;
 
 import java.util.Optional;
 
@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest (classes = {s21EduApplication.class, NotifyServiceConfig.class})
+@SpringBootTest (classes = {S21EduApplication.class, NotifyServiceConfig.class})
 @Sql(scripts = {"/friends_import.sql", "/online_import.sql", "/workplace_import.sql"})
 @TestPropertySource(properties = {"notify.service.enabled=true", "message.service.enabled = true"})
 @Transactional

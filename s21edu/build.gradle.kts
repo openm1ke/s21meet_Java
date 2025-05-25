@@ -107,11 +107,11 @@ tasks.getByName<Jar>("jar") {
 tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     enabled = true
     archiveFileName.set("${project.name}.jar")
-    mainClass.set("ru.izpz.edu.s21EduApplication")
+    mainClass.set("ru.izpz.edu.S21EduApplication")
 }
 
 springBoot {
-    mainClass.set("ru.izpz.edu.s21EduApplication")
+    mainClass.set("ru.izpz.edu.S21EduApplication")
 }
 
 sourceSets {

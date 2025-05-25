@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import ru.izpz.edu.ApiException;
 import ru.izpz.edu.BaseTestContainer;
+import ru.izpz.edu.S21EduApplication;
 import ru.izpz.edu.config.TestClusterApiProxyConfig;
 import ru.izpz.edu.exception.NonRetryableApiException;
 import ru.izpz.edu.exception.RetryableApiException;
@@ -14,7 +15,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest(classes = {ru.izpz.edu.s21EduApplication.class, TestClusterApiProxyConfig.class})
+@SpringBootTest(classes = {S21EduApplication.class, TestClusterApiProxyConfig.class})
 @TestPropertySource(properties = {
         "cluster.api.enabled=true",
         "api.client.enabled=true",
