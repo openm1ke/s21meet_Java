@@ -1,0 +1,13 @@
+server:
+  port: 8083
+
+spring:
+  application:
+      name: s21bot
+
+bot:
+  token: ${BOT_TOKEN}
+
+logging:
+  level:
+    io.github.resilience4j: INFO

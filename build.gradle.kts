@@ -28,7 +28,7 @@ subprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(21)
         }
     }
 
@@ -42,6 +42,9 @@ subprojects {
         annotationProcessor("org.projectlombok:lombok")
         testImplementation("org.springframework.boot:spring-boot-starter-test")
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+        configurations.all {
+            exclude(group = "org.slf4j", module = "slf4j-simple")
+        }
     }
 
     tasks.withType<Test>().configureEach {
@@ -50,7 +53,7 @@ subprojects {
 
     plugins.withId("jacoco") {
         jacoco {
-            toolVersion = "0.8.12" // укажите актуальную версию
+            toolVersion = "0.8.12"
         }
 
         tasks.withType<Test> {
@@ -60,7 +63,7 @@ subprojects {
 
         tasks.named<JacocoReport>("jacocoTestReport") {
             reports {
-                xml.required.set(true)  // XML-отчёт нужен Sonar
+                xml.required.set(true)
                 html.required.set(true)
                 csv.required.set(false)
             }
@@ -75,7 +78,7 @@ sonarqube {
         property("sonar.host.url", env.SONAR_HOST_URL.value)
         property("sonar.token", env.SONAR_TOKEN.value)
         property("sonar.coverage.jacoco.xmlReportPaths", "s21auth/build/reports/jacoco/test/jacocoTestReport.xml," +
-                "s21edu_api/build/reports/jacoco/test/jacocoTestReport.xml")
+                "s21edu/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
         property("sonar.exclusions", "**/generated/**, **/openapi/**")
         property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**")
@@ -88,7 +91,7 @@ tasks.register("buildAllJars") {
 
     dependsOn(
         ":s21auth:bootJar",
-        ":s21edu_api:bootJar",
-        ":s21meet:bootJar"
+        ":s21edu:bootJar",
+        ":s21bot:bootJar"
     )
 }
