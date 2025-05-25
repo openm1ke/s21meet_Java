@@ -27,9 +27,9 @@ tasks.getByName<Jar>("jar") {
 tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     enabled = true
     archiveFileName.set("${project.name}.jar")
-    mainClass.set("ru.izpz.auth.s21AuthApplication")
+    mainClass.set("ru.izpz.auth.S21AuthApplication")
 }
 
 springBoot {
-    mainClass.set("ru.izpz.auth.s21AuthApplication")
+    mainClass.set("ru.izpz.auth.S21AuthApplication")
 }

@@ -5,12 +5,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
+import ru.izpz.bot.S21BotApplication;
 import ru.izpz.bot.bot.SimpleBot;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-@SpringBootTest(classes = ru.izpz.bot.s21BotApplication.class)
+@SpringBootTest(classes = S21BotApplication.class)
 @Import(BotConfig.class)
 class BotConfigTest {
 

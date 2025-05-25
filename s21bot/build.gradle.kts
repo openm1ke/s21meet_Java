@@ -56,9 +56,9 @@ configurations.all {
 tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     enabled = true
     archiveFileName.set("${project.name}.jar")
-    mainClass.set("ru.izpz.meet.s21BotApplication")
+    mainClass.set("ru.izpz.bot.S21BotApplication")
 }
 
 springBoot {
-    mainClass.set("ru.izpz.meet.s21BotApplication")
+    mainClass.set("ru.izpz.bot.S21BotApplication")
 }

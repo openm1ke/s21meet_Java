@@ -16,9 +16,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableRetry
 @EnableAsync
 @EnableAspectJAutoProxy(proxyTargetClass = true)
-public class s21EduApplication {
+public class S21EduApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(s21EduApplication.class, args);
+        SpringApplication.run(S21EduApplication.class, args);
     }
 }

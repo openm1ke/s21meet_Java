@@ -38,11 +38,13 @@ subprojects {
 
     dependencies {
         implementation("org.springframework.boot:spring-boot-starter")
-        implementation("com.squareup.okhttp3:okhttp:4.11.0")
         compileOnly("org.projectlombok:lombok")
         annotationProcessor("org.projectlombok:lombok")
         testImplementation("org.springframework.boot:spring-boot-starter-test")
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+        configurations.all {
+            exclude(group = "org.slf4j", module = "slf4j-simple")
+        }
     }
 
     tasks.withType<Test>().configureEach {
@@ -51,7 +53,7 @@ subprojects {
 
     plugins.withId("jacoco") {
         jacoco {
-            toolVersion = "0.8.12" // укажите актуальную версию
+            toolVersion = "0.8.12"
         }
 
         tasks.withType<Test> {
@@ -61,7 +63,7 @@ subprojects {
 
         tasks.named<JacocoReport>("jacocoTestReport") {
             reports {
-                xml.required.set(true)  // XML-отчёт нужен Sonar
+                xml.required.set(true)
                 html.required.set(true)
                 csv.required.set(false)
             }
