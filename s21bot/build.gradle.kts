@@ -15,17 +15,18 @@ val squareupOkhttpVersion: String by project
 val apacheCommonsVersion: String by project
 val springDotEnvVersion: String by project
 val telegramBotsVersion: String by project
+val okioJvmVersion: String by project
 
 dependencies {
 
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
     implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
-
     implementation("org.telegram:telegrambots-meta:$telegramBotsVersion")
     implementation("org.telegram:telegrambots-longpolling:$telegramBotsVersion")
     implementation("org.telegram:telegrambots-client:$telegramBotsVersion")
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
+    implementation("com.squareup.okio:okio-jvm:$okioJvmVersion")
     implementation("me.paulschwarz:spring-dotenv:$springDotEnvVersion")
 
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")

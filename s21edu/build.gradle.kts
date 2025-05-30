@@ -18,6 +18,7 @@ val squareupOkhttpVersion: String by project
 val gsonfireVersion: String by project
 val springRetryVersion: String by project
 val apacheCommonsVersion: String by project
+val okioJvmVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
@@ -35,11 +36,12 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-ratelimiter:$resilience4jVersion")
     implementation("io.gsonfire:gson-fire:$gsonfireVersion")
     implementation("com.squareup.okhttp3:logging-interceptor:$squareupOkhttpVersion")
+    implementation("com.squareup.okio:okio-jvm:$okioJvmVersion")
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
     implementation("com.google.code.gson:gson:$gsonVersion")
 
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
-     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
+    testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
