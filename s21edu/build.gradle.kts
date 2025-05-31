@@ -1,8 +1,8 @@
 plugins {
     java
-    id("org.springframework.boot") version "3.4.3"
+    id("org.springframework.boot") version "3.5.0"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.openapi.generator") version "7.11.0"
+    id("org.openapi.generator") version "7.13.0"
 }
 
 val springBootVersion: String by project
@@ -25,6 +25,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
     implementation("org.openapitools:jackson-databind-nullable:$jacksonDatabind")
     implementation("org.springframework.retry:spring-retry:$springRetryVersion")
