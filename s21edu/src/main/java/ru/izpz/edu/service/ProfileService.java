@@ -2,9 +2,10 @@ package ru.izpz.edu.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.izpz.edu.dto.ProfileDto;
+import ru.izpz.dto.ProfileDto;
+import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.model.Profile;
-import ru.izpz.edu.model.ProfileStatus;
+import ru.izpz.dto.ProfileStatus;
 import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
 
@@ -12,18 +13,19 @@ import ru.izpz.edu.repository.ProfileValidationRepository;
 @RequiredArgsConstructor
 public class ProfileService {
 
+    private final ProfileMapper profileMapper;
     private final ProfileRepository profileRepository;
     private final ProfileValidationRepository profileValidationRepository;
 
     public ProfileDto viewProfile(String telegramId) {
         return profileRepository.findByTelegramId(telegramId)
-            .map(ProfileDto::fromEntity)
+            .map(profileMapper::toDto)
             .orElseGet(() -> {
                 Profile profile = new Profile();
                 profile.setTelegramId(telegramId);
                 profile.setStatus(ProfileStatus.CREATED);
                 Profile saved = profileRepository.save(profile);
-                return ProfileDto.fromEntity(saved);
+                return profileMapper.toDto(saved);
             });
     }
 }

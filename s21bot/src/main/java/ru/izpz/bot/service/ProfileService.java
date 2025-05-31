@@ -3,8 +3,8 @@ package ru.izpz.bot.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.izpz.bot.client.ProfileClient;
-import ru.izpz.bot.dto.ProfileDto;
-import ru.izpz.bot.dto.ProfileRequest;
+import ru.izpz.dto.ProfileDto;
+import ru.izpz.dto.ProfileRequest;
 
 @Service
 @RequiredArgsConstructor

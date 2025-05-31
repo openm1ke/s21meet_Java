@@ -1,4 +1,4 @@
-package ru.izpz.bot.dto;
+package ru.izpz.dto;
 
 public record ProfileDto(
         String telegramId,

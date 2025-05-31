@@ -21,6 +21,8 @@ val okioJvmVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
+    implementation(project(":common"))
+    implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
@@ -44,6 +46,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
     testImplementation("org.apache.commons:commons-compress:$apacheCommonsVersion")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")

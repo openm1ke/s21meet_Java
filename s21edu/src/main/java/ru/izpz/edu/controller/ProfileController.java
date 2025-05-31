@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ru.izpz.edu.dto.ProfileDto;
-import ru.izpz.edu.dto.ProfileRequest;
+import ru.izpz.dto.ProfileDto;
+import ru.izpz.dto.ProfileRequest;
 import ru.izpz.edu.service.ProfileService;
 
 @Slf4j
