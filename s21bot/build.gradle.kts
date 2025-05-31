@@ -19,7 +19,8 @@ val openFeignVersion: String by project
 val springSecurityCryptoVersion: String by project
 
 dependencies {
-
+    implementation(project(":common"))
+    implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -40,6 +41,7 @@ dependencies {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
 
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.apache.commons:commons-compress:$apacheCommonsVersion")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")

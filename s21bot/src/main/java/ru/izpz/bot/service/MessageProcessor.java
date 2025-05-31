@@ -10,8 +10,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.chat.Chat;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import ru.izpz.bot.dto.ProfileDto;
-import ru.izpz.bot.dto.ProfileRequest;
+import ru.izpz.dto.ProfileDto;
+import ru.izpz.dto.ProfileRequest;
 
 @Slf4j
 @Service

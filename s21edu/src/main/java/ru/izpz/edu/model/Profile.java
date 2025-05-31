@@ -1,5 +1,6 @@
 package ru.izpz.edu.model;
 
+import ru.izpz.dto.ProfileStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

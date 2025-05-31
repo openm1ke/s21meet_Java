@@ -38,10 +38,8 @@ subprojects {
     }
 
     dependencies {
-        implementation("org.springframework.boot:spring-boot-starter")
         compileOnly("org.projectlombok:lombok")
         annotationProcessor("org.projectlombok:lombok")
-        testImplementation("org.springframework.boot:spring-boot-starter-test")
         configurations.all {
             exclude(group = "org.slf4j", module = "slf4j-simple")
         }

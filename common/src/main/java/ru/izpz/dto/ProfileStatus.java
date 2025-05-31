@@ -1,4 +1,4 @@
-package ru.izpz.edu.model;
+package ru.izpz.dto;
 
 public enum ProfileStatus {
     CREATED,
