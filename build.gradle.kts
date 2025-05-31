@@ -2,11 +2,13 @@ plugins {
     java
     id("jacoco")
     id("jacoco-report-aggregation")
-    id("org.sonarqube") version "6.0.1.5171"
-    id("org.springframework.boot") version "3.4.3"
+    id("org.sonarqube") version "6.2.0.5505"
+    id("org.springframework.boot") version "3.5.0"
     id("io.spring.dependency-management") version "1.1.7"
     id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
+
+val junitVersion: String by project
 
 allprojects {
     group = "ru.izpz"
@@ -41,7 +43,9 @@ subprojects {
         compileOnly("org.projectlombok:lombok")
         annotationProcessor("org.projectlombok:lombok")
         testImplementation("org.springframework.boot:spring-boot-starter-test")
-        testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+        testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
+        testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")
+        testRuntimeOnly("org.junit.platform:junit-platform-launcher:${junitVersion}")
         configurations.all {
             exclude(group = "org.slf4j", module = "slf4j-simple")
         }

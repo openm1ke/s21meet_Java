@@ -1,5 +1,6 @@
 package ru.izpz.auth.controller;
 
+import lombok.RequiredArgsConstructor;
 import ru.izpz.auth.dto.TokenRequest;
 import ru.izpz.auth.service.TokenService;
 import jakarta.validation.Valid;
@@ -10,14 +11,11 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/tokens")
 public class TokenController {
 
     private final TokenService tokenService;
-
-    public TokenController(TokenService tokenService) {
-        this.tokenService = tokenService;
-    }
 
     @PostMapping
     public ResponseEntity<String> generateToken(@Valid @RequestBody TokenRequest request) {
