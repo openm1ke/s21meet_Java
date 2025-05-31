@@ -6,7 +6,6 @@ plugins {
 }
 
 val springBootVersion: String by project
-val junitJupiterVersion: String by project
 val testcontainersVersion: String by project
 val resilience4jVersion: String by project
 val mockitoVersion: String by project
@@ -50,10 +49,6 @@ dependencies {
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion")
 }
 
 openApiGenerate {

@@ -8,7 +8,6 @@ plugins {
     id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
 
-val junitVersion: String by project
 
 allprojects {
     group = "ru.izpz"
@@ -43,9 +42,6 @@ subprojects {
         compileOnly("org.projectlombok:lombok")
         annotationProcessor("org.projectlombok:lombok")
         testImplementation("org.springframework.boot:spring-boot-starter-test")
-        testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
-        testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")
-        testRuntimeOnly("org.junit.platform:junit-platform-launcher:${junitVersion}")
         configurations.all {
             exclude(group = "org.slf4j", module = "slf4j-simple")
         }
@@ -98,4 +94,23 @@ tasks.register("buildAllJars") {
         ":s21edu:bootJar",
         ":s21bot:bootJar"
     )
+}
+
+tasks.register("runAllTestsWithCoverage") {
+    group = "verification"
+    description = "Запускает все тесты и собирает отчёты Jacoco во всех модулях"
+
+    dependsOn(subprojects.flatMap {
+        listOf(
+            it.path + ":test",
+            it.path + ":jacocoTestReport"
+        )
+    })
+}
+
+tasks.register("runAllTests") {
+    group = "verification"
+    description = "Запускает все тесты во всех subprojects"
+
+    dependsOn(subprojects.map { it.path + ":test" })
 }
