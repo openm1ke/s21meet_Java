@@ -19,6 +19,7 @@ public class SimpleBot implements LongPollingSingleThreadUpdateConsumer {
             Message message = update.getMessage();
             String type = message.getChat().getType();
             if (type.equals("private")) {
+                log.info("{} написал {}", message.getChat().getUserName(), message.getText());
                 messageProcessor.process(message);
             }
         }

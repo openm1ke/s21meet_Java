@@ -41,6 +41,10 @@ dependencies {
     implementation("com.squareup.okio:okio-jvm:$okioJvmVersion")
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
     implementation("com.google.code.gson:gson:$gsonVersion")
+    // https://mvnrepository.com/artifact/com.google.code.gson/gson
+    implementation("com.google.code.gson:gson:2.13.1")
+    // https://mvnrepository.com/artifact/io.gsonfire/gson-fire
+    implementation("io.gsonfire:gson-fire:1.9.0")
 
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
@@ -83,14 +87,14 @@ configurations.all {
 
 
 tasks.named("openApiGenerate") {
-    doLast {
-        val stubFile = file("src/main/resources/stub/JSON.java")
-        val generatedFile = layout.buildDirectory.dir("generated/src/main/java/ru/school21/edu/JSON.java").get().asFile
-        if (stubFile.exists()) {
-            println("Перезаписываем сгенерированный JSON.java на версию-стаб из: ${stubFile.absolutePath}")
-            stubFile.copyTo(generatedFile, overwrite = true)
-        }
-    }
+//    doLast {
+//        val stubFile = file("src/main/resources/ru/izpz/edu/JSON.java")
+//        val generatedFile = layout.buildDirectory.dir("generated/src/main/java/ru/izpz/edu/JSON.java").get().asFile
+//        if (stubFile.exists()) {
+//            println("Перезаписываем сгенерированный JSON.java на версию-стаб из: ${stubFile.absolutePath}")
+//            stubFile.copyTo(generatedFile, overwrite = true)
+//        }
+//    }
 }
 tasks.test {
     useJUnitPlatform()
