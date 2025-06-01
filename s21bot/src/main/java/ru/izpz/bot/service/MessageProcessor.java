@@ -15,6 +15,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.dto.ProfileDto;
+import ru.izpz.dto.ProfileStatus;
 
 import java.util.List;
 
@@ -84,6 +85,7 @@ public class MessageProcessor {
             case "start_registration" -> {
                 //sendMessage(chatId, "Вы нажали кнопку регистрации");
                 //removeInlineKeyboard(chatId, messageId);
+                profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
                 editMessageAndRemoveKeyboard(chatId, messageId, "Введите логин на платформе");
             }
             case "help" -> sendMessage(chatId, "Вот инструкция по использованию бота...");

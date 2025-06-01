@@ -3,6 +3,8 @@ package ru.izpz.edu.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ProfileDto;
+import ru.izpz.dto.ProfileRequest;
+import ru.izpz.edu.exception.ProfileNotFoundException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.model.Profile;
 import ru.izpz.dto.ProfileStatus;
@@ -17,15 +19,27 @@ public class ProfileService {
     private final ProfileRepository profileRepository;
     private final ProfileValidationRepository profileValidationRepository;
 
-    public ProfileDto viewProfile(String telegramId) {
+    public ProfileDto getOrCreateProfile(String telegramId) {
         return profileRepository.findByTelegramId(telegramId)
-            .map(profileMapper::toDto)
-            .orElseGet(() -> {
-                Profile profile = new Profile();
-                profile.setTelegramId(telegramId);
-                profile.setStatus(ProfileStatus.CREATED);
-                Profile saved = profileRepository.save(profile);
-                return profileMapper.toDto(saved);
-            });
+                .map(profileMapper::toDto)
+                .orElseGet(() -> {
+                    Profile profile = new Profile();
+                    profile.setTelegramId(telegramId);
+                    profile.setStatus(ProfileStatus.CREATED);
+                    Profile saved = profileRepository.save(profile);
+                    return profileMapper.toDto(saved);
+                });
+    }
+
+    public ProfileDto updateProfile(ProfileRequest request) {
+        return profileRepository.findByTelegramId(request.getTelegramId())
+                .map(existing -> {
+                    existing.setStatus(request.getStatus());
+                    existing.setS21login(request.getS21login());
+                    existing.setLastCommand(request.getLastCommand());
+                    return profileRepository.save(existing);
+                })
+                .map(profileMapper::toDto)
+                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
     }
 }

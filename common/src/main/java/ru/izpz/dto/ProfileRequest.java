@@ -17,4 +17,7 @@ public class ProfileRequest {
         message = "Telegram ID должен содержать только цифры и быть длиной от 7 до 13 символов"
     )
     private String telegramId;
+    private String s21login;
+    private ProfileStatus status;
+    private String lastCommand;
 }
