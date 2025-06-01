@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import ru.izpz.bot.client.ProfileClient;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileRequest;
+import ru.izpz.dto.ProfileStatus;
 
 @Slf4j
 @Service
@@ -16,15 +17,24 @@ public class ProfileService {
     private final ProfileClient profileClient;
 
     public ProfileDto getProfile(Long chatId) {
-        var profileRequest = ProfileRequest.builder()
-                //.telegramId("1234")
-                .telegramId(chatId.toString())
-                .build();
-        log.info("ProfileRequest: {}", profileRequest.toString());
+        log.info("Получение профиля {}", chatId);
         try {
-            return profileClient.getOrCreateProfile(profileRequest);
+            return profileClient.getOrCreateProfile(chatId.toString());
         } catch (FeignException e) {
             log.error("Ошибка обработки профиля", e);
+            throw e;
+        }
+    }
+
+    public ProfileDto updateProfileStatus(Long chatId, ProfileStatus status) {
+        ProfileRequest profileRequest = ProfileRequest.builder()
+                .telegramId(chatId.toString())
+                .status(status)
+                .build();
+        try {
+            return profileClient.updateProfile(profileRequest);
+        } catch (FeignException e) {
+            log.error("Ошибка обновления профиля {}", e.contentUTF8());
             throw e;
         }
     }

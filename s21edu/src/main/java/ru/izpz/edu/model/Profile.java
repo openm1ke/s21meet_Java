@@ -1,15 +1,17 @@
 package ru.izpz.edu.model;
 
+import lombok.*;
 import ru.izpz.dto.ProfileStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
+@Builder
+@RequiredArgsConstructor
+@AllArgsConstructor
 public class Profile {
     @Id
     @GeneratedValue(generator = "UUID")
