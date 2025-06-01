@@ -22,6 +22,13 @@ public class SimpleBot implements LongPollingSingleThreadUpdateConsumer {
                 log.info("{} написал {}", message.getChat().getUserName(), message.getText());
                 messageProcessor.process(message);
             }
+        } else if (update.hasCallbackQuery()) {
+            var callback = update.getCallbackQuery();
+            var data = callback.getData();
+            var chatId = callback.getMessage().getChatId();
+            var messageId = update.getCallbackQuery().getMessage().getMessageId();
+            log.info("Callback '{}' от chatId={}", data, chatId);
+            messageProcessor.handleCallback(chatId, data, messageId);
         }
     }
 }
