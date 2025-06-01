@@ -16,19 +16,29 @@ package ru.izpz.edu;
 import com.google.gson.*;
 import com.google.gson.internal.bind.util.ISO8601Utils;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
+import io.gsonfire.GsonFireBuilder;
+import io.gsonfire.TypeSelector;
+
 import okio.ByteString;
 
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.ParsePosition;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.Locale;
+import java.util.Map;
+import java.util.HashMap;
+import static com.google.gson.stream.JsonToken.NULL;
 
 /*
  * A JSON utility class
@@ -36,238 +46,152 @@ import java.util.Date;
  * NOTE: in the future, this class may be converted to static, which may break
  *       backward-compatibility
  */
+
 public class JSON {
-    private static Gson gson;
-    private static boolean isLenientOnJson = false;
-    private static DateTypeAdapter dateTypeAdapter = new DateTypeAdapter();
-    private static SqlDateTypeAdapter sqlDateTypeAdapter = new SqlDateTypeAdapter();
-    private static OffsetDateTimeTypeAdapter offsetDateTimeTypeAdapter = new OffsetDateTimeTypeAdapter();
-    private static LocalDateTypeAdapter localDateTypeAdapter = new LocalDateTypeAdapter();
-    private static ByteArrayAdapter byteArrayAdapter = new ByteArrayAdapter();
+    private final Gson gson;
 
-    private JSON() {}
+    public JSON() {
+        gson = createGson().create();
+    }
 
-    @SuppressWarnings("unchecked")
     public static GsonBuilder createGson() {
-        return new GsonBuilder();
+        GsonFireBuilder fireBuilder = new GsonFireBuilder();
+        GsonBuilder builder = fireBuilder.createGsonBuilder();
+
+        return builder
+                .registerTypeAdapter(Date.class, new DateTypeAdapter())
+                .registerTypeAdapter(OffsetDateTime.class, new OffsetDateTimeTypeAdapter())
+                .registerTypeAdapter(LocalDate.class, new LocalDateTypeAdapter())
+                .serializeNulls()
+                .disableHtmlEscaping();
     }
 
-    static {
-        GsonBuilder gsonBuilder = createGson();
-        gsonBuilder.registerTypeAdapter(Date.class, dateTypeAdapter);
-        gsonBuilder.registerTypeAdapter(java.sql.Date.class, sqlDateTypeAdapter);
-        gsonBuilder.registerTypeAdapter(OffsetDateTime.class, offsetDateTimeTypeAdapter);
-        gsonBuilder.registerTypeAdapter(LocalDate.class, localDateTypeAdapter);
-        gsonBuilder.registerTypeAdapter(byte[].class, byteArrayAdapter);
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.CampusV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.CampusesV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ClusterMapV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ClusterV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ClustersV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.CoalitionV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.CoalitionsV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ConditionRuleGroupV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ConditionRuleV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ConditionRuleValueV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ConditionValueValueV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.CourseV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ErrorResponseDTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.EventV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.EventsV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.GraphEdgeV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.GraphNodeItemV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.GraphNodeV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.GraphV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantBadgeV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantBadgesV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantCampusV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantCoalitionV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantCourseV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantCoursesV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantFeedbackV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantLoginsV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantPointsV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantProjectV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantProjectsV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantSkillV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantSkillsV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantWorkstationV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantXpHistoryItemV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ParticipantXpHistoryV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.ProjectV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.SaleV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.SalesV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.TeamMemberV1DTO.CustomTypeAdapterFactory());
-        gsonBuilder.registerTypeAdapterFactory(new ru.school21.edu.model.WorkplaceV1DTO.CustomTypeAdapterFactory());
-        gson = gsonBuilder.create();
-    }
-
-    /**
-     * Get Gson.
-     *
-     * @return Gson
-     */
-    public static Gson getGson() {
+    public Gson getGson() {
         return gson;
     }
 
-    /**
-     * Set Gson.
-     *
-     * @param gson Gson
-     */
-    public static void setGson(Gson gson) {
-        JSON.gson = gson;
+    public <T> T deserialize(String json, Type type) {
+        return gson.fromJson(json, type);
+    }
+
+    public <T> T deserialize(Reader reader, Type type) {
+        return gson.fromJson(reader, type);
     }
 
     public static void setLenientOnJson(boolean lenientOnJson) {
         isLenientOnJson = lenientOnJson;
     }
 
-    /**
-     * Serialize the given Java object into JSON string.
-     *
-     * @param obj Object
-     * @return String representation of the JSON
-     */
-    public static String serialize(Object obj) {
+    public String serialize(Object obj) {
         return gson.toJson(obj);
     }
 
-    /**
-     * Deserialize the given JSON string to Java object.
-     *
-     * @param <T>        Type
-     * @param body       The JSON string
-     * @param returnType The type to deserialize into
-     * @return The deserialized Java object
-     */
-    @SuppressWarnings("unchecked")
-    public static <T> T deserialize(String body, Type returnType) {
-        try {
-            if (isLenientOnJson) {
-                JsonReader jsonReader = new JsonReader(new StringReader(body));
-                // see https://google-gson.googlecode.com/svn/trunk/gson/docs/javadocs/com/google/gson/stream/JsonReader.html#setLenient(boolean)
-                jsonReader.setLenient(true);
-                return gson.fromJson(jsonReader, returnType);
-            } else {
-                return gson.fromJson(body, returnType);
-            }
-        } catch (JsonParseException e) {
-            if (returnType.equals(String.class)) {
-                return (T) body;
-            } else {
-                throw (e);
-            }
-        }
+    public String serialize(Object obj, Type type) {
+        return gson.toJson(obj, type);
     }
 
-    /**
-     * Gson TypeAdapter for Byte Array type
-     */
-    public static class ByteArrayAdapter extends TypeAdapter<byte[]> {
+    public <T> T deserialize(String json, Class<T> clazz) {
+        return gson.fromJson(json, clazz);
+    }
+
+    public <T> T deserialize(Reader reader, Class<T> clazz) {
+        return gson.fromJson(reader, clazz);
+    }
+
+    public <T> T deserialize(String json, Map<String, Class<?>> classByDiscriminatorValue, String discriminatorField) {
+        JsonElement readElement = JsonParser.parseString(json);
+        String discriminatorValue = getDiscriminatorValue(readElement, discriminatorField);
+        Class<?> clazz = getClassByDiscriminator(classByDiscriminatorValue, discriminatorValue);
+        @SuppressWarnings("unchecked")
+        T result = (T) gson.fromJson(readElement, clazz);
+        return result;
+    }
+
+    private static String getDiscriminatorValue(JsonElement readElement, String discriminatorField) {
+        if (!readElement.isJsonObject() || !readElement.getAsJsonObject().has(discriminatorField)) {
+            throw new IllegalArgumentException("Missing discriminator field: <" + discriminatorField + ">");
+        }
+        return readElement.getAsJsonObject().get(discriminatorField).getAsString();
+    }
+
+    private static Class<?> getClassByDiscriminator(Map<String, Class<?>> classByDiscriminatorValue, String discriminatorValue) {
+        Class<?> clazz = classByDiscriminatorValue.get(discriminatorValue);
+        if (clazz == null) {
+            throw new IllegalArgumentException("Cannot determine model class of name: <" + discriminatorValue + ">");
+        }
+        return clazz;
+    }
+
+    // ===== DateTypeAdapter using java.time for ISO format =====
+
+    private static class DateTypeAdapter extends TypeAdapter<Date> {
+        private final DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
         @Override
-        public void write(JsonWriter out, byte[] value) throws IOException {
+        public void write(JsonWriter out, Date value) throws IOException {
             if (value == null) {
                 out.nullValue();
-            } else {
-                out.value(ByteString.of(value).base64());
+                return;
             }
+            Instant instant = value.toInstant();
+            out.value(formatter.format(instant.atOffset(ZoneOffset.UTC)));
         }
 
         @Override
-        public byte[] read(JsonReader in) throws IOException {
-            if (in.peek() == NULL) {
+        public Date read(JsonReader in) throws IOException {
+            if (in.peek() == JsonToken.NULL) {
                 in.nextNull();
-                return new byte[0];
-            } else {
-                String bytesAsBase64 = in.nextString();
-                ByteString byteString = ByteString.decodeBase64(bytesAsBase64);
-                return byteString.toByteArray();
+                return null;
             }
+            String dateStr = in.nextString();
+            OffsetDateTime odt = OffsetDateTime.parse(dateStr, formatter);
+            return Date.from(odt.toInstant());
         }
     }
 
-    /**
-     * Gson TypeAdapter for JSR310 OffsetDateTime type
-     */
-    public static class OffsetDateTimeTypeAdapter extends TypeAdapter<OffsetDateTime> {
-
-        private DateTimeFormatter formatter;
-
-        public OffsetDateTimeTypeAdapter() {
-            this(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-        }
-
-        public OffsetDateTimeTypeAdapter(DateTimeFormatter formatter) {
-            this.formatter = formatter;
-        }
-
-        public void setFormat(DateTimeFormatter dateFormat) {
-            this.formatter = dateFormat;
-        }
+    private static class OffsetDateTimeTypeAdapter extends TypeAdapter<OffsetDateTime> {
+        private final DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
         @Override
-        public void write(JsonWriter out, OffsetDateTime date) throws IOException {
-            if (date == null) {
+        public void write(JsonWriter out, OffsetDateTime value) throws IOException {
+            if (value == null) {
                 out.nullValue();
-            } else {
-                out.value(formatter.format(date));
+                return;
             }
+            out.value(formatter.format(value));
         }
 
         @Override
         public OffsetDateTime read(JsonReader in) throws IOException {
-            if (in.peek() == NULL) {
+            if (in.peek() == JsonToken.NULL) {
                 in.nextNull();
                 return null;
             }
-            String date = in.nextString();
-            if (date.endsWith("+0000")) {
-                date = date.substring(0, date.length()-5) + "Z";
-            }
-            return OffsetDateTime.parse(date, formatter);
+            String value = in.nextString();
+            return OffsetDateTime.parse(value, formatter);
         }
     }
 
-    /**
-     * Gson TypeAdapter for JSR310 LocalDate type
-     */
-    public static class LocalDateTypeAdapter extends TypeAdapter<LocalDate> {
-
-        private DateTimeFormatter formatter;
-
-        public LocalDateTypeAdapter() {
-            this(DateTimeFormatter.ISO_LOCAL_DATE);
-        }
-
-        public LocalDateTypeAdapter(DateTimeFormatter formatter) {
-            this.formatter = formatter;
-        }
-
-        public void setFormat(DateTimeFormatter dateFormat) {
-            this.formatter = dateFormat;
-        }
+    private static class LocalDateTypeAdapter extends TypeAdapter<LocalDate> {
+        private final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
 
         @Override
-        public void write(JsonWriter out, LocalDate date) throws IOException {
-            if (date == null) {
+        public void write(JsonWriter out, LocalDate value) throws IOException {
+            if (value == null) {
                 out.nullValue();
-            } else {
-                out.value(formatter.format(date));
+                return;
             }
+            out.value(formatter.format(value));
         }
 
         @Override
         public LocalDate read(JsonReader in) throws IOException {
-            if (in.peek() == NULL) {
+            if (in.peek() == JsonToken.NULL) {
                 in.nextNull();
                 return null;
             }
-            String date = in.nextString();
-            return LocalDate.parse(date, formatter);
+            String value = in.nextString();
+            return LocalDate.parse(value, formatter);
         }
     }
 
@@ -277,113 +201,6 @@ public class JSON {
 
     public static void setLocalDateFormat(DateTimeFormatter dateFormat) {
         localDateTypeAdapter.setFormat(dateFormat);
-    }
-
-    /**
-     * Gson TypeAdapter for java.sql.Date type
-     * If the dateFormat is null, a simple "yyyy-MM-dd" format will be used
-     * (more efficient than SimpleDateFormat).
-     */
-    public static class SqlDateTypeAdapter extends TypeAdapter<java.sql.Date> {
-
-        private DateFormat dateFormat;
-
-        public SqlDateTypeAdapter() {}
-
-        public SqlDateTypeAdapter(DateFormat dateFormat) {
-            this.dateFormat = dateFormat;
-        }
-
-        public void setFormat(DateFormat dateFormat) {
-            this.dateFormat = dateFormat;
-        }
-
-        @Override
-        public void write(JsonWriter out, java.sql.Date date) throws IOException {
-            if (date == null) {
-                out.nullValue();
-            } else {
-                String value;
-                if (dateFormat != null) {
-                    value = dateFormat.format(date);
-                } else {
-                    value = date.toString();
-                }
-                out.value(value);
-            }
-        }
-
-        @Override
-        public java.sql.Date read(JsonReader in) throws IOException {
-            if (in.peek() == NULL) {
-                in.nextNull();
-                return null;
-            }
-            String date = in.nextString();
-            try {
-                if (dateFormat != null) {
-                    return new java.sql.Date(dateFormat.parse(date).getTime());
-                }
-                return new java.sql.Date(ISO8601Utils.parse(date, new ParsePosition(0)).getTime());
-            } catch (ParseException e) {
-                throw new JsonParseException(e);
-            }
-        }
-    }
-
-    /**
-     * Gson TypeAdapter for java.util.Date type
-     * If the dateFormat is null, ISO8601Utils will be used.
-     */
-    public static class DateTypeAdapter extends TypeAdapter<Date> {
-
-        private DateFormat dateFormat;
-
-        public DateTypeAdapter() {}
-
-        public DateTypeAdapter(DateFormat dateFormat) {
-            this.dateFormat = dateFormat;
-        }
-
-        public void setFormat(DateFormat dateFormat) {
-            this.dateFormat = dateFormat;
-        }
-
-        @Override
-        public void write(JsonWriter out, Date date) throws IOException {
-            if (date == null) {
-                out.nullValue();
-            } else {
-                String value;
-                if (dateFormat != null) {
-                    value = dateFormat.format(date);
-                } else {
-                    value = ISO8601Utils.format(date, true);
-                }
-                out.value(value);
-            }
-        }
-
-        private Date parseDate(String date) throws JsonParseException, ParseException {
-            if (dateFormat != null) {
-                return dateFormat.parse(date);
-            }
-            return ISO8601Utils.parse(date, new ParsePosition(0));
-        }
-
-        @Override
-        public Date read(JsonReader in) throws IOException {
-            try {
-                if (in.peek() == NULL) {
-                    in.nextNull();
-                    return null;
-                }
-                String date = in.nextString();
-                return parseDate(date);
-            } catch (IllegalArgumentException e) {
-                throw new JsonParseException(e);
-            }
-        }
     }
 
     public static void setDateFormat(DateFormat dateFormat) {
