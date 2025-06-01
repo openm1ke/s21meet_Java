@@ -18,6 +18,7 @@ import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -32,7 +33,7 @@ public class MessageProcessor {
 
     public void process(Message message) {
         Long chatId = message.getChatId();
-        String text = message.getText();
+        String text = message.getText().trim();
         ProfileDto profile;
         try {
             profile = profileService.getProfile(chatId);
@@ -40,43 +41,25 @@ public class MessageProcessor {
             //sendMessage(chatId, profile.toString());
             parseMessage(chatId, profile, text);
         } catch (FeignException e) {
-            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже");
-            sendMessage(ADMIN_ID, e.contentUTF8());
+            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
+            sendMessage(ADMIN_ID, e.contentUTF8(), null);
         }
     }
 
     public void parseMessage(Long chatId, ProfileDto profile, String text) {
         switch(profile.status()) {
-            case CREATED -> sendMessage(chatId, "Для регистрации нажмите кнопку ниже");
-            case VALIDATION -> sendMessage(chatId, "Вам был отправлен код для подтверждения");
-            case REGISTERED -> sendMessage(chatId, "Вы зарегистрированы");
-        }
-    }
-
-    public void sendMessage(Long chatId, String message) {
-
-        InlineKeyboardButton button = InlineKeyboardButton.builder()
-                .text("Регистрация")
-                .callbackData("start_registration")
-                .build();
-        var row = new InlineKeyboardRow();
-        row.add(button);
-
-        List<InlineKeyboardRow> keyboard = List.of(row);
-
-        InlineKeyboardMarkup markup = InlineKeyboardMarkup.builder()
-                .keyboard(keyboard)
-                .build();
-
-        SendMessage response = SendMessage.builder()
-                .chatId(chatId)
-                .text(message)
-                .replyMarkup(markup)
-                .build();
-        try {
-            telegramClient.execute(response);
-        } catch (TelegramApiException e) {
-            log.error("Ошибка отправки сообщения для {}: {}", chatId, message, e);
+            case CREATED -> sendMessage(chatId, "Для регистрации нажмите кнопку ниже", Map.of(
+                    "start_registration", "Регистрация"));
+            case VALIDATION -> {
+                // TODO: проверить валидность логина на бэкенде
+                // может быть несколько ошибок: логин не найден, логин найден но уже зареган,
+                // логин не на основе, логин заблокирован на платформе
+                // если все норм то пытаемся отправить код подтверждения через рокет чат
+                // и тут ошибки: не удалось отправить
+                // если все норм, то меняем статус на
+                sendMessage(chatId, "Вам был отправлен код для подтверждения для логина " + text, null);
+            }
+            case REGISTERED -> sendMessage(chatId, "Вы зарегистрированы", null);
         }
     }
 
@@ -88,8 +71,26 @@ public class MessageProcessor {
                 profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
                 editMessageAndRemoveKeyboard(chatId, messageId, "Введите логин на платформе");
             }
-            case "help" -> sendMessage(chatId, "Вот инструкция по использованию бота...");
-            default -> sendMessage(chatId, "Неизвестная команда: " + data);
+            case "help" -> sendMessage(chatId, "Вот инструкция по использованию бота...", null);
+            default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
+        }
+    }
+
+    public void sendMessage(Long chatId, String text, Map<String, String> buttons) {
+        InlineKeyboardMarkup markup = buttons == null || buttons.isEmpty()
+                ? null
+                : createInlineKeyboardMarkup(buttons);
+
+        SendMessage response = SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .replyMarkup(markup)
+                .build();
+
+        try {
+            telegramClient.execute(response);
+        } catch (TelegramApiException e) {
+            log.error("Ошибка отправки сообщения для {}: {}", chatId, text, e);
         }
     }
 
@@ -120,5 +121,22 @@ public class MessageProcessor {
         } catch (TelegramApiException e) {
             log.error("Ошибка при редактировании сообщения {}: {}", messageId, e.getMessage());
         }
+    }
+
+    public InlineKeyboardMarkup createInlineKeyboardMarkup(Map<String, String> buttons) {
+        var row = new InlineKeyboardRow();
+
+        buttons.forEach((key, value) -> {
+            var button = InlineKeyboardButton.builder()
+                    .text(value)
+                    .callbackData(key)
+                    .build();
+            row.add(button);
+        });
+
+        var markup = InlineKeyboardMarkup.builder()
+                .keyboard(List.of(row))
+                .build();
+        return markup;
     }
 }
