@@ -80,8 +80,8 @@ sonarqube {
                 "s21edu/build/reports/jacoco/test/jacocoTestReport.xml" +
                 "s21bot/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
-        property("sonar.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/ru/izpz/dto/**")
-        property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/ru/izpz/dto/**")
+        property("sonar.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**")
+        property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**")
     }
 }
 
