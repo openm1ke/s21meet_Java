@@ -8,6 +8,7 @@ import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.BotSession;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import ru.izpz.bot.bot.SimpleBot;
+import ru.izpz.bot.service.MessageProcessor;
 
 @Slf4j
 @Configuration
@@ -27,8 +28,8 @@ public class BotConfig {
     }
 
     @Bean
-    public SimpleBot simpleBot(OkHttpTelegramClient telegramClient) {
-        return new SimpleBot(telegramClient);
+    public SimpleBot simpleBot(MessageProcessor messageProcessor) {
+        return new SimpleBot(messageProcessor);
     }
 
     @Bean

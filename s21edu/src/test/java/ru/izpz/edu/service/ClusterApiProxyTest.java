@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
-import ru.izpz.edu.ApiException;
+import ru.izpz.dto.ApiException;
 import ru.izpz.edu.BaseTestContainer;
 import ru.izpz.edu.S21EduApplication;
 import ru.izpz.edu.config.TestClusterApiProxyConfig;

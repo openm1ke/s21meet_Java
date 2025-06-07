@@ -1,0 +1,8 @@
+### Получить профиль по Telegram ID
+POST http://localhost:8082/profile
+Content-Type: application/json
+
+{
+    "telegramId": "12345678"
+}
+

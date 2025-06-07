@@ -3,23 +3,24 @@ package ru.izpz.bot.bot;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.chat.Chat;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ru.izpz.bot.service.MessageProcessor;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.*;
 
 class SimpleBotTest {
 
+    private final MessageProcessor messageProcessor = mock(MessageProcessor.class);
     private final OkHttpTelegramClient telegramClient = mock(OkHttpTelegramClient.class);
-    private final SimpleBot simpleBot = new SimpleBot(telegramClient);
+    private final SimpleBot simpleBot = new SimpleBot(messageProcessor);
 
     @Test
-    void consume_ShouldSendCorrectResponse_WhenUpdateHasTextMessage() throws TelegramApiException {
+    void consume_ShouldSendCorrectResponse_WhenUpdateHasTextMessage() {
         Update update = mock(Update.class);
         Message message = mock(Message.class);
         Chat chat = mock(Chat.class);
@@ -34,12 +35,9 @@ class SimpleBotTest {
 
         simpleBot.consume(update);
 
-        ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
-        verify(telegramClient, times(1)).execute(captor.capture());
+        ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
 
-        SendMessage actualMessage = captor.getValue();
-        assertEquals("12345", actualMessage.getChatId());
-        assertEquals("Вы написали: Привет, бот!", actualMessage.getText());
+        verify(messageProcessor, times(1)).handleTextMessage(captor.capture());
     }
 
     @Test
@@ -53,7 +51,7 @@ class SimpleBotTest {
 
         simpleBot.consume(update);
 
-        verify(telegramClient, never()).execute((SendDocument) any());
+        verify(telegramClient, never()).execute((SendMessage) any());
     }
 
     @Test
@@ -65,7 +63,7 @@ class SimpleBotTest {
         update.setMessage(message);
 
         doThrow(new TelegramApiException("API error"))
-                .when(telegramClient).execute((SendDocument) any());
+                .when(telegramClient).execute((SendMessage) any());
 
         assertDoesNotThrow(() -> simpleBot.consume(update));
     }

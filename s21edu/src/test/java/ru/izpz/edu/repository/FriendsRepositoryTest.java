@@ -27,7 +27,7 @@ class FriendsRepositoryTest extends BaseTestContainer {
         assertTrue(distinctLogins.contains("elevante"), "Логин 'elevante' должен присутствовать в списке");
         assertTrue(distinctLogins.contains("scrimgew"), "Логин 'scrimgew' должен присутствовать в списке");
         assertTrue(distinctLogins.contains("lucankri"), "Логин 'lucankri' должен присутствовать в списке");
-        assertTrue(distinctLogins.contains("mjollror"), "Логин 'lucankri' должен присутствовать в списке");
+        assertTrue(distinctLogins.contains("mjollror"), "Логин 'mjollror' должен присутствовать в списке");
 
         assertEquals(4, distinctLogins.size(), "Ожидается 4 уникальных логина");
     }

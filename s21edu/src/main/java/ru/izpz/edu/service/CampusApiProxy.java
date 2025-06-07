@@ -7,14 +7,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import ru.izpz.edu.ApiClient;
-import ru.izpz.edu.ApiException;
-import ru.izpz.edu.api.CampusApi;
+import ru.izpz.dto.ApiClient;
+import ru.izpz.dto.ApiException;
+import ru.izpz.dto.api.CampusApi;
 import ru.izpz.edu.exception.RetryableApiException;
-import ru.izpz.edu.model.CampusesV1DTO;
-import ru.izpz.edu.model.ClustersV1DTO;
-import ru.izpz.edu.model.CoalitionsV1DTO;
-import ru.izpz.edu.model.ParticipantLoginsV1DTO;
+import ru.izpz.dto.model.CampusesV1DTO;
+import ru.izpz.dto.model.ClustersV1DTO;
+import ru.izpz.dto.model.CoalitionsV1DTO;
+import ru.izpz.dto.model.ParticipantLoginsV1DTO;
 
 import java.util.UUID;
 
