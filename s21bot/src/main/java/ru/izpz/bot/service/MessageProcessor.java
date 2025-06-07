@@ -86,6 +86,10 @@ public class MessageProcessor {
 
 
     private void startRegistration(Long chatId, ProfileDto profile, String text) {
+        if (!isValidLogin(text)) {
+            sendMessage(chatId, "Введенный логин не соответствует требованиям", null);
+            return;
+        }
         // тут мы получает в тексте логин на платформе
         // надо отправить его на бэкенд и получить дто с какими-то полями
         // первое что мы проверяем что профиль существует или нет
@@ -105,7 +109,9 @@ public class MessageProcessor {
         sendMessage(chatId, "Для регистрации нажмите кнопку ниже", registration_button);
     }
 
-
+    private boolean isValidLogin(String login) {
+        return login != null && login.matches("^[a-zA-Z]{3,9}$");
+    }
 
     public void sendMessage(Long chatId, String text, Map<String, String> buttons) {
         InlineKeyboardMarkup markup = buttons == null || buttons.isEmpty()

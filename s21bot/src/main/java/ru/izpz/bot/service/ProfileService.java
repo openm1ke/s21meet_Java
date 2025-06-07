@@ -26,6 +26,15 @@ public class ProfileService {
         }
     }
 
+    public void checkEduLogin(String login) {
+        try {
+            profileClient.checkEduLogin(login);
+        } catch (FeignException e) {
+            log.error("Ошибка обработки профиля", e);
+            throw e;
+        }
+    }
+
     public ProfileDto updateProfileStatus(Long chatId, ProfileStatus status) {
         ProfileRequest profileRequest = ProfileRequest.builder()
                 .telegramId(chatId.toString())

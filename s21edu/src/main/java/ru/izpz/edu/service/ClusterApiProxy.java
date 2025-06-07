@@ -7,11 +7,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import ru.izpz.edu.ApiClient;
-import ru.izpz.edu.ApiException;
-import ru.izpz.edu.api.ClusterApi;
+import ru.izpz.dto.ApiClient;
+import ru.izpz.dto.ApiException;
+import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.edu.exception.RetryableApiException;
-import ru.izpz.edu.model.ClusterMapV1DTO;
+import ru.izpz.dto.model.ClusterMapV1DTO;
 
 @Slf4j
 @Service
