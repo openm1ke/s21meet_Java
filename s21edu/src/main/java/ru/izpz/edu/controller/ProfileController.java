@@ -25,9 +25,9 @@ public class ProfileController {
     }
 
     @PostMapping
-    public ResponseEntity<ProfileDto> updateProfile(@Valid @RequestBody ProfileRequest request) {
+    public ResponseEntity<ProfileDto> updateProfileStatus(@Valid @RequestBody ProfileRequest request) {
         log.info("Получен запрос на обновление профиля для telegramId = {}", request.getTelegramId());
-        var updateProfile = profileService.updateProfile(request);
+        var updateProfile = profileService.updateProfileStatus(request);
         return ResponseEntity.ok(updateProfile);
     }
 }

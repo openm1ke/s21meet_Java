@@ -3,7 +3,7 @@ package ru.izpz.bot.bot;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.chat.Chat;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
@@ -37,7 +37,7 @@ class SimpleBotTest {
 
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
 
-        verify(messageProcessor, times(1)).process(captor.capture());
+        verify(messageProcessor, times(1)).handleTextMessage(captor.capture());
     }
 
     @Test
@@ -51,7 +51,7 @@ class SimpleBotTest {
 
         simpleBot.consume(update);
 
-        verify(telegramClient, never()).execute((SendDocument) any());
+        verify(telegramClient, never()).execute((SendMessage) any());
     }
 
     @Test
@@ -63,7 +63,7 @@ class SimpleBotTest {
         update.setMessage(message);
 
         doThrow(new TelegramApiException("API error"))
-                .when(telegramClient).execute((SendDocument) any());
+                .when(telegramClient).execute((SendMessage) any());
 
         assertDoesNotThrow(() -> simpleBot.consume(update));
     }

@@ -31,12 +31,10 @@ public class ProfileService {
                 });
     }
 
-    public ProfileDto updateProfile(ProfileRequest request) {
+    public ProfileDto updateProfileStatus(ProfileRequest request) {
         return profileRepository.findByTelegramId(request.getTelegramId())
                 .map(existing -> {
                     existing.setStatus(request.getStatus());
-                    existing.setS21login(request.getS21login());
-                    existing.setLastCommand(request.getLastCommand());
                     return profileRepository.save(existing);
                 })
                 .map(profileMapper::toDto)

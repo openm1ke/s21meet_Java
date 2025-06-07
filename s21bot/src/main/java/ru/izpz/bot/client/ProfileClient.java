@@ -18,5 +18,5 @@ public interface ProfileClient {
     ProfileDto getOrCreateProfile(@RequestParam String telegramId);
 
     @PostMapping("/profile")
-    ProfileDto updateProfile(@RequestBody ProfileRequest request);
+    ProfileDto updateProfileStatus(@RequestBody ProfileRequest request);
 }

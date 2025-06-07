@@ -20,7 +20,7 @@ public class SimpleBot implements LongPollingSingleThreadUpdateConsumer {
             String type = message.getChat().getType();
             if (type.equals("private")) {
                 log.info("{} написал {}", message.getChat().getUserName(), message.getText());
-                messageProcessor.process(message);
+                messageProcessor.handleTextMessage(message);
             }
         } else if (update.hasCallbackQuery()) {
             var callback = update.getCallbackQuery();
@@ -28,7 +28,7 @@ public class SimpleBot implements LongPollingSingleThreadUpdateConsumer {
             var chatId = callback.getMessage().getChatId();
             var messageId = update.getCallbackQuery().getMessage().getMessageId();
             log.info("Callback '{}' от chatId={}", data, chatId);
-            messageProcessor.handleCallback(chatId, data, messageId);
+            messageProcessor.handleCallbackMessage(chatId, data, messageId);
         }
     }
 }
