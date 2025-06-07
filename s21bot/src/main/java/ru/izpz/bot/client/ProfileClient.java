@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileRequest;
+import ru.izpz.dto.model.ParticipantV1DTO;
 
 @FeignClient(
     name = "profile",
@@ -19,4 +20,7 @@ public interface ProfileClient {
 
     @PostMapping("/profile")
     ProfileDto updateProfileStatus(@RequestBody ProfileRequest request);
+
+    @GetMapping("/login")
+    ParticipantV1DTO checkEduLogin(@RequestParam String login);
 }
