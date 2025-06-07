@@ -1,5 +1,7 @@
 package ru.izpz.bot.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,11 +16,14 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
 
 import java.util.List;
 import java.util.Map;
+
+import static ru.izpz.bot.service.Buttons.registration_button;
 
 @Slf4j
 @Service
@@ -31,7 +36,9 @@ public class MessageProcessor {
     private final OkHttpTelegramClient telegramClient;
     private final ProfileService profileService;
 
-    public void process(Message message) {
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public void handleTextMessage(Message message) {
         Long chatId = message.getChatId();
         String text = message.getText().trim();
         ProfileDto profile;
@@ -46,35 +53,59 @@ public class MessageProcessor {
         }
     }
 
-    public void parseMessage(Long chatId, ProfileDto profile, String text) {
-        switch(profile.status()) {
-            case CREATED -> sendMessage(chatId, "Для регистрации нажмите кнопку ниже", Map.of(
-                    "start_registration", "Регистрация"));
-            case VALIDATION -> {
-                // TODO: проверить валидность логина на бэкенде
-                // может быть несколько ошибок: логин не найден, логин найден но уже зареган,
-                // логин не на основе, логин заблокирован на платформе
-                // если все норм то пытаемся отправить код подтверждения через рокет чат
-                // и тут ошибки: не удалось отправить
-                // если все норм, то меняем статус на
-                sendMessage(chatId, "Вам был отправлен код для подтверждения для логина " + text, null);
-            }
-            case REGISTERED -> sendMessage(chatId, "Вы зарегистрированы", null);
+    public void handleCallbackMessage(Long chatId, String data, Integer messageId) {
+        CallbackPayload payload;
+        try {
+            payload = objectMapper.readValue(data, CallbackPayload.class);
+        } catch (JsonProcessingException e) {
+            log.error("Error parsing callback data: {}", data, e);
+            sendMessage(ADMIN_ID, e.getMessage(), null);
+            return;
         }
-    }
 
-    public void handleCallback(Long chatId, String data, Integer messageId) {
-        switch (data) {
-            case "start_registration" -> {
-                //sendMessage(chatId, "Вы нажали кнопку регистрации");
-                //removeInlineKeyboard(chatId, messageId);
-                profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
-                editMessageAndRemoveKeyboard(chatId, messageId, "Введите логин на платформе");
-            }
+        switch (payload.getCommand()) {
+            case "registration" -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
             case "help" -> sendMessage(chatId, "Вот инструкция по использованию бота...", null);
             default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
         }
     }
+
+    public void parseMessage(Long chatId, ProfileDto profile, String text) {
+        switch(profile.status()) {
+            case CREATED -> startOnboarding(chatId);
+            case REGISTRATION -> startRegistration(chatId, profile, text);
+            case VALIDATION -> {
+
+                sendMessage(chatId, "Вам был отправлен код для подтверждения для логина " + text + " в рокет чат", null);
+            }
+
+            case CONFIRMED -> sendMessage(chatId, "Вы зарегистрированы", null);
+        }
+    }
+
+
+
+    private void startRegistration(Long chatId, ProfileDto profile, String text) {
+        // тут мы получает в тексте логин на платформе
+        // надо отправить его на бэкенд и получить дто с какими-то полями
+        // первое что мы проверяем что профиль существует или нет
+        //   - если нет то пишем что вы ошиблись попробуйте еще раз
+        // второе если существует
+        //   - если он уже зарегистрирован то говорим что этот профиль уже привязан к другому телеграму
+        //   - если он не зарегистрирован то смотрим на его статус
+        //          - статус заблокирован - не можем зарегать такой профиль (можно поменять статус на блокированный)
+        //          - статус заморожен - тоже выставляем блок
+        //          - статус не на основе пишем сообщение что не можем зарегать пока не будет на основе (тут другой статус)
+        // если все хорошо и профиль активный и на основе то привязываем его к этому телеграм айди и пытаемся начать валидацию
+
+
+    }
+
+    private void startOnboarding(Long chatId) {
+        sendMessage(chatId, "Для регистрации нажмите кнопку ниже", registration_button);
+    }
+
+
 
     public void sendMessage(Long chatId, String text, Map<String, String> buttons) {
         InlineKeyboardMarkup markup = buttons == null || buttons.isEmpty()
@@ -108,7 +139,7 @@ public class MessageProcessor {
         }
     }
 
-    public void editMessageAndRemoveKeyboard(Long chatId, Integer messageId, String newText) {
+    public void updateMessageAndChangeStatusRegistration(Long chatId, Integer messageId, String newText) {
         EditMessageText editMessage = EditMessageText.builder()
                 .chatId(chatId.toString()) // обязательно как String
                 .messageId(messageId)
@@ -118,8 +149,11 @@ public class MessageProcessor {
 
         try {
             telegramClient.execute(editMessage);
+            profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
         } catch (TelegramApiException e) {
             log.error("Ошибка при редактировании сообщения {}: {}", messageId, e.getMessage());
+        } catch (FeignException e) {
+            log.error("Ошибка обработки профиля", e);
         }
     }
 
@@ -128,8 +162,8 @@ public class MessageProcessor {
 
         buttons.forEach((key, value) -> {
             var button = InlineKeyboardButton.builder()
-                    .text(value)
-                    .callbackData(key)
+                    .text(key)
+                    .callbackData(value)
                     .build();
             row.add(button);
         });

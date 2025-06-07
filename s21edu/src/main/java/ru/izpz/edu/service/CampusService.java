@@ -83,7 +83,7 @@ public class CampusService {
      */
     public void getParticipantsByCluster(Long clusterId) throws ApiException {
         log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
-        // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максиум)
+        // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максимум)
         var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);
         // надо удалять старые записи даже если нам ничего не пришло
         workplaceRepository.deleteByIdClusterId(clusterId);

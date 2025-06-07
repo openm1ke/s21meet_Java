@@ -32,7 +32,7 @@ public class ProfileService {
                 .status(status)
                 .build();
         try {
-            return profileClient.updateProfile(profileRequest);
+            return profileClient.updateProfileStatus(profileRequest);
         } catch (FeignException e) {
             log.error("Ошибка обновления профиля {}", e.contentUTF8());
             throw e;
