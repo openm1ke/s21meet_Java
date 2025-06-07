@@ -4,7 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
-import ru.izpz.edu.ApiClient;
+import ru.izpz.dto.ApiClient;
 import ru.izpz.edu.service.CampusApiProxy;
 import ru.izpz.edu.service.ClusterApiProxy;
 import ru.izpz.edu.service.TokenService;

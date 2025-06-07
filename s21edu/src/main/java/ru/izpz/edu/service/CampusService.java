@@ -4,8 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import ru.izpz.edu.ApiClient;
-import ru.izpz.edu.ApiException;
+import ru.izpz.dto.ApiClient;
+import ru.izpz.dto.ApiException;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;
@@ -83,7 +83,7 @@ public class CampusService {
      */
     public void getParticipantsByCluster(Long clusterId) throws ApiException {
         log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
-        // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максиум)
+        // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максимум)
         var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);
         // надо удалять старые записи даже если нам ничего не пришло
         workplaceRepository.deleteByIdClusterId(clusterId);

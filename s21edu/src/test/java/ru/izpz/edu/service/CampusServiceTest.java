@@ -6,12 +6,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.izpz.edu.ApiClient;
-import ru.izpz.edu.ApiException;
-import ru.izpz.edu.model.ClusterMapV1DTO;
-import ru.izpz.edu.model.ClusterV1DTO;
-import ru.izpz.edu.model.ClustersV1DTO;
-import ru.izpz.edu.model.WorkplaceV1DTO;
+import ru.izpz.dto.ApiClient;
+import ru.izpz.dto.ApiException;
+import ru.izpz.dto.model.ClusterMapV1DTO;
+import ru.izpz.dto.model.ClusterV1DTO;
+import ru.izpz.dto.model.ClustersV1DTO;
+import ru.izpz.dto.model.WorkplaceV1DTO;
 import ru.izpz.edu.repository.ClusterRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 

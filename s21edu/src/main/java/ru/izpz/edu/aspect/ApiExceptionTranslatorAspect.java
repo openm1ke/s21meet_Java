@@ -5,7 +5,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
-import ru.izpz.edu.ApiException;
+import ru.izpz.dto.ApiException;
 import ru.izpz.edu.exception.NonRetryableApiException;
 import ru.izpz.edu.exception.RetryableApiException;
 
