@@ -111,6 +111,23 @@ public class MessageProcessor {
             return;
         }
 
+        ProfileDto profileDto;
+        try {
+            profileDto = profileService.checkAndSetLogin(chatId, text);
+        } catch (FeignException e) {
+            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
+            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            return;
+        }
+        // если логин совпадает значит мы его сохранили
+        if (profileDto.s21login().equals(text)) {
+            sendMessage(chatId, "Ваш логин сохранен", null);
+            // тут посылаем запрос на валидацию, для этого на конкретный эндпоинт будет послан запрос
+            // создаст код подтверждения и отправит его в чат
+            // если сообщение отправилось то мы получим дто с измененным статусом
+            // или исключение что не удалось отправить сообщение в чат
+        }
+
         // тут мы получает в тексте логин на платформе
         // надо отправить его на бэкенд и получить дто с какими-то полями
         // первое что мы проверяем что профиль существует или нет

@@ -57,4 +57,18 @@ public class ProfileService {
             throw e;
         }
     }
+
+    public ProfileDto checkAndSetLogin(Long chatId, String login) {
+        log.info("Сохранение логина профиля {} для {}", chatId, login);
+        ProfileRequest profileRequest = ProfileRequest.builder()
+                .telegramId(chatId.toString())
+                .s21login(login)
+                .build();
+        try {
+            return profileClient.checkAndSetLogin(profileRequest);
+        } catch (FeignException e) {
+            log.error("Ошибка обновления профиля {}", e.contentUTF8());
+            throw e;
+        }
+    }
 }
