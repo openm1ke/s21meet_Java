@@ -1,6 +1,21 @@
 {
   "properties": [
     {
+      "name": "profile.api.enabled",
+      "type": "java.lang.String",
+      "description": "Description for profile.api.enabled."
+    },
+    {
+      "name": "profile.service.enabled",
+      "type": "java.lang.String",
+      "description": "Description for profile.service.enabled."
+    },
+    {
+      "name": "participant.api.enabled",
+      "type": "java.lang.String",
+      "description": "Description for participant.api.enabled."
+    },
+    {
       "name": "api.client.enabled",
       "type": "java.lang.String",
       "description": "Description for api.client.enabled."

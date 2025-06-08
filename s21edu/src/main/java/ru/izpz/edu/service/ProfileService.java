@@ -1,6 +1,7 @@
 package ru.izpz.edu.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileRequest;
@@ -13,6 +14,7 @@ import ru.izpz.edu.repository.ProfileValidationRepository;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "profile.service.enabled", havingValue = "true", matchIfMissing = true)
 public class ProfileService {
 
     private final ProfileMapper profileMapper;
