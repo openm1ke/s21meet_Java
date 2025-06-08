@@ -10,6 +10,8 @@ val okioJvmVersion: String by project
 val gsonVersion: String by project
 val gsonfireVersion: String by project
 val jacksonDatabindNullable: String by project
+val springSecurityCryptoVersion: String by project
+val openFeignVersion: String by project
 
 group = "ru.izpz"
 version = "0.0.1-SNAPSHOT"
@@ -29,6 +31,11 @@ dependencies {
     implementation("com.google.code.gson:gson:$gsonVersion")
     // https://mvnrepository.com/artifact/jakarta.annotation/jakarta.annotation-api
     implementation("jakarta.annotation:jakarta.annotation-api:3.0.0")
+
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign:$openFeignVersion") {
+        exclude(group = "org.springframework.security", module = "spring-security-crypto")
+    }
+    implementation("org.springframework.security:spring-security-crypto:$springSecurityCryptoVersion")
 
     // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.0")

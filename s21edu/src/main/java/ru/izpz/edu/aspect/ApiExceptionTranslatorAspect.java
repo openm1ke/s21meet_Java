@@ -25,7 +25,7 @@ public class ApiExceptionTranslatorAspect {
                 throw new RetryableApiException(code, e.getMessage(), e);
             } else {
                 log.warn("Non-retryable error in {}: {}", joinPoint.getSignature(), e.getCode());
-                throw new NonRetryableApiException(code, e.getMessage(), e);
+                throw new NonRetryableApiException(code, e.getMessage(), e.getResponseHeaders(), e.getResponseBody(), e);
             }
         }
     }
