@@ -20,6 +20,8 @@ import static org.mockito.Mockito.*;
         "cluster.api.enabled=true",
         "api.client.enabled=true",
         "token.service.enabled=true",
+        "profile.service.enabled=true",
+        "campus.service.enabled=true",
         "spring.main.allow-bean-definition-overriding=true"
 })
 class ClusterApiProxyTest extends BaseTestContainer {

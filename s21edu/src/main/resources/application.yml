@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update  # Автоматически обновлять схему БД на основе сущностей
+      ddl-auto: create  # Автоматически обновлять схему БД на основе сущностей
     show-sql: false  # Логирование SQL-запросов
     properties:
       hibernate:
@@ -31,6 +31,9 @@ logging:
   level:
     io.github.resilience4j: INFO
 
+participant.api.enabled: true
+profile.service.enabled: true
+profile.api.enabled: true
 notify.service.enabled: true
 message.service.enabled: true
 token.service.enabled: true

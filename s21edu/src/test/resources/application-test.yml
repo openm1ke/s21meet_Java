@@ -1,5 +1,8 @@
 spring.main.allow-bean-definition-overriding: true
 
+participant.api.enabled: false
+profile.service.enabled: false
+profile.api.enabled: false
 notify.service.enabled: false
 message.service.enabled: false
 token.service.enabled: false

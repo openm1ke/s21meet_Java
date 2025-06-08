@@ -17,8 +17,11 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.bot.dto.CallbackPayload;
+import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
+import ru.izpz.dto.model.ErrorResponseDTO;
+import ru.izpz.dto.model.ParticipantV1DTO;
 
 import java.util.List;
 import java.util.Map;
@@ -90,6 +93,24 @@ public class MessageProcessor {
             sendMessage(chatId, "Введенный логин не соответствует требованиям", null);
             return;
         }
+
+        ParticipantV1DTO participant;
+        try {
+            participant = profileService.checkEduLogin(text);
+        } catch (EduLoginCheckException e) {
+            ErrorResponseDTO error = e.getError();
+            sendMessage(chatId, "Ошибка проверки логина: " + error.getMessage(), null);
+            sendMessage(ADMIN_ID, "Ошибка проверки логина: " + error, null);
+            return;
+        }
+
+        System.out.println(participant);
+
+        if (participant.getStatus() != ParticipantV1DTO.StatusEnum.ACTIVE) {
+            sendMessage(chatId, "Введенный логин не активен", null);
+            return;
+        }
+
         // тут мы получает в тексте логин на платформе
         // надо отправить его на бэкенд и получить дто с какими-то полями
         // первое что мы проверяем что профиль существует или нет

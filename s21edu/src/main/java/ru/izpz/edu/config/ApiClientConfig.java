@@ -7,6 +7,7 @@ import org.springframework.web.client.RestTemplate;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.edu.service.CampusApiProxy;
 import ru.izpz.edu.service.ClusterApiProxy;
+import ru.izpz.edu.service.ParticipantApiProxy;
 import ru.izpz.edu.service.TokenService;
 
 @Configuration
@@ -34,5 +35,10 @@ public class ApiClientConfig {
     @Bean
     public ClusterApiProxy clusterApiProxy(ApiClient apiClient) {
         return new ClusterApiProxy(apiClient);
+    }
+
+    @Bean
+    public ParticipantApiProxy participantApiProxy(ApiClient apiClient) {
+        return new ParticipantApiProxy(apiClient);
     }
 }

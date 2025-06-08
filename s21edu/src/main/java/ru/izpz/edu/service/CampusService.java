@@ -1,11 +1,13 @@
 package ru.izpz.edu.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.ApiException;
+import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;
@@ -19,29 +21,17 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 @ConditionalOnProperty(name = "campus.service.enabled", havingValue = "true", matchIfMissing = true)
 public class CampusService {
 
     private final CampusApiProxy campusApi;
     private final ClusterApiProxy clusterApi;
+    private final ParticipantApiProxy participantApi;
     private final ClusterRepository clusterRepository;
     private final WorkplaceRepository workplaceRepository;
     private final ApiClient apiClient;
     private final TokenService tokenService;
-
-    public CampusService(CampusApiProxy campusApi,
-                         ClusterApiProxy clusterApi,
-                         ClusterRepository clusterRepository,
-                         WorkplaceRepository workplaceRepository,
-                         ApiClient apiClient,
-                         TokenService tokenService) {
-        this.campusApi = campusApi;
-        this.clusterApi = clusterApi;
-        this.clusterRepository = clusterRepository;
-        this.workplaceRepository = workplaceRepository;
-        this.apiClient = apiClient;
-        this.tokenService = tokenService;
-    }
 
     @Scheduled(fixedDelay = 30000)
     public void parseMskKznNsk() {
@@ -131,5 +121,11 @@ public class CampusService {
         }
         log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
         clusterRepository.saveAllAndFlush(clusterEntities);
+    }
+
+
+    public ParticipantV1DTO checkEduLogin(String login) throws ApiException {
+        log.info("Получен запрос на проверку логина: login = {}", login);
+        return participantApi.getParticipantByLogin(login);
     }
 }

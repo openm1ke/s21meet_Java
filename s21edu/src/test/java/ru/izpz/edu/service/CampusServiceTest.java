@@ -8,10 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.ApiException;
-import ru.izpz.dto.model.ClusterMapV1DTO;
-import ru.izpz.dto.model.ClusterV1DTO;
-import ru.izpz.dto.model.ClustersV1DTO;
-import ru.izpz.dto.model.WorkplaceV1DTO;
+import ru.izpz.dto.model.*;
 import ru.izpz.edu.repository.ClusterRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 
@@ -32,6 +29,9 @@ class CampusServiceTest {
 
     @Mock
     private ClusterApiProxy clusterApi;
+
+    @Mock
+    private ParticipantApiProxy participantApi;
 
     @Mock
     private ClusterRepository clusterRepository;
@@ -145,5 +145,11 @@ class CampusServiceTest {
         );
 
         verify(workplaceRepository, never()).saveAllAndFlush(anyList());
+    }
+
+    @Test
+    void getParticipantByLogin() throws ApiException {
+        when(participantApi.getParticipantByLogin("login")).thenReturn(new ParticipantV1DTO());
+        campusService.checkEduLogin("login");
     }
 }
