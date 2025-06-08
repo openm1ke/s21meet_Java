@@ -1,11 +1,14 @@
 package ru.izpz.edu.exception;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import ru.izpz.dto.ApiException;
+import ru.izpz.dto.model.ErrorResponseDTO;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -13,6 +16,28 @@ import java.util.Map;
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Object> handleApiException(ApiException ex) {
+        try {
+            ErrorResponseDTO error = objectMapper.readValue(ex.getResponseBody(), ErrorResponseDTO.class);
+            log.warn("Ошибка от внешнего API [{}]: {}", error.getCode(), error.getMessage());
+            return ResponseEntity
+                    .status(error.getStatus())
+                    .body(error);
+        } catch (Exception parseEx) {
+            log.warn("Не удалось распарсить тело ошибки API: {}", ex.getResponseBody(), parseEx);
+            return ResponseEntity
+                    .status(ex.getCode())
+                    .body(Map.of(
+                            "status", ex.getCode(),
+                            "message", ex.getMessage(),
+                            "raw", ex.getResponseBody()
+                    ));
+        }
+    }
 
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<String> handleProfileNotFound(ProfileNotFoundException e) {

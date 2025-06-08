@@ -21,6 +21,6 @@ public interface ProfileClient {
     @PostMapping("/profile")
     ProfileDto updateProfileStatus(@RequestBody ProfileRequest request);
 
-    @GetMapping("/login")
+    @GetMapping("/profile/login")
     ParticipantV1DTO checkEduLogin(@RequestParam String login);
 }
