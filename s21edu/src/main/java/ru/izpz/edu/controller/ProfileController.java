@@ -43,4 +43,11 @@ public class ProfileController {
         var participant = campusService.checkEduLogin(login);
         return ResponseEntity.ok(participant);
     }
+
+    @PostMapping("/login")
+    ResponseEntity<ProfileDto> checkAndSetLogin(@Valid @RequestBody ProfileRequest request) {
+        log.info("Получен запрос на привязку логина: login = {} для телеграма = {}", request.getS21login(), request.getTelegramId());
+        var profile = profileService.checkAndSetLogin(request.getTelegramId(), request.getS21login());
+        return ResponseEntity.ok(profile);
+    }
 }

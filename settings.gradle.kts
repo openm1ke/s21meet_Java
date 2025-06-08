@@ -5,3 +5,4 @@ include("s21edu")
 include("s21bot")
 
 include("common")
+include("s21rocket")
