@@ -5,10 +5,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.izpz.bot.client.ProfileClient;
+import ru.izpz.bot.client.RocketChatClient;
 import ru.izpz.bot.exception.EduLoginCheckException;
-import ru.izpz.dto.ProfileDto;
-import ru.izpz.dto.ProfileRequest;
-import ru.izpz.dto.ProfileStatus;
+import ru.izpz.bot.exception.RocketChatSendException;
+import ru.izpz.dto.*;
 import ru.izpz.dto.model.ErrorResponseDTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.utils.FeignErrorParser;
@@ -19,6 +19,7 @@ import ru.izpz.utils.FeignErrorParser;
 public class ProfileService {
 
     private final ProfileClient profileClient;
+    private final RocketChatClient rocketChatClient;
 
     public ProfileDto getProfile(Long chatId) {
         log.info("Получение профиля {}", chatId);
@@ -71,4 +72,37 @@ public class ProfileService {
             throw e;
         }
     }
+
+    public ProfileCodeResponse getVerificationCode(String s21login) {
+        ProfileCodeRequest request = ProfileCodeRequest.builder()
+                .s21login(s21login)
+                .build();
+        try {
+            return profileClient.getProfileCode(request);
+        } catch (FeignException e) {
+            log.error("Ошибка генерации кода подтверждения {}", e.contentUTF8());
+            throw e;
+        }
+    }
+
+    public RocketChatSendResponse sendVerificationCode(String s21login) {
+        try {
+            ProfileCodeResponse code = getVerificationCode(s21login);
+            String message = String.format("Привет! Вот твой код подтверждения: %s", code.getSecretCode());
+            RocketChatSendRequest rocketChatSendRequest = RocketChatSendRequest.builder()
+                    .username(code.getS21login())
+                    .message(message)
+                    .build();
+            var response = rocketChatClient.sendMessage(rocketChatSendRequest);
+            if (response.isSuccess()) {
+                return response;
+            } else {
+                throw new RocketChatSendException(response);
+            }
+        } catch (FeignException e) {
+            log.error("Ошибка генерации кода подтверждения {}", e.contentUTF8());
+            throw e;
+        }
+    }
+
 }

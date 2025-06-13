@@ -3,14 +3,20 @@ package ru.izpz.edu.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import ru.izpz.dto.ProfileCodeResponse;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileRequest;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.edu.exception.ProfileNotFoundException;
 import ru.izpz.edu.mapper.ProfileMapper;
+import ru.izpz.edu.mapper.ProfileVerificationMapper;
 import ru.izpz.edu.model.Profile;
+import ru.izpz.edu.model.ProfileValidation;
 import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
+import ru.izpz.edu.utils.StringUtils;
+
+import java.time.OffsetDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +24,7 @@ import ru.izpz.edu.repository.ProfileValidationRepository;
 public class ProfileService {
 
     private final ProfileMapper profileMapper;
+    private final ProfileVerificationMapper profileVerificationMapper;
     private final ProfileRepository profileRepository;
     private final ProfileValidationRepository profileValidationRepository;
 
@@ -54,5 +61,17 @@ public class ProfileService {
         }
         profile.setS21login(s21login);
         return profileMapper.toDto(profileRepository.save(profile));
+    }
+
+    public ProfileCodeResponse getVerificationCode(String s21login) {
+        ProfileValidation validation = profileValidationRepository.findByS21login(s21login).orElseGet(() -> {
+            ProfileValidation profileValidation = new ProfileValidation();
+            profileValidation.setS21login(s21login);
+            profileValidation.setSecretCode(StringUtils.generateCode(4));
+            profileValidation.setExpiresAt(OffsetDateTime.now());
+            return profileValidationRepository.save(profileValidation);
+        });
+
+        return profileVerificationMapper.toProfileCodeResponse(validation);
     }
 }

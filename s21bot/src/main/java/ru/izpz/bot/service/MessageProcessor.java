@@ -18,8 +18,10 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.exception.EduLoginCheckException;
+import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
+import ru.izpz.dto.RocketChatSendResponse;
 import ru.izpz.dto.model.ErrorResponseDTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 
@@ -77,15 +79,28 @@ public class MessageProcessor {
         switch(profile.status()) {
             case CREATED -> startOnboarding(chatId);
             case REGISTRATION -> startRegistration(chatId, profile, text);
-            case VALIDATION -> {
-
-                sendMessage(chatId, "Вам был отправлен код для подтверждения для логина " + text + " в рокет чат", null);
-            }
-
-            case CONFIRMED -> sendMessage(chatId, "Вы зарегистрированы", null);
+            case VALIDATION -> startValidation(chatId, profile, text);
+            case CONFIRMED -> startConfirmed(chatId, profile, text);
         }
     }
 
+    private void startConfirmed(Long chatId, ProfileDto profile, String text) {
+        if (text.equals("/start")) {
+            // Отрпавить сообщение с текстом "выбери команду" из меню
+            //startOnboarding(chatId);
+        }
+        // в ином случае нужно проверить ласт комманд и вызвать нужный метож
+    }
+
+    private void startValidation(Long chatId, ProfileDto profile, String text) {
+        var code = profileService.getVerificationCode(profile.s21login());
+        if (code.getSecretCode().equals(text)) {
+            profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
+            sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", null);
+        } else {
+            sendMessage(chatId, "Введенный код не совпадает!", null);
+        }
+    }
 
 
     private void startRegistration(Long chatId, ProfileDto profile, String text) {
@@ -121,11 +136,22 @@ public class MessageProcessor {
         }
         // если логин совпадает значит мы его сохранили
         if (profileDto.s21login().equals(text)) {
-            sendMessage(chatId, "Ваш логин сохранен", null);
-            // тут посылаем запрос на валидацию, для этого на конкретный эндпоинт будет послан запрос
-            // создаст код подтверждения и отправит его в чат
-            // если сообщение отправилось то мы получим дто с измененным статусом
-            // или исключение что не удалось отправить сообщение в чат
+            RocketChatSendResponse rocketChatResponse;
+            try {
+                rocketChatResponse = profileService.sendVerificationCode(text);
+            } catch (RocketChatSendException e) {
+                sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
+                sendMessage(ADMIN_ID, e.getMessage(), null);
+                return;
+            } catch (FeignException e) {
+                sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
+                sendMessage(ADMIN_ID, e.contentUTF8(), null);
+                return;
+            }
+
+            sendMessage(chatId, "В рокет чат был отправлен код для подтверждения для логина " + text, null);
+            sendMessage(ADMIN_ID, "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(), null);
+            profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
         }
 
         // тут мы получает в тексте логин на платформе
