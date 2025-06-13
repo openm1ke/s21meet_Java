@@ -84,12 +84,12 @@ public class MessageProcessor {
 
     private void startConfirmed(Long chatId, ProfileDto profile, String text) {
         if (text.equals("/start")) {
-            // Отрпавить сообщение с текстом "выбери команду" из меню
+            // Отправить сообщение с текстом "выбери команду" из меню
             //startOnboarding(chatId);
             ReplyKeyboard keyboard = TelegramKeyboardFactory.createReplyKeyboard(TelegramButtons.MAIN_MENU, 3);
             sendMessage(chatId, "Выберите команду", keyboard);
         }
-        // в ином случае нужно проверить ласт комманд и вызвать нужный метож
+        // в ином случае нужно проверить ласт комманд и вызвать нужный метод
     }
 
     private void startValidation(Long chatId, ProfileDto profile, String text) {
@@ -118,8 +118,6 @@ public class MessageProcessor {
             sendMessage(ADMIN_ID, "Ошибка проверки логина: " + error, null);
             return;
         }
-
-        System.out.println(participant);
 
         if (participant.getStatus() != ParticipantV1DTO.StatusEnum.ACTIVE) {
             sendMessage(chatId, "Введенный логин не активен", null);

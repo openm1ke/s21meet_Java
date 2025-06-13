@@ -50,7 +50,6 @@ public class ProfileService {
                 .telegramId(chatId.toString())
                 .status(status)
                 .build();
-        System.out.println(profileRequest);
         try {
             return profileClient.updateProfileStatus(profileRequest);
         } catch (FeignException e) {
