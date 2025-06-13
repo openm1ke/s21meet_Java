@@ -13,22 +13,21 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageRe
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.RocketChatSendException;
+import ru.izpz.bot.keyboard.Buttons;
+import ru.izpz.bot.keyboard.TelegramButtons;
+import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.RocketChatSendResponse;
 import ru.izpz.dto.model.ErrorResponseDTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 
-import java.util.List;
-import java.util.Map;
-
-import static ru.izpz.bot.service.Buttons.registration_button;
 
 @Slf4j
 @Service
@@ -69,8 +68,7 @@ public class MessageProcessor {
         }
 
         switch (payload.getCommand()) {
-            case "registration" -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
-            case "help" -> sendMessage(chatId, "Вот инструкция по использованию бота...", null);
+            case Buttons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
             default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
         }
     }
@@ -88,6 +86,8 @@ public class MessageProcessor {
         if (text.equals("/start")) {
             // Отрпавить сообщение с текстом "выбери команду" из меню
             //startOnboarding(chatId);
+            ReplyKeyboard keyboard = TelegramKeyboardFactory.createReplyKeyboard(TelegramButtons.MAIN_MENU, 3);
+            sendMessage(chatId, "Выберите команду", keyboard);
         }
         // в ином случае нужно проверить ласт комманд и вызвать нужный метож
     }
@@ -96,9 +96,9 @@ public class MessageProcessor {
         var code = profileService.getVerificationCode(profile.s21login());
         if (code.getSecretCode().equals(text)) {
             profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
-            sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", null);
+            sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", TelegramKeyboardFactory.createReplyKeyboard(TelegramButtons.MAIN_MENU, 3));
         } else {
-            sendMessage(chatId, "Введенный код не совпадает!", null);
+            sendMessage(chatId, "Введенный код не совпадает!", TelegramKeyboardFactory.removeReplyKeyboard());
         }
     }
 
@@ -170,22 +170,19 @@ public class MessageProcessor {
     }
 
     private void startOnboarding(Long chatId) {
-        sendMessage(chatId, "Для регистрации нажмите кнопку ниже", registration_button);
+        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.createInlineKeyboardMarkup(Buttons.registration_button, 1);
+        sendMessage(chatId, "Для регистрации нажмите кнопку ниже", keyboard);
     }
 
     private boolean isValidLogin(String login) {
         return login != null && login.matches("^[a-zA-Z]{3,9}$");
     }
 
-    public void sendMessage(Long chatId, String text, Map<String, String> buttons) {
-        InlineKeyboardMarkup markup = buttons == null || buttons.isEmpty()
-                ? null
-                : createInlineKeyboardMarkup(buttons);
-
+    public void sendMessage(Long chatId, String text, ReplyKeyboard replyKeyboard) {
         SendMessage response = SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
-                .replyMarkup(markup)
+                .replyMarkup(replyKeyboard)
                 .build();
 
         try {
@@ -209,6 +206,20 @@ public class MessageProcessor {
         }
     }
 
+    public void removeReplyKeyboard(Long chatId, String message) {
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId.toString())
+                .text(message)
+                .replyMarkup(new ReplyKeyboardRemove(true)) // удаляет клавиатуру
+                .build();
+
+        try {
+            telegramClient.execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error("Ошибка при удалении reply keyboard: {}", e.getMessage());
+        }
+    }
+
     public void updateMessageAndChangeStatusRegistration(Long chatId, Integer messageId, String newText) {
         EditMessageText editMessage = EditMessageText.builder()
                 .chatId(chatId.toString()) // обязательно как String
@@ -225,22 +236,5 @@ public class MessageProcessor {
         } catch (FeignException e) {
             log.error("Ошибка обработки профиля", e);
         }
-    }
-
-    public InlineKeyboardMarkup createInlineKeyboardMarkup(Map<String, String> buttons) {
-        var row = new InlineKeyboardRow();
-
-        buttons.forEach((key, value) -> {
-            var button = InlineKeyboardButton.builder()
-                    .text(key)
-                    .callbackData(value)
-                    .build();
-            row.add(button);
-        });
-
-        var markup = InlineKeyboardMarkup.builder()
-                .keyboard(List.of(row))
-                .build();
-        return markup;
     }
 }
