@@ -13,6 +13,10 @@ logging:
   level:
     io.github.resilience4j: INFO
 
+rocketchat:
+  service:
+    url: ${ROCKETCHAT_SERVICE_URL}
+
 profile:
   service:
     url: ${PROFILE_SERVICE_URL}

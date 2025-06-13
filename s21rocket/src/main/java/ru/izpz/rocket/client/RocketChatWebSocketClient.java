@@ -184,7 +184,7 @@ public class RocketChatWebSocketClient extends WebSocketClient {
                         .put("msg", text)))
                 .toString());
 
-        response = new RocketChatSendResponse(true, "Message sent successfully");
+        response = new RocketChatSendResponse(true, text);
         close();
     }
 }

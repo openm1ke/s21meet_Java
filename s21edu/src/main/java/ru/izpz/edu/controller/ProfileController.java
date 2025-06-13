@@ -6,9 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.izpz.dto.ApiException;
-import ru.izpz.dto.ProfileDto;
-import ru.izpz.dto.ProfileRequest;
+import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.ProfileService;
@@ -49,5 +47,12 @@ public class ProfileController {
         log.info("Получен запрос на привязку логина: login = {} для телеграма = {}", request.getS21login(), request.getTelegramId());
         var profile = profileService.checkAndSetLogin(request.getTelegramId(), request.getS21login());
         return ResponseEntity.ok(profile);
+    }
+
+    @PostMapping("/code")
+    ResponseEntity<ProfileCodeResponse> sendVerificationCode(@Valid @RequestBody ProfileCodeRequest request) {
+        log.info("Получен запрос на генерацию кода подтверждения для {}", request.getS21login());
+        var verificationCode = profileService.getVerificationCode(request.getS21login());
+        return ResponseEntity.ok(verificationCode);
     }
 }
