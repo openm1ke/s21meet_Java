@@ -1,0 +1,11 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: s21rocket
+
+rocketchat:
+  websocket-uri: ${ROCKET_CHAT_URL}
+  bot-username: ${ROCKET_CHAT_QRBOT}
+  token: ${ROCKET_CHAT_TOKEN}

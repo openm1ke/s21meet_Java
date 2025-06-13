@@ -4,6 +4,8 @@ plugins {
     java
 }
 
+val springDotEnvVersion: String by project
+
 group = "ru.izpz.rocket"
 version = "0.0.1-SNAPSHOT"
 
@@ -12,6 +14,8 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":common"))
+
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-logging")
@@ -20,6 +24,8 @@ dependencies {
     implementation("org.json:json:20250517")
     implementation("org.slf4j:slf4j-api:2.0.17")
     implementation("ch.qos.logback:logback-classic:1.5.18")
+
+    implementation("me.paulschwarz:spring-dotenv:${springDotEnvVersion}")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
