@@ -7,5 +7,5 @@ spring:
 
 rocketchat:
   websocket-uri: ${ROCKET_CHAT_URL}
-  bot-username: ${ROCKET_CHAT_QRBOT}
+  bot-username: ${ROCKET_CHAT_QR_BOT}
   token: ${ROCKET_CHAT_TOKEN}

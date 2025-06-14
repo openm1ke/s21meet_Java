@@ -1,7 +1,5 @@
 package ru.izpz.bot.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +16,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRem
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.exception.EduLoginCheckException;
+import ru.izpz.bot.exception.InvalidCallbackPayloadException;
 import ru.izpz.bot.exception.RocketChatSendException;
-import ru.izpz.bot.keyboard.Buttons;
+import ru.izpz.bot.keyboard.CallbackPayloadSerializer;
 import ru.izpz.bot.keyboard.TelegramButtons;
 import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
 import ru.izpz.dto.ProfileDto;
@@ -40,8 +39,6 @@ public class MessageProcessor {
     private final OkHttpTelegramClient telegramClient;
     private final ProfileService profileService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     public void handleTextMessage(Message message) {
         Long chatId = message.getChatId();
         String text = message.getText().trim();
@@ -58,18 +55,16 @@ public class MessageProcessor {
     }
 
     public void handleCallbackMessage(Long chatId, String data, Integer messageId) {
-        CallbackPayload payload;
         try {
-            payload = objectMapper.readValue(data, CallbackPayload.class);
-        } catch (JsonProcessingException e) {
-            log.error("Error parsing callback data: {}", data, e);
-            sendMessage(ADMIN_ID, e.getMessage(), null);
-            return;
-        }
+            CallbackPayload payload = CallbackPayloadSerializer.deserialize(data);
 
-        switch (payload.getCommand()) {
-            case Buttons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
-            default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
+            switch (payload.getCommand()) {
+                case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
+                default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
+            }
+        } catch (InvalidCallbackPayloadException e) {
+            log.error("Получены некорректные данные в callback: {}", data, e);
+            sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
         }
     }
 
@@ -168,12 +163,12 @@ public class MessageProcessor {
     }
 
     private void startOnboarding(Long chatId) {
-        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.createInlineKeyboardMarkup(Buttons.registration_button, 1);
+        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.createInlineKeyboardMarkup(TelegramButtons.registration_button, 1);
         sendMessage(chatId, "Для регистрации нажмите кнопку ниже", keyboard);
     }
 
     private boolean isValidLogin(String login) {
-        return login != null && login.matches("^[a-zA-Z]{3,9}$");
+        return login != null && login.matches("^[a-zA-Z]{3,30}$");
     }
 
     public void sendMessage(Long chatId, String text, ReplyKeyboard replyKeyboard) {
