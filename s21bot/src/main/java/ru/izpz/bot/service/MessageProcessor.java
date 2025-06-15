@@ -18,9 +18,7 @@ import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.InvalidCallbackPayloadException;
 import ru.izpz.bot.exception.RocketChatSendException;
-import ru.izpz.bot.keyboard.CallbackPayloadSerializer;
-import ru.izpz.bot.keyboard.TelegramButtons;
-import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
+import ru.izpz.bot.keyboard.*;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.RocketChatSendResponse;
@@ -78,20 +76,43 @@ public class MessageProcessor {
     }
 
     private void startConfirmed(Long chatId, ProfileDto profile, String text) {
-        if (text.equals("/start")) {
-            // Отправить сообщение с текстом "выбери команду" из меню
-            //startOnboarding(chatId);
-            ReplyKeyboard keyboard = TelegramKeyboardFactory.createReplyKeyboard(TelegramButtons.MAIN_MENU, 3);
-            sendMessage(chatId, "Выберите команду", keyboard);
+
+        if (SlashCommandEnum.contains(text)) {
+            SlashCommandEnum command = SlashCommandEnum.fromText(text).get();
+            switch (command) {
+                case SlashCommandEnum.START -> {
+                    ReplyKeyboard keyboard = TelegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
+                    sendMessage(chatId, "Выберите команду", keyboard);
+                }
+                case SlashCommandEnum.ME -> {
+                    sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
+                }
+                case SlashCommandEnum.HELP -> {
+                    sendMessage(chatId, "Помощь по командам бота", null);
+                }
+                case SlashCommandEnum.DONATE -> sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
+            }
         }
+
         // в ином случае нужно проверить ласт комманд и вызвать нужный метод
+        if (MenuCommandEnum.contains(text)) {
+            MenuCommandEnum command = MenuCommandEnum.fromText(text).get();
+            switch (command) {
+                case MenuCommandEnum.SEARCH -> sendMessage(chatId, "Поиск", null);
+                case MenuCommandEnum.FRIENDS -> sendMessage(chatId, "Друзья", null);
+                case MenuCommandEnum.PROFILE -> sendMessage(chatId, "Профиль", null);
+                case MenuCommandEnum.EVENTS -> sendMessage(chatId, "События", null);
+                case MenuCommandEnum.CAMPUS -> sendMessage(chatId, "Кампус", null);
+                case MenuCommandEnum.PROJECTS -> sendMessage(chatId, "Проекты", null);
+            }
+        }
     }
 
     private void startValidation(Long chatId, ProfileDto profile, String text) {
         var code = profileService.getVerificationCode(profile.s21login());
         if (code.getSecretCode().equals(text)) {
             profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
-            sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", TelegramKeyboardFactory.createReplyKeyboard(TelegramButtons.MAIN_MENU, 3));
+            sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", TelegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
         } else {
             sendMessage(chatId, "Введенный код не совпадает!", TelegramKeyboardFactory.removeReplyKeyboard());
         }
@@ -114,10 +135,13 @@ public class MessageProcessor {
             return;
         }
 
+        // проверяем что профиль активный
         if (participant.getStatus() != ParticipantV1DTO.StatusEnum.ACTIVE) {
             sendMessage(chatId, "Введенный логин не активен", null);
             return;
         }
+
+        // тут можно проверить что профиль на основе Core program
 
         ProfileDto profileDto;
         try {
