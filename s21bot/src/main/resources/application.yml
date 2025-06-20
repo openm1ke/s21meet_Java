@@ -8,6 +8,8 @@ spring:
 bot:
   token: ${BOT_TOKEN}
   admin: ${BOT_ADMIN}
+  group: ${BOT_GROUP}
+  group-invite-link: ${BOT_GROUP_INVITE_LINK}
 
 logging:
   level:

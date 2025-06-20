@@ -104,4 +104,13 @@ public class ProfileService {
         }
     }
 
+    public CampusResponse showCampusMap(Long chatId) {
+        var request = CampusRequest.builder().telegramId(chatId.toString()).build();
+        try {
+            return profileClient.getCampusMap(request);
+        } catch (FeignException e) {
+            log.error("Ошибка получения карты кампуса {}", e.contentUTF8());
+            throw e;
+        }
+    }
 }

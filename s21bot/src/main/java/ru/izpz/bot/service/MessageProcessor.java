@@ -6,9 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
+import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
@@ -19,6 +21,7 @@ import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.InvalidCallbackPayloadException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.bot.keyboard.*;
+import ru.izpz.dto.CampusResponse;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.RocketChatSendResponse;
@@ -33,9 +36,12 @@ public class MessageProcessor {
 
     @Value("${bot.admin}")
     private Long ADMIN_ID;
+    @Value("${bot.group}")
+    private Long GROUP_ID;
 
     private final OkHttpTelegramClient telegramClient;
     private final ProfileService profileService;
+    private final TelegramButtons telegramButtons;
 
     public void handleTextMessage(Message message) {
         Long chatId = message.getChatId();
@@ -75,7 +81,24 @@ public class MessageProcessor {
         }
     }
 
+    private boolean isUserInGroup(Long chatId) {
+        GetChatMember getChatMember = new GetChatMember(GROUP_ID.toString(), chatId);
+        try {
+            ChatMember chatMember = telegramClient.execute(getChatMember);
+            String status = chatMember.getStatus();
+            return !("left".equals(status) || "kicked".equals(status));
+        } catch (TelegramApiException e) {
+            return false;
+        }
+    }
+
     private void startConfirmed(Long chatId, ProfileDto profile, String text) {
+        // проверка подписан ли на канал
+        if (!isUserInGroup(chatId)) {
+            ReplyKeyboard keyboard = TelegramKeyboardFactory.createUrlKeyboard(telegramButtons.getSubscribeButton(),1);
+            sendMessage(chatId, "Подпишитесь на канал", keyboard);
+            return;
+        }
 
         if (SlashCommandEnum.contains(text)) {
             SlashCommandEnum command = SlashCommandEnum.fromText(text).get();
@@ -102,10 +125,17 @@ public class MessageProcessor {
                 case MenuCommandEnum.FRIENDS -> sendMessage(chatId, "Друзья", null);
                 case MenuCommandEnum.PROFILE -> sendMessage(chatId, "Профиль", null);
                 case MenuCommandEnum.EVENTS -> sendMessage(chatId, "События", null);
-                case MenuCommandEnum.CAMPUS -> sendMessage(chatId, "Кампус", null);
+                case MenuCommandEnum.CAMPUS -> {
+                    var campusMap = showCampusMap(chatId);
+                    sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
+                }
                 case MenuCommandEnum.PROJECTS -> sendMessage(chatId, "Проекты", null);
             }
         }
+    }
+
+    private CampusResponse showCampusMap(Long chatId) {
+        return profileService.showCampusMap(chatId);
     }
 
     private void startValidation(Long chatId, ProfileDto profile, String text) {
@@ -187,7 +217,7 @@ public class MessageProcessor {
     }
 
     private void startOnboarding(Long chatId) {
-        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.createInlineKeyboardMarkup(TelegramButtons.registration_button, 1);
+        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.createInlineKeyboardMarkup(telegramButtons.getRegistrationButton(), 1);
         sendMessage(chatId, "Для регистрации нажмите кнопку ниже", keyboard);
     }
 

@@ -7,11 +7,15 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.ApiException;
+import ru.izpz.dto.Clusters;
 import ru.izpz.dto.model.ParticipantV1DTO;
+import ru.izpz.edu.dto.CampusDto;
+import ru.izpz.edu.exception.ProfileNotFoundException;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;
 import ru.izpz.edu.repository.ClusterRepository;
+import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.utils.StringUtils;
 
@@ -32,6 +36,7 @@ public class CampusService {
     private final WorkplaceRepository workplaceRepository;
     private final ApiClient apiClient;
     private final TokenService tokenService;
+    private final ProfileRepository profileRepository;
 
     @Scheduled(fixedDelay = 30000)
     public void parseMskKznNsk() {
@@ -127,5 +132,26 @@ public class CampusService {
     public ParticipantV1DTO checkEduLogin(String login) throws ApiException {
         log.info("Получен запрос на проверку логина: login = {}", login);
         return participantApi.getParticipantByLogin(login);
+    }
+
+    public CampusDto getCampus(String telegramId) throws ApiException {
+        log.info("Получен запрос на получение кампуса для telegramId = {}", telegramId);
+        var profile = profileRepository.findByTelegramId(telegramId);
+        if (profile.isEmpty()) {
+            throw new ProfileNotFoundException("Не найден логин для данного телеграм айди");
+        }
+        var participant = checkEduLogin(profile.get().getS21login());
+        return new CampusDto(participant.getCampus().getShortName(), participant.getCampus().getId().toString());
+    }
+
+    public List<Clusters> getClusters(CampusDto campus) {
+        return clusterRepository.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
+            .map(cluster -> Clusters.builder()
+                .name(cluster.getName())
+                .capacity(cluster.getCapacity())
+                .availableCapacity(cluster.getAvailableCapacity())
+                .floor(cluster.getFloor())
+                .build())
+            .toList();
     }
 }

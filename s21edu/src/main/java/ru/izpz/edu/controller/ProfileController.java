@@ -4,10 +4,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
+import ru.izpz.edu.dto.CampusDto;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.ProfileService;
 
@@ -54,5 +56,17 @@ public class ProfileController {
         log.info("Получен запрос на генерацию кода подтверждения для {}", request.getS21login());
         var verificationCode = profileService.getVerificationCode(request.getS21login());
         return ResponseEntity.ok(verificationCode);
+    }
+
+    @PostMapping("/campus")
+    ResponseEntity<CampusResponse> getCampus(@Valid @RequestBody CampusRequest request) throws ApiException {
+        log.info("Получен запрос на вывод карты кампуса для {}", request.getTelegramId());
+        CampusDto campus = campusService.getCampus(request.getTelegramId());
+        var clusters = campusService.getClusters(campus);
+        var response = CampusResponse.builder()
+                .campusName(campus.name)
+                .clusters(clusters)
+                .build();
+        return ResponseEntity.ok(response);
     }
 }
