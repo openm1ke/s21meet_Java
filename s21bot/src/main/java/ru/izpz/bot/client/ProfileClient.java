@@ -5,10 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
-import ru.izpz.dto.ProfileCodeRequest;
-import ru.izpz.dto.ProfileCodeResponse;
-import ru.izpz.dto.ProfileDto;
-import ru.izpz.dto.ProfileRequest;
+import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
 
 @FeignClient(
@@ -31,5 +28,8 @@ public interface ProfileClient {
 
     @PostMapping("/profile/code")
     ProfileCodeResponse getProfileCode(@RequestBody ProfileCodeRequest request);
+
+    @PostMapping("/profile/campus")
+    CampusResponse getCampusMap(@RequestBody CampusRequest request);
 
 }

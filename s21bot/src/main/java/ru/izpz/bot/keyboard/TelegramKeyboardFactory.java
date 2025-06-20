@@ -39,6 +39,32 @@ public class TelegramKeyboardFactory {
                 .build();
     }
 
+    public static InlineKeyboardMarkup createUrlKeyboard(Map<String, String> buttons, int rowSize) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        InlineKeyboardRow currentRow = new InlineKeyboardRow();
+
+        for (Map.Entry<String, String> entry : buttons.entrySet()) {
+            InlineKeyboardButton button = InlineKeyboardButton.builder()
+                    .text(entry.getKey())
+                    .url(entry.getValue())
+                    .build();
+            currentRow.add(button);
+
+            if (currentRow.size() == rowSize) {
+                rows.add(currentRow);
+                currentRow = new InlineKeyboardRow();
+            }
+        }
+
+        if (!currentRow.isEmpty()) {
+            rows.add(currentRow);
+        }
+
+        return InlineKeyboardMarkup.builder()
+                .keyboard(rows)
+                .build();
+    }
+
     public static InlineKeyboardMarkup createInlineKeyboardMarkup(Map<String, String> buttons, int rowSize) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         InlineKeyboardRow currentRow = new InlineKeyboardRow();
