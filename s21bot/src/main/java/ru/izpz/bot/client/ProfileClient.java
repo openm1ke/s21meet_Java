@@ -32,4 +32,6 @@ public interface ProfileClient {
     @PostMapping("/profile/campus")
     CampusResponse getCampusMap(@RequestBody CampusRequest request);
 
+    @PostMapping("/profile/participant")
+    ParticipantDto getParticipant(@RequestBody ParticipantRequest request);
 }

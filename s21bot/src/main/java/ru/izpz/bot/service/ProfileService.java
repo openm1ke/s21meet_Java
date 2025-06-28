@@ -113,4 +113,14 @@ public class ProfileService {
             throw e;
         }
     }
+
+    public ParticipantDto showParticipant(Long chatId) {
+        var request = ParticipantRequest.builder().telegramId(chatId.toString()).build();
+        try {
+            return profileClient.getParticipant(request);
+        } catch (FeignException e) {
+            log.error("Ошибка получения профиля {}", e.contentUTF8());
+            throw e;
+        }
+    }
 }
