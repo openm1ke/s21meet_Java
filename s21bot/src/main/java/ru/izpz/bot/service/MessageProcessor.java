@@ -123,7 +123,10 @@ public class MessageProcessor {
             switch (command) {
                 case MenuCommandEnum.SEARCH -> sendMessage(chatId, "Поиск", null);
                 case MenuCommandEnum.FRIENDS -> sendMessage(chatId, "Друзья", null);
-                case MenuCommandEnum.PROFILE -> sendMessage(chatId, "Профиль", null);
+                case MenuCommandEnum.PROFILE -> {
+                    var showProfile = profileService.showParticipant(chatId);
+                    sendMessage(chatId, "Профиль\n" + showProfile, null);
+                }
                 case MenuCommandEnum.EVENTS -> sendMessage(chatId, "События", null);
                 case MenuCommandEnum.CAMPUS -> {
                     var campusMap = showCampusMap(chatId);

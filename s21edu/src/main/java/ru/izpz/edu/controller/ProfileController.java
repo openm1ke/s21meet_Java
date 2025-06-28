@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.izpz.dto.*;
@@ -68,5 +67,12 @@ public class ProfileController {
                 .clusters(clusters)
                 .build();
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/participant")
+    ResponseEntity<ParticipantDto> getParticipant(@Valid @RequestBody ParticipantRequest request) throws ApiException {
+        log.info("Получен запрос на вывод данных участника для {}", request.getTelegramId());
+        var participant = profileService.getParticipant(request.getTelegramId());
+        return ResponseEntity.ok(participant);
     }
 }

@@ -3,15 +3,16 @@ package ru.izpz.edu.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import ru.izpz.dto.ProfileCodeResponse;
-import ru.izpz.dto.ProfileDto;
-import ru.izpz.dto.ProfileRequest;
-import ru.izpz.dto.ProfileStatus;
+import ru.izpz.dto.*;
 import ru.izpz.edu.exception.ProfileNotFoundException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
+import ru.izpz.edu.model.Participant;
+import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.model.Profile;
 import ru.izpz.edu.model.ProfileValidation;
+import ru.izpz.edu.repository.ParticipantCampusRepository;
+import ru.izpz.edu.repository.ParticipantRepository;
 import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
 import ru.izpz.edu.utils.StringUtils;
@@ -27,6 +28,9 @@ public class ProfileService {
     private final ProfileVerificationMapper profileVerificationMapper;
     private final ProfileRepository profileRepository;
     private final ProfileValidationRepository profileValidationRepository;
+    private final CampusService campusService;
+    private final ParticipantRepository participantRepository;
+    private final ParticipantCampusRepository participantCampusRepository;
 
     public ProfileDto getOrCreateProfile(String telegramId) {
         return profileRepository.findByTelegramId(telegramId)
@@ -73,5 +77,20 @@ public class ProfileService {
         });
 
         return profileVerificationMapper.toProfileCodeResponse(validation);
+    }
+
+    public ParticipantDto getParticipant(String telegramId) throws ApiException {
+        Profile profile = profileRepository.findByTelegramId(telegramId)
+                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + telegramId));
+        var participantV1DTO = campusService.checkEduLogin(profile.getS21login());
+
+        ParticipantCampus campus = profileMapper.toEntity(participantV1DTO.getCampus());
+        participantCampusRepository.save(campus);
+
+        Participant participant = profileMapper.toEntity(participantV1DTO);
+        participant.setCampus(campus);
+        participantRepository.save(participant);
+
+        return profileMapper.toDto(participant);
     }
 }
