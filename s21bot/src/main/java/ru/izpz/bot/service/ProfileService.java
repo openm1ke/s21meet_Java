@@ -26,7 +26,7 @@ public class ProfileService {
         try {
             return profileClient.getOrCreateProfile(chatId.toString());
         } catch (FeignException e) {
-            log.error("Ошибка обработки профиля", e);
+            log.error("Ошибка обработки профиля для {}", chatId, e);
             throw e;
         }
     }
@@ -114,12 +114,26 @@ public class ProfileService {
         }
     }
 
-    public ParticipantDto showParticipant(Long chatId) {
-        var request = ParticipantRequest.builder().telegramId(chatId.toString()).build();
+    public ParticipantDto showParticipant(String telegramId, String eduLogin) {
+        var request = ParticipantRequest.builder().telegramId(telegramId).eduLogin(eduLogin).build();
         try {
             return profileClient.getParticipant(request);
         } catch (FeignException e) {
             log.error("Ошибка получения профиля {}", e.contentUTF8());
+            throw e;
+        }
+    }
+
+    public void setLastCommand(Long chatId, String command) {
+        var request = LastCommandRequest.builder()
+                .telegramId(chatId.toString())
+                .command(command)
+                .build();
+        try {
+            profileClient.setLastCommand(request);
+            log.info("Команда {} сохранена для {}", command, chatId);
+        } catch (FeignException e) {
+            log.error("Ошибка сохранения команды {} для {}", command, chatId, e.contentUTF8());
             throw e;
         }
     }

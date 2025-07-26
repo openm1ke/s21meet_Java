@@ -71,8 +71,15 @@ public class ProfileController {
 
     @PostMapping("/participant")
     ResponseEntity<ParticipantDto> getParticipant(@Valid @RequestBody ParticipantRequest request) throws ApiException {
-        log.info("Получен запрос на вывод данных участника для {}", request.getTelegramId());
-        var participant = profileService.getParticipant(request.getTelegramId());
+        log.info("Получен запрос на вывод данных участника {} для {}", request.getEduLogin(), request.getTelegramId());
+        var participant = profileService.getParticipant(request.getEduLogin());
         return ResponseEntity.ok(participant);
+    }
+
+    @PostMapping("/lastcommand")
+    ResponseEntity<ProfileDto> setLastCommand(@Valid @RequestBody LastCommandRequest request) {
+        log.info("Получен запрос на обновление последней команды для telegramId = {}, команда {}", request.getTelegramId(), request.getCommand());
+        var profile = profileService.updateLastCommand(request);
+        return ResponseEntity.ok(profile);
     }
 }

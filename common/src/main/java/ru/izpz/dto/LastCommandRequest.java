@@ -8,7 +8,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ParticipantRequest {
+public class LastCommandRequest {
     private String telegramId;
-    private String eduLogin;
+    private String command;
 }

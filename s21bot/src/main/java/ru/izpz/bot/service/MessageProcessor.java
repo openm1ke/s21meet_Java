@@ -21,12 +21,11 @@ import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.InvalidCallbackPayloadException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.bot.keyboard.*;
-import ru.izpz.dto.CampusResponse;
-import ru.izpz.dto.ProfileDto;
-import ru.izpz.dto.ProfileStatus;
-import ru.izpz.dto.RocketChatSendResponse;
+import ru.izpz.dto.*;
 import ru.izpz.dto.model.ErrorResponseDTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
+
+import java.util.Map;
 
 
 @Slf4j
@@ -46,29 +45,14 @@ public class MessageProcessor {
     public void handleTextMessage(Message message) {
         Long chatId = message.getChatId();
         String text = message.getText().trim();
-        ProfileDto profile;
         try {
-            profile = profileService.getProfile(chatId);
+            ProfileDto profile = profileService.getProfile(chatId);
             log.info("Profile: {}", profile.toString());
             //sendMessage(chatId, profile.toString());
             parseMessage(chatId, profile, text);
         } catch (FeignException e) {
             sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
             sendMessage(ADMIN_ID, e.contentUTF8(), null);
-        }
-    }
-
-    public void handleCallbackMessage(Long chatId, String data, Integer messageId) {
-        try {
-            CallbackPayload payload = CallbackPayloadSerializer.deserialize(data);
-
-            switch (payload.getCommand()) {
-                case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
-                default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
-            }
-        } catch (InvalidCallbackPayloadException e) {
-            log.error("Получены некорректные данные в callback: {}", data, e);
-            sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
         }
     }
 
@@ -81,13 +65,31 @@ public class MessageProcessor {
         }
     }
 
+    public void handleCallbackMessage(Long chatId, String data, Integer messageId) {
+        try {
+            CallbackPayload payload = CallbackPayloadSerializer.deserialize(data);
+
+            switch (payload.getCommand()) {
+                case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
+                case "add_friend" -> sendMessage(chatId, "Добавить в друзья", null);
+                case "set_name" -> sendMessage(chatId, "Указать имя", null);
+                default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
+            }
+        } catch (InvalidCallbackPayloadException e) {
+            log.error("Получены некорректные данные в callback: {}", data, e);
+            sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
+        }
+    }
+
     private boolean isUserInGroup(Long chatId) {
+        log.info("Проверка пользователя {} в группе {}", chatId, GROUP_ID.toString());
         GetChatMember getChatMember = new GetChatMember(GROUP_ID.toString(), chatId);
         try {
             ChatMember chatMember = telegramClient.execute(getChatMember);
             String status = chatMember.getStatus();
             return !("left".equals(status) || "kicked".equals(status));
         } catch (TelegramApiException e) {
+            log.error("Ошибка при проверке пользователя {} в группе {}", chatId, GROUP_ID.toString(), e);
             return false;
         }
     }
@@ -103,38 +105,78 @@ public class MessageProcessor {
         if (SlashCommandEnum.contains(text)) {
             SlashCommandEnum command = SlashCommandEnum.fromText(text).get();
             switch (command) {
-                case SlashCommandEnum.START -> {
+                case START -> {
                     ReplyKeyboard keyboard = TelegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
                     sendMessage(chatId, "Выберите команду", keyboard);
                 }
-                case SlashCommandEnum.ME -> {
+                case ME -> {
                     sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
                 }
-                case SlashCommandEnum.HELP -> {
+                case HELP -> {
                     sendMessage(chatId, "Помощь по командам бота", null);
                 }
-                case SlashCommandEnum.DONATE -> sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
+                case DONATE -> sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
             }
         }
 
-        // в ином случае нужно проверить ласт комманд и вызвать нужный метод
+        // если текст это команда меню
         if (MenuCommandEnum.contains(text)) {
             MenuCommandEnum command = MenuCommandEnum.fromText(text).get();
             switch (command) {
-                case MenuCommandEnum.SEARCH -> sendMessage(chatId, "Поиск", null);
-                case MenuCommandEnum.FRIENDS -> sendMessage(chatId, "Друзья", null);
-                case MenuCommandEnum.PROFILE -> {
-                    var showProfile = profileService.showParticipant(chatId);
-                    sendMessage(chatId, "Профиль\n" + showProfile, null);
+                case SEARCH -> {
+                    setLastCommand(chatId, MenuCommandEnum.SEARCH.name());
+                    sendMessage(chatId, "Введите логин для поиска", null);
                 }
-                case MenuCommandEnum.EVENTS -> sendMessage(chatId, "События", null);
-                case MenuCommandEnum.CAMPUS -> {
+                case FRIENDS -> sendMessage(chatId, "Друзья", null);
+                case PROFILE -> {
+                    showProfile(chatId, profile.s21login(), null);
+                }
+                case EVENTS -> sendMessage(chatId, "События", null);
+                case CAMPUS -> {
                     var campusMap = showCampusMap(chatId);
                     sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
                 }
-                case MenuCommandEnum.PROJECTS -> sendMessage(chatId, "Проекты", null);
+                case PROJECTS -> sendMessage(chatId, "Проекты", null);
             }
+            return;
         }
+
+        // в ином случае нужно проверить ласт комманд и вызвать нужный метод
+        MenuCommandEnum.fromName(profile.lastCommand()).ifPresent(cmd -> {
+            switch (cmd) {
+                case SEARCH -> {
+                    if (isValidLogin(text)) {
+
+                        Map<String, String> data = Map.of(
+                                "Добавить в друзья", CallbackPayloadSerializer.serialize(new CallbackPayload("add_friend")),
+                                "Указать имя",CallbackPayloadSerializer.serialize(new CallbackPayload("set_name"))
+                        );
+
+                        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.defaultInlineKeyboard(data);
+
+                        showProfile(chatId, text, keyboard);
+                    } else {
+                        sendMessage(chatId, "Логин должен быть от 3 до 30 символов и состоять только из латинских букв", null);
+                    }
+                }
+            }
+
+            setLastCommand(chatId, null);
+        });
+    }
+
+    private void showProfile(Long chatId, String login, InlineKeyboardMarkup keyboard) {
+        try {
+            ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
+            sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
+        } catch (FeignException e) {
+            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
+            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+        }
+    }
+
+    private void setLastCommand(Long chatId, String command) {
+        profileService.setLastCommand(chatId, command);
     }
 
     private CampusResponse showCampusMap(Long chatId) {
@@ -150,7 +192,6 @@ public class MessageProcessor {
             sendMessage(chatId, "Введенный код не совпадает!", TelegramKeyboardFactory.removeReplyKeyboard());
         }
     }
-
 
     private void startRegistration(Long chatId, ProfileDto profile, String text) {
         if (!isValidLogin(text)) {
