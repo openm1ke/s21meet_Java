@@ -1,5 +1,6 @@
 package ru.izpz.edu.service;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -79,10 +80,8 @@ public class ProfileService {
         return profileVerificationMapper.toProfileCodeResponse(validation);
     }
 
-    public ParticipantDto getParticipant(String telegramId) throws ApiException {
-        Profile profile = profileRepository.findByTelegramId(telegramId)
-                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + telegramId));
-        var participantV1DTO = campusService.checkEduLogin(profile.getS21login());
+    public ParticipantDto getParticipant(String eduLogin) throws ApiException {
+        var participantV1DTO = campusService.checkEduLogin(eduLogin);
 
         ParticipantCampus campus = profileMapper.toEntity(participantV1DTO.getCampus());
         participantCampusRepository.save(campus);
@@ -92,5 +91,12 @@ public class ProfileService {
         participantRepository.save(participant);
 
         return profileMapper.toDto(participant);
+    }
+
+    public ProfileDto updateLastCommand(@Valid LastCommandRequest request) {
+        Profile profile = profileRepository.findByTelegramId(request.getTelegramId())
+                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
+        profile.setLastCommand(request.getCommand() == null ? "" : request.getCommand());
+        return profileMapper.toDto(profileRepository.save(profile));
     }
 }

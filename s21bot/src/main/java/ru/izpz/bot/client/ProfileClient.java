@@ -34,4 +34,7 @@ public interface ProfileClient {
 
     @PostMapping("/profile/participant")
     ParticipantDto getParticipant(@RequestBody ParticipantRequest request);
+
+    @PostMapping("/profile/lastcommand")
+    ProfileDto setLastCommand(@RequestBody LastCommandRequest request);
 }
