@@ -124,17 +124,10 @@ public class ProfileService {
         }
     }
 
-    public void setLastCommand(Long chatId, String command) {
-        var request = LastCommandRequest.builder()
-                .telegramId(chatId.toString())
-                .command(command)
-                .build();
-        try {
-            profileClient.setLastCommand(request);
-            log.info("Команда {} сохранена для {}", command, chatId);
-        } catch (FeignException e) {
-            log.error("Ошибка сохранения команды {} для {}", command, chatId, e.contentUTF8());
-            throw e;
-        }
+    public void setLastCommand(Long chatId, LastCommandState command) {
+        profileClient.setLastCommand(new LastCommandRequest(chatId.toString(), command));
+    }
+
+    public void updateProfileFriendName(Long chatId, String text) {
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.*;
 import ru.izpz.edu.exception.ProfileNotFoundException;
+import ru.izpz.edu.mapper.LastCommandConverter;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
 import ru.izpz.edu.model.Participant;
@@ -96,7 +97,8 @@ public class ProfileService {
     public ProfileDto updateLastCommand(@Valid LastCommandRequest request) {
         Profile profile = profileRepository.findByTelegramId(request.getTelegramId())
                 .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
-        profile.setLastCommand(request.getCommand() == null ? "" : request.getCommand());
+        String serialized = request.getCommand() == null ? null : LastCommandConverter.serialize(request.getCommand());
+        profile.setLastCommand(serialized);
         return profileMapper.toDto(profileRepository.save(profile));
     }
 }

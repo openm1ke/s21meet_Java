@@ -24,7 +24,7 @@ public class TelegramButtons {
     public Map<String, String> getRegistrationButton() {
         return Map.of(
                 REGISTRATION_NAME,
-                CallbackPayloadSerializer.serialize(new CallbackPayload(REGISTRATION_CODE))
+                CallbackPayloadSerializer.serialize(new CallbackPayload(REGISTRATION_CODE, null))
         );
     }
 

@@ -10,5 +10,5 @@ import lombok.*;
 @AllArgsConstructor
 public class LastCommandRequest {
     private String telegramId;
-    private String command;
+    private LastCommandState command;
 }

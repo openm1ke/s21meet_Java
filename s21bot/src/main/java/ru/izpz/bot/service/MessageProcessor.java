@@ -72,7 +72,13 @@ public class MessageProcessor {
             switch (payload.getCommand()) {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
                 case "add_friend" -> sendMessage(chatId, "Добавить в друзья", null);
-                case "set_name" -> sendMessage(chatId, "Указать имя", null);
+                case "set_name" -> {
+                    var lastCommand = new LastCommandState();
+                    lastCommand.setCommand(LastCommandType.SET_NAME);
+                    lastCommand.setArgs(Map.of("login", payload.getArgs().get("login")));
+                    setLastCommand(chatId, lastCommand);
+                    sendMessage(chatId, "Указать имя", null);
+                }
                 default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
             }
         } catch (InvalidCallbackPayloadException e) {
@@ -124,7 +130,9 @@ public class MessageProcessor {
             MenuCommandEnum command = MenuCommandEnum.fromText(text).get();
             switch (command) {
                 case SEARCH -> {
-                    setLastCommand(chatId, MenuCommandEnum.SEARCH.name());
+                    var lastCommand = new LastCommandState();
+                    lastCommand.setCommand(LastCommandType.SEARCH);
+                    setLastCommand(chatId, lastCommand);
                     sendMessage(chatId, "Введите логин для поиска", null);
                 }
                 case FRIENDS -> sendMessage(chatId, "Друзья", null);
@@ -142,14 +150,16 @@ public class MessageProcessor {
         }
 
         // в ином случае нужно проверить ласт комманд и вызвать нужный метод
-        MenuCommandEnum.fromName(profile.lastCommand()).ifPresent(cmd -> {
+        LastCommandType.fromName(profile.lastCommand()).ifPresent(cmd -> {
             switch (cmd) {
                 case SEARCH -> {
                     if (isValidLogin(text)) {
 
                         Map<String, String> data = Map.of(
-                                "Добавить в друзья", CallbackPayloadSerializer.serialize(new CallbackPayload("add_friend")),
-                                "Указать имя",CallbackPayloadSerializer.serialize(new CallbackPayload("set_name"))
+                                "Добавить в друзья", CallbackPayloadSerializer.serialize(new CallbackPayload("add_friend", Map.of("login", text))),
+                                "Указать имя",CallbackPayloadSerializer.serialize(new CallbackPayload("set_name", Map.of("login", text))),
+                                "Subscribe", CallbackPayloadSerializer.serialize(new CallbackPayload("subscribe", Map.of("login", text))),
+                                "Favorite", CallbackPayloadSerializer.serialize(new CallbackPayload("favorite", Map.of("login", text)))
                         );
 
                         InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.defaultInlineKeyboard(data);
@@ -157,6 +167,14 @@ public class MessageProcessor {
                         showProfile(chatId, text, keyboard);
                     } else {
                         sendMessage(chatId, "Логин должен быть от 3 до 30 символов и состоять только из латинских букв", null);
+                    }
+                }
+                case SET_NAME -> {
+                    if (text.length() > 100) {
+                        sendMessage(chatId, "Имя должно быть не более 100 символов", null);
+                    } else {
+                        profileService.updateProfileFriendName(chatId, text);
+                        sendMessage(chatId, "Имя успешно обновлено", null);
                     }
                 }
             }
@@ -175,7 +193,7 @@ public class MessageProcessor {
         }
     }
 
-    private void setLastCommand(Long chatId, String command) {
+    private void setLastCommand(Long chatId, LastCommandState command) {
         profileService.setLastCommand(chatId, command);
     }
 
