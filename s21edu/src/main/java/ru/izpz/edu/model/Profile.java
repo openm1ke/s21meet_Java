@@ -21,5 +21,6 @@ public class Profile {
     String s21login;
     @Enumerated(EnumType.STRING)
     ProfileStatus status;
+    @Column(name = "last_command", columnDefinition = "TEXT")
     String lastCommand;
 }

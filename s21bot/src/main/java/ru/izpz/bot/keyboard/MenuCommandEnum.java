@@ -39,12 +39,4 @@ public enum MenuCommandEnum {
         return Optional.ofNullable(COMMANDS_MAP.get(text));
     }
 
-    public static Optional<MenuCommandEnum> fromName(String name) {
-        if (name == null || name.isBlank()) {
-            return Optional.empty();
-        }
-        return Arrays.stream(values())
-                .filter(e -> e.name().equalsIgnoreCase(name))
-                .findFirst();
-    }
 }

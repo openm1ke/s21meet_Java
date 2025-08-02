@@ -21,6 +21,7 @@ public class Friends {
     UUID id;
     String telegramId;
     String login;
+    String name;
     Boolean isFriend;
     Boolean isSubscribe;
     LocalDateTime date;
