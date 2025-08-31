@@ -11,7 +11,7 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class RestTemplateConfig {
 
-    private static final String BASE_URL = "https://auth.sberclass.ru";
+    private static final String BASE_URL = "https://auth.21-school.ru";
 
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
