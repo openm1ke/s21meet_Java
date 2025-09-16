@@ -10,10 +10,12 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create  # Автоматически обновлять схему БД на основе сущностей
+      ddl-auto: none  # Автоматически обновлять схему БД на основе сущностей
     show-sql: false  # Логирование SQL-запросов
     properties:
       hibernate:
+        jdbc:
+          time_zone: UTC
         format_sql: false  # Форматировать SQL-запросы для удобства
 
 edu:

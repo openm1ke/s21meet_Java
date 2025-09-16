@@ -1,0 +1,26 @@
+version: '3.9'
+
+services:
+  # База данных PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      TZ: UTC
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - s21meet-network
+
+# Сети и тома
+networks:
+  s21meet-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

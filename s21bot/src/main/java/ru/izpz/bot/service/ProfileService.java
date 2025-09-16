@@ -130,4 +130,8 @@ public class ProfileService {
 
     public void updateProfileFriendName(Long chatId, String text) {
     }
+
+    public FriendDto addFriend(Long chatId, String login) {
+        return profileClient.addFriend(new FriendRequest(chatId.toString(), login));
+    }
 }

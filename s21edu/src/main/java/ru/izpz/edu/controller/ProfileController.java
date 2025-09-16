@@ -10,6 +10,7 @@ import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.dto.CampusDto;
 import ru.izpz.edu.service.CampusService;
+import ru.izpz.edu.service.FriendService;
 import ru.izpz.edu.service.ProfileService;
 
 @Slf4j
@@ -21,6 +22,7 @@ public class ProfileController {
 
     private final ProfileService profileService;
     private final CampusService campusService;
+    private final FriendService friendsService;
 
     @GetMapping
     public ResponseEntity<ProfileDto> getProfile(@RequestParam("telegramId") String telegramId) {
@@ -81,5 +83,12 @@ public class ProfileController {
         log.info("Получен запрос на обновление последней команды для telegramId = {}, команда {}", request.getTelegramId(), request.getCommand());
         var profile = profileService.updateLastCommand(request);
         return ResponseEntity.ok(profile);
+    }
+
+    @PostMapping("/friend")
+    ResponseEntity<FriendDto> addFriend(@Valid @RequestBody FriendRequest friendRequest) {
+        var profile = profileService.getProfile(friendRequest.getTelegramId());
+        log.info("Получен запрос на добавление друга {} для {}", friendRequest.getLogin(), profile.s21login());
+        return ResponseEntity.ok(friendsService.getOrCreateFriend(profile.telegramId(), friendRequest.getLogin()));
     }
 }

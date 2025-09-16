@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import ru.izpz.edu.model.Friends;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface FriendsRepository extends JpaRepository<Friends, UUID> {
@@ -12,4 +13,6 @@ public interface FriendsRepository extends JpaRepository<Friends, UUID> {
     List<String> findDistinctLogins();
 
     List<Friends> findByLoginAndIsSubscribeTrue(String login);
+
+    Optional<Friends> findFirstByTelegramIdAndLogin(String telegramId, String login);
 }

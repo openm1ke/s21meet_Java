@@ -38,6 +38,9 @@ public interface ProfileClient {
     @PostMapping("/profile/lastcommand")
     ProfileDto setLastCommand(@RequestBody LastCommandRequest request);
 
+    @PostMapping("/profile/friend")
+    FriendDto addFriend(FriendRequest friendRequest);
+
 //    @PostMapping("/profile/setfriendname")
 //    ProfileDto setFriendName(@RequestBody FriendNameRequest request);
 }
