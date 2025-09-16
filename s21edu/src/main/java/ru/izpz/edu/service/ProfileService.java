@@ -46,6 +46,13 @@ public class ProfileService {
                 });
     }
 
+    public ProfileDto getProfile(String telegramId) {
+        return profileRepository.findByTelegramId(telegramId)
+                .map(profileMapper::toDto)
+                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + telegramId)
+        );
+    }
+
     public ProfileDto updateProfileStatus(ProfileRequest request) {
         return profileRepository.findByTelegramId(request.getTelegramId())
                 .map(existing -> {

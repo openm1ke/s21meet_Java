@@ -71,13 +71,19 @@ public class MessageProcessor {
 
             switch (payload.getCommand()) {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
-                case "add_friend" -> sendMessage(chatId, "Добавить в друзья", null);
+                case "add_friend" -> {
+                    FriendDto friend = profileService.addFriend(chatId, payload.getArgs().get("login"));
+                    sendMessage(chatId, friend.getLogin() + (friend.getIsFriend() ? " добавлен в друзья" : " удален из друзей"), null);
+                }
                 case "set_name" -> {
                     var lastCommand = new LastCommandState();
                     lastCommand.setCommand(LastCommandType.SET_NAME);
                     lastCommand.setArgs(Map.of("login", payload.getArgs().get("login")));
                     setLastCommand(chatId, lastCommand);
                     sendMessage(chatId, "Указать имя", null);
+                }
+                case "favorite" -> {
+
                 }
                 default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
             }
@@ -234,6 +240,10 @@ public class MessageProcessor {
         }
 
         // тут можно проверить что профиль на основе Core program
+        if (participant.getParallelName() == null || !participant.getParallelName().equals("Core program")) {
+            sendMessage(chatId, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
+            return;
+        }
 
         ProfileDto profileDto;
         try {
