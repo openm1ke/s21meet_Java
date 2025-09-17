@@ -13,6 +13,8 @@ import ru.izpz.dto.model.ErrorResponseDTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.utils.FeignErrorParser;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -145,4 +147,9 @@ public class ProfileService {
                 .build();
         return profileClient.applyFriend(request);
     }
+
+    public List<FriendDto> getFriends(Long chatId, int page, int pageSize) {
+        return profileClient.getFriends(chatId.toString(), page, pageSize);
+    }
+
 }

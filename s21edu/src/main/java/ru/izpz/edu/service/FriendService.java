@@ -3,13 +3,17 @@ package ru.izpz.edu.service;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.FriendDto;
 import ru.izpz.dto.FriendRequest;
 import ru.izpz.edu.mapper.FriendsMapper;
 import ru.izpz.edu.model.Friends;
 import ru.izpz.edu.repository.FriendsRepository;
+
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -36,5 +40,11 @@ public class FriendService {
         }
 
         return friendsMapper.toDto(friendsRepository.save(f));
+    }
+
+    public List<FriendDto> getFriends(@NotBlank String telegramId, int page, int pageSize) {
+        Pageable pageable = PageRequest.of(page, pageSize);
+        var entities = friendsRepository.findAllOrdered(telegramId, pageable);
+        return friendsMapper.toDtos(entities);
     }
 }

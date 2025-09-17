@@ -96,6 +96,36 @@ public class TelegramKeyboardFactory {
                 .build();
     }
 
+//    public static InlineKeyboardMarkup getFriendsInlineKeyboard(List<FriendDto> friends, int page, boolean hasNext) {
+//        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+//
+//        for (FriendDto f : friends) {
+//            String title = (Boolean.TRUE.equals(f.getIsFavorite()) ? "★ " : "☆ ")
+//                    + (f.getName() != null && !f.getName().isBlank() ? f.getName() + " (" + f.getLogin() + ")" : f.getLogin());
+//
+//            String payload = CallbackPayloadSerializer.serialize(
+//                    new CallbackPayload("friend_view", Map.of("login", f.getLogin()))
+//            );
+//            rows.add(List.of(new InlineKeyboardButton(title).setCallbackData(payload)));
+//        }
+//
+//        // Навигация
+//        List<InlineKeyboardButton> nav = new ArrayList<>();
+//        if (page > 0) {
+//            nav.add(new InlineKeyboardButton("⏮ Назад")
+//                    .setCallbackData(serialize("friends_page", Map.of("page", String.valueOf(page - 1)))));
+//        }
+//        if (hasNext) {
+//            nav.add(new InlineKeyboardButton("Вперёд ⏭")
+//                    .setCallbackData(serialize("friends_page", Map.of("page", String.valueOf(page + 1)))));
+//        }
+//        if (!nav.isEmpty()) rows.add(nav);
+//
+//        InlineKeyboardMarkup kb = new InlineKeyboardMarkup();
+//        kb.setKeyboard(rows);
+//        return kb;
+//    }
+
     public static AnswerCallbackQuery createAnswerCallbackQuery(String callbackId, String text, boolean showAlert) {
         AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery(callbackId);
         answerCallbackQuery.setText(text);

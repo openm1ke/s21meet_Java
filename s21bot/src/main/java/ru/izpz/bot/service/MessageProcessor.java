@@ -42,6 +42,8 @@ public class MessageProcessor {
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
 
+    private static final int PAGE_SIZE = 10;
+
     public void handleTextMessage(Message message) {
         Long chatId = message.getChatId();
         String text = message.getText().trim();
@@ -159,7 +161,10 @@ public class MessageProcessor {
                     setLastCommand(chatId, lastCommand);
                     sendMessage(chatId, "Введите логин для поиска", null);
                 }
-                case FRIENDS -> sendMessage(chatId, "Друзья", null);
+                case FRIENDS -> {
+                    showFriends(chatId, 0);
+                    //sendMessage(chatId, "Друзья", null);
+                }
                 case PROFILE -> {
                     showProfile(chatId, profile.s21login(), null);
                 }
@@ -198,6 +203,18 @@ public class MessageProcessor {
 
             setLastCommand(chatId, null);
         });
+    }
+
+    private void showFriends(Long chatId, int page) {
+        try {
+            var list = profileService.getFriends(chatId, page, PAGE_SIZE);
+            boolean hasNext = list.size() == PAGE_SIZE;
+            //var keyboard = TelegramKeyboardFactory.getFriendsInlineKeyboard(list, page, hasNext);
+            sendMessage(chatId, "Друзья\n\n" + list, null);
+        } catch (FeignException e) {
+            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
+            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+        }
     }
 
     private void showProfile(Long chatId, String login, InlineKeyboardMarkup keyboard) {
