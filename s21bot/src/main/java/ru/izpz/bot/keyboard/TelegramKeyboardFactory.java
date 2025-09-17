@@ -1,15 +1,20 @@
 package ru.izpz.bot.keyboard;
 
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import ru.izpz.bot.dto.CallbackPayload;
+import ru.izpz.dto.FriendDto;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,6 +94,35 @@ public class TelegramKeyboardFactory {
         return InlineKeyboardMarkup.builder()
                 .keyboard(rows)
                 .build();
+    }
+
+    public static AnswerCallbackQuery createAnswerCallbackQuery(String callbackId, String text, boolean showAlert) {
+        AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery(callbackId);
+        answerCallbackQuery.setText(text);
+        answerCallbackQuery.setShowAlert(showAlert);
+        return answerCallbackQuery;
+    }
+
+    public static InlineKeyboardMarkup getFriendInlineKeyboard(FriendDto friend) {
+        var login = friend.getLogin();
+        var isFriendLabel = friend.getIsFriend() ? "Удалить из друзей" : "Добавить в друзья";
+        var isFavoriteLabel = friend.getIsFavorite() ? "Удалить из избранного" : "Добавить в избранное";
+        var isSubscribedLabel = friend.getIsSubscribe() ? "Отписаться" : "Подписаться";
+        var setNameLabel = friend.getName() == null ? "Указать имя" : "Изменить имя";
+        LinkedHashMap<String, String> data = new LinkedHashMap<>();
+        data.put(isFriendLabel, CallbackPayloadSerializer.serialize(new CallbackPayload("add_friend", Map.of("login", login))));
+        data.put(setNameLabel,CallbackPayloadSerializer.serialize(new CallbackPayload("set_name", Map.of("login", login))));
+        data.put(isSubscribedLabel, CallbackPayloadSerializer.serialize(new CallbackPayload("subscribe", Map.of("login", login))));
+        data.put(isFavoriteLabel, CallbackPayloadSerializer.serialize(new CallbackPayload("favorite", Map.of("login", login))));
+        return TelegramKeyboardFactory.defaultInlineKeyboard(data);
+    }
+
+    public static EditMessageReplyMarkup editFriendInlineKeyboard(InlineKeyboardMarkup keyboard, Long chatId, int messageId) {
+        EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup();
+        editMessageReplyMarkup.setChatId(chatId);
+        editMessageReplyMarkup.setMessageId(messageId);
+        editMessageReplyMarkup.setReplyMarkup(keyboard);
+        return editMessageReplyMarkup;
     }
 
     public static ReplyKeyboard removeReplyKeyboard() {
