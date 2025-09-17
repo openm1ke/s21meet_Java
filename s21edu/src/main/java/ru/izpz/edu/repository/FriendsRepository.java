@@ -1,7 +1,9 @@
 package ru.izpz.edu.repository;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import ru.izpz.edu.model.Friends;
 
 import java.util.List;
@@ -15,4 +17,14 @@ public interface FriendsRepository extends JpaRepository<Friends, UUID> {
     List<Friends> findByLoginAndIsSubscribeTrue(String login);
 
     Optional<Friends> findFirstByTelegramIdAndLogin(String telegramId, String login);
+
+    @Query("""
+        select f from Friends f
+        where f.telegramId = :telegramId and f.isFriend = true
+        order by case when f.isFavorite = true then 0 else 1 end,
+        f.date desc,
+        f.login asc
+    """)
+    List<Friends> findAllOrdered(@Param("telegramId") String telegramId,
+                                 Pageable pageable);
 }

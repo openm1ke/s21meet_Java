@@ -1,6 +1,7 @@
 package ru.izpz.edu.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,6 +13,8 @@ import ru.izpz.edu.dto.CampusDto;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.FriendService;
 import ru.izpz.edu.service.ProfileService;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -91,5 +94,12 @@ public class ProfileController {
         log.info("Получен запрос на {} у {} для {}", friendRequest.getAction(), friendRequest.getLogin(), profile.s21login());
         var dto = friendsService.applyFriend(profile.telegramId(), friendRequest.getLogin(), friendRequest.getAction(), friendRequest.getName());
         return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/friends")
+    ResponseEntity<List<FriendDto>> getFriends(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int pageSize) {
+        return ResponseEntity.ok(
+                friendsService.getFriends(telegramId, page, pageSize)
+        );
     }
 }
