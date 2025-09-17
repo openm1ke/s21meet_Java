@@ -14,4 +14,5 @@ public class FriendDto {
     String name;
     Boolean isFriend;
     Boolean isSubscribe;
+    Boolean isFavorite;
 }

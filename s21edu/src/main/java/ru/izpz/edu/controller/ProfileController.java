@@ -88,7 +88,8 @@ public class ProfileController {
     @PostMapping("/friend")
     ResponseEntity<FriendDto> addFriend(@Valid @RequestBody FriendRequest friendRequest) {
         var profile = profileService.getProfile(friendRequest.getTelegramId());
-        log.info("Получен запрос на добавление друга {} для {}", friendRequest.getLogin(), profile.s21login());
-        return ResponseEntity.ok(friendsService.getOrCreateFriend(profile.telegramId(), friendRequest.getLogin()));
+        log.info("Получен запрос на {} у {} для {}", friendRequest.getAction(), friendRequest.getLogin(), profile.s21login());
+        var dto = friendsService.applyFriend(profile.telegramId(), friendRequest.getLogin(), friendRequest.getAction(), friendRequest.getName());
+        return ResponseEntity.ok(dto);
     }
 }

@@ -27,8 +27,9 @@ public class SimpleBot implements LongPollingSingleThreadUpdateConsumer {
             var data = callback.getData();
             var chatId = callback.getMessage().getChatId();
             var messageId = update.getCallbackQuery().getMessage().getMessageId();
-            log.info("Callback '{}' от chatId={}", data, chatId);
-            messageProcessor.handleCallbackMessage(chatId, data, messageId);
+            var callbackId = callback.getId();
+            log.info("Callback id = {} '{}' от chatId={}", callbackId, data, chatId);
+            messageProcessor.handleCallbackMessage(chatId, data, messageId, callbackId);
         }
     }
 }

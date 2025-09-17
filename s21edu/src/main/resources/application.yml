@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none  # Автоматически обновлять схему БД на основе сущностей
+      ddl-auto: create-drop  # Автоматически обновлять схему БД на основе сущностей
     show-sql: false  # Логирование SQL-запросов
     properties:
       hibernate:

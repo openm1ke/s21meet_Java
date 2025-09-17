@@ -65,15 +65,23 @@ public class MessageProcessor {
         }
     }
 
-    public void handleCallbackMessage(Long chatId, String data, Integer messageId) {
+    public void handleCallbackMessage(Long chatId, String data, Integer messageId, String callbackId) {
         try {
             CallbackPayload payload = CallbackPayloadSerializer.deserialize(data);
 
             switch (payload.getCommand()) {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
                 case "add_friend" -> {
-                    FriendDto friend = profileService.addFriend(chatId, payload.getArgs().get("login"));
-                    sendMessage(chatId, friend.getLogin() + (friend.getIsFriend() ? " добавлен в друзья" : " удален из друзей"), null);
+                    applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
+                        FriendRequest.Action.TOGGLE_FRIEND, "Статус «друг» переключён");
+                }
+                case "favorite" -> {
+                    applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
+                        FriendRequest.Action.TOGGLE_FAVORITE, "Избранное переключено");
+                }
+                case "subscribe" -> {
+                    applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
+                        FriendRequest.Action.TOGGLE_SUBSCRIBE, "Подписка переключена");
                 }
                 case "set_name" -> {
                     var lastCommand = new LastCommandState();
@@ -82,15 +90,25 @@ public class MessageProcessor {
                     setLastCommand(chatId, lastCommand);
                     sendMessage(chatId, "Указать имя", null);
                 }
-                case "favorite" -> {
-
-                }
                 default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
             }
         } catch (InvalidCallbackPayloadException e) {
             log.error("Получены некорректные данные в callback: {}", data, e);
             sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    private void applyAndRefreshKeyboard(
+            long chatId, int messageId, String callbackId,
+            String login, FriendRequest.Action action, String toastText) throws TelegramApiException {
+
+        FriendDto friend = profileService.applyFriend(chatId, login, action);
+        var kb = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
+
+        telegramClient.execute(TelegramKeyboardFactory.editFriendInlineKeyboard(kb, chatId, messageId));
+        telegramClient.execute(TelegramKeyboardFactory.createAnswerCallbackQuery(callbackId, toastText, false));
     }
 
     private boolean isUserInGroup(Long chatId) {
@@ -160,16 +178,8 @@ public class MessageProcessor {
             switch (cmd) {
                 case SEARCH -> {
                     if (isValidLogin(text)) {
-
-                        Map<String, String> data = Map.of(
-                                "Добавить в друзья", CallbackPayloadSerializer.serialize(new CallbackPayload("add_friend", Map.of("login", text))),
-                                "Указать имя",CallbackPayloadSerializer.serialize(new CallbackPayload("set_name", Map.of("login", text))),
-                                "Subscribe", CallbackPayloadSerializer.serialize(new CallbackPayload("subscribe", Map.of("login", text))),
-                                "Favorite", CallbackPayloadSerializer.serialize(new CallbackPayload("favorite", Map.of("login", text)))
-                        );
-
-                        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.defaultInlineKeyboard(data);
-
+                        FriendDto friend = profileService.applyFriend(chatId, text, FriendRequest.Action.NONE);
+                        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
                         showProfile(chatId, text, keyboard);
                     } else {
                         sendMessage(chatId, "Логин должен быть от 3 до 30 символов и состоять только из латинских букв", null);
@@ -179,7 +189,8 @@ public class MessageProcessor {
                     if (text.length() > 100) {
                         sendMessage(chatId, "Имя должно быть не более 100 символов", null);
                     } else {
-                        profileService.updateProfileFriendName(chatId, text);
+                        var login = profile.lastCommand().getArgs().get("login");
+                        profileService.updateProfileFriendName(chatId, login, FriendRequest.Action.SET_NAME, text);
                         sendMessage(chatId, "Имя успешно обновлено", null);
                     }
                 }

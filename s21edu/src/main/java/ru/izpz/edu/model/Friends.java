@@ -24,6 +24,7 @@ public class Friends {
     String name = "";
     Boolean isFriend = false;
     Boolean isSubscribe = false;
+    Boolean isFavorite = false;
     LocalDateTime date;
 
     public Friends() {}

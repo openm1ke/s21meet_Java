@@ -128,10 +128,21 @@ public class ProfileService {
         profileClient.setLastCommand(new LastCommandRequest(chatId.toString(), command));
     }
 
-    public void updateProfileFriendName(Long chatId, String text) {
+    public FriendDto updateProfileFriendName(Long telegramId, String login, FriendRequest.Action action, String name) {
+        var request = FriendRequest.builder()
+                .telegramId(telegramId.toString())
+                .action(action)
+                .login(login)
+                .name(name).build();
+        return profileClient.applyFriend(request);
     }
 
-    public FriendDto addFriend(Long chatId, String login) {
-        return profileClient.addFriend(new FriendRequest(chatId.toString(), login));
+    public FriendDto applyFriend(Long telegramId, String login, FriendRequest.Action action) {
+        var request = FriendRequest.builder()
+                .telegramId(telegramId.toString())
+                .action(action)
+                .login(login)
+                .build();
+        return profileClient.applyFriend(request);
     }
 }

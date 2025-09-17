@@ -1,8 +1,11 @@
 package ru.izpz.edu.service;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.FriendDto;
+import ru.izpz.dto.FriendRequest;
 import ru.izpz.edu.mapper.FriendsMapper;
 import ru.izpz.edu.model.Friends;
 import ru.izpz.edu.repository.FriendsRepository;
@@ -15,23 +18,23 @@ public class FriendService {
     private final FriendsRepository friendsRepository;
     private final FriendsMapper friendsMapper;
 
-    public FriendDto getOrCreateFriend(String telegramId, String login) {
-        return friendsRepository.findFirstByTelegramIdAndLogin(telegramId, login)
-            .map(existing -> {
-                // переключаем флаг
-                existing.setIsFriend(!Boolean.TRUE.equals(existing.getIsFriend()));
-                Friends saved = friendsRepository.save(existing);
-                return friendsMapper.toDto(saved);
-            })
+    public FriendDto applyFriend(String telegramId, @NotBlank String login, FriendRequest.@NotNull Action action, String name) {
+        Friends f = friendsRepository.findFirstByTelegramIdAndLogin(telegramId, login)
             .orElseGet(() -> {
-                // создаём новую запись с isFriend = true
-                Friends friends = new Friends();
-                friends.setLogin(login);
-                friends.setTelegramId(telegramId);
-                friends.setIsFriend(true);
-                friends.setDate(LocalDateTime.now());
-                Friends saved = friendsRepository.save(friends);
-                return friendsMapper.toDto(saved);
+                var nf = new Friends();
+                nf.setTelegramId(telegramId);
+                nf.setLogin(login);
+                nf.setDate(LocalDateTime.now());
+                return friendsRepository.save(nf);
             });
+
+        switch (action) {
+            case TOGGLE_FRIEND     -> f.setIsFriend(!Boolean.TRUE.equals(f.getIsFriend()));
+            case TOGGLE_FAVORITE   -> f.setIsFavorite(!Boolean.TRUE.equals(f.getIsFavorite()));
+            case TOGGLE_SUBSCRIBE  -> f.setIsSubscribe(!Boolean.TRUE.equals(f.getIsSubscribe()));
+            case SET_NAME          -> f.setName(name == null ? "" : name.trim());
+        }
+
+        return friendsMapper.toDto(friendsRepository.save(f));
     }
 }
