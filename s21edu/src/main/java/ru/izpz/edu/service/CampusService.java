@@ -3,6 +3,7 @@ package ru.izpz.edu.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.ApiException;
@@ -30,6 +31,7 @@ public class CampusService {
 
     private final CampusApiProxy campusApi;
     private final ClusterApiProxy clusterApi;
+    private final GraphQLService graphQLService;
     private final ParticipantApiProxy participantApi;
     private final ClusterRepository clusterRepository;
     private final WorkplaceRepository workplaceRepository;
@@ -37,7 +39,7 @@ public class CampusService {
     private final TokenService tokenService;
     private final ProfileRepository profileRepository;
 
-    //@Scheduled(fixedDelay = 30000)
+    @Scheduled(fixedDelay = 30000)
     public void parseMskKznNsk() {
         // установка токена для всех клиентов
         apiClient.setApiKey(tokenService.getToken());
@@ -95,6 +97,14 @@ public class CampusService {
             }
             log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
             workplaceRepository.saveAllAndFlush(workplaces);
+        }
+    }
+
+    public void getParticipantsByClusterV2(Long clusterId) throws ApiException {
+        log.info("Получение списка занятых рабочих мест по кластерам {} через GraphQL", clusterId);
+        var response = graphQLService.getOccupiedSeats(String.valueOf(clusterId));
+        for (var workplace : response) {
+            System.out.println(workplace);
         }
     }
 
