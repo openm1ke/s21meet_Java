@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
 
-import java.util.List;
-
 @FeignClient(
     name = "profile",
     url = "${profile.service.url}"
@@ -44,7 +42,7 @@ public interface ProfileClient {
     FriendDto applyFriend(FriendRequest friendRequest);
 
     @GetMapping("/profile/friends")
-    List<FriendDto> getFriends(@RequestParam String telegramId, @RequestParam int page, @RequestParam int pageSize);
+    FriendsSliceDto getFriends(@RequestParam String telegramId, @RequestParam int page, @RequestParam int size);
 
 //    @PostMapping("/profile/setfriendname")
 //    ProfileDto setFriendName(@RequestBody FriendNameRequest request);

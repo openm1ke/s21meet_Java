@@ -5,9 +5,11 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.FriendDto;
 import ru.izpz.dto.FriendRequest;
+import ru.izpz.dto.FriendsSliceDto;
 import ru.izpz.edu.mapper.FriendsMapper;
 import ru.izpz.edu.model.Friends;
 import ru.izpz.edu.repository.FriendsRepository;
@@ -42,9 +44,10 @@ public class FriendService {
         return friendsMapper.toDto(friendsRepository.save(f));
     }
 
-    public List<FriendDto> getFriends(@NotBlank String telegramId, int page, int pageSize) {
-        Pageable pageable = PageRequest.of(page, pageSize);
-        var entities = friendsRepository.findAllOrdered(telegramId, pageable);
-        return friendsMapper.toDtos(entities);
+    public FriendsSliceDto getFriends(String telegramId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Slice<Friends> slice = friendsRepository.findAllOrdered(telegramId, pageable);
+        List<FriendDto> items = friendsMapper.toDtos(slice.getContent());
+        return new FriendsSliceDto(items, page, size, slice.hasNext());
     }
 }

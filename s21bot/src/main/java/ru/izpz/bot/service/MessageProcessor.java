@@ -42,7 +42,7 @@ public class MessageProcessor {
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
 
-    private static final int PAGE_SIZE = 10;
+    private static final int PAGE_SIZE = 2;
 
     public void handleTextMessage(Message message) {
         Long chatId = message.getChatId();
@@ -73,6 +73,20 @@ public class MessageProcessor {
 
             switch (payload.getCommand()) {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
+                case "show_friend" -> {
+                    var login = payload.getArgs().get("login");
+                    FriendDto friend = profileService.applyFriend(chatId, login, FriendRequest.Action.NONE);
+                    InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
+                    showProfile(chatId, login, keyboard);
+                }
+                case "friends_page" -> {
+                    int page = Integer.parseInt(payload.getArgs().get("page"));
+                    FriendsSliceDto friends = profileService.getFriends(chatId, page, PAGE_SIZE);
+
+                    InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.friendsListKeyboard(friends, 3, page, PAGE_SIZE);
+                    String text = TelegramKeyboardFactory.friendsListText(friends, page);
+                    updateMessage(chatId, messageId, text, keyboard);
+                }
                 case "add_friend" -> {
                     applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
                         FriendRequest.Action.TOGGLE_FRIEND, "Статус «друг» переключён");
@@ -208,9 +222,9 @@ public class MessageProcessor {
     private void showFriends(Long chatId, int page) {
         try {
             var list = profileService.getFriends(chatId, page, PAGE_SIZE);
-            boolean hasNext = list.size() == PAGE_SIZE;
-            //var keyboard = TelegramKeyboardFactory.getFriendsInlineKeyboard(list, page, hasNext);
-            sendMessage(chatId, "Друзья\n\n" + list, null);
+            var keyboard = TelegramKeyboardFactory.friendsListKeyboard(list, 3, page, PAGE_SIZE);
+            String text = TelegramKeyboardFactory.friendsListText(list, page);
+            sendMessage(chatId, text, keyboard);
         } catch (FeignException e) {
             sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
             sendMessage(ADMIN_ID, e.contentUTF8(), null);
@@ -367,19 +381,24 @@ public class MessageProcessor {
         }
     }
 
-    public void updateMessageAndChangeStatusRegistration(Long chatId, Integer messageId, String newText) {
+    public void updateMessage(Long chatId, Integer messageId, String text, InlineKeyboardMarkup keyboard) {
         EditMessageText editMessage = EditMessageText.builder()
                 .chatId(chatId.toString()) // обязательно как String
                 .messageId(messageId)
-                .text(newText)
-                .replyMarkup(null) // удаляет кнопки
+                .text(text)
+                .replyMarkup(keyboard) // удаляет кнопки
                 .build();
-
         try {
             telegramClient.execute(editMessage);
-            profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
         } catch (TelegramApiException e) {
             log.error("Ошибка при редактировании сообщения {}: {}", messageId, e.getMessage());
+        }
+    }
+
+    public void updateMessageAndChangeStatusRegistration(Long chatId, Integer messageId, String newText) {
+        try {
+            updateMessage(chatId, messageId, newText, null);
+            profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
         } catch (FeignException e) {
             log.error("Ошибка обработки профиля", e);
         }

@@ -14,8 +14,6 @@ import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.FriendService;
 import ru.izpz.edu.service.ProfileService;
 
-import java.util.List;
-
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -97,9 +95,9 @@ public class ProfileController {
     }
 
     @GetMapping("/friends")
-    ResponseEntity<List<FriendDto>> getFriends(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int pageSize) {
+    ResponseEntity<FriendsSliceDto> getFriends(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int size) {
         return ResponseEntity.ok(
-                friendsService.getFriends(telegramId, page, pageSize)
+                friendsService.getFriends(telegramId, page, size)
         );
     }
 }

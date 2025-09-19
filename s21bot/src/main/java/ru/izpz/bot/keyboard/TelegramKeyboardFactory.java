@@ -12,6 +12,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.dto.FriendDto;
+import ru.izpz.dto.FriendsSliceDto;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -95,6 +96,68 @@ public class TelegramKeyboardFactory {
                 .keyboard(rows)
                 .build();
     }
+
+    public static InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page, int size) {
+        Map<String, String> buttons = new LinkedHashMap<>();
+
+        List<FriendDto> content = friends.content();
+
+        for (int i = 0; i < content.size(); i++) {
+            FriendDto friend = content.get(i);
+            int ordinal = i + 1;
+            buttons.put(
+                    String.valueOf(ordinal),
+                    CallbackPayloadSerializer.serialize(
+                            new CallbackPayload("show_friend", Map.of("login", friend.getLogin()))
+                    )
+            );
+        }
+
+        // блок навигации
+        if (page > 0) {
+            buttons.put(
+                    "◀ Назад",
+                    CallbackPayloadSerializer.serialize(
+                            new CallbackPayload("friends_page", Map.of("page", String.valueOf(page - 1)))
+                    )
+            );
+        }
+
+        if (friends.hasNext()) { // использовать slice.hasNext()
+            buttons.put(
+                    "Вперёд ▶",
+                    CallbackPayloadSerializer.serialize(
+                            new CallbackPayload("friends_page", Map.of("page", String.valueOf(page + 1)))
+                    )
+            );
+        }
+
+        return createInlineKeyboardMarkup(buttons, rowSize);
+    }
+
+
+    public static String friendsListText(FriendsSliceDto friends, int page) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Друзья (стр. ").append(page + 1).append(")\n\n");
+
+        List<FriendDto> content = friends.content();
+
+        for (int i = 0; i < content.size(); i++) {
+            FriendDto f = content.get(i);
+            int ordinal = i + 1; // локальная нумерация на странице
+            sb.append(ordinal)
+                    .append(". ")
+                    .append(f.getLogin());
+            sb.append("\n");
+        }
+
+        if (content.isEmpty()) {
+            sb.append("Список пуст");
+        }
+
+        return sb.toString();
+    }
+
 
 //    public static InlineKeyboardMarkup getFriendsInlineKeyboard(List<FriendDto> friends, int page, boolean hasNext) {
 //        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
