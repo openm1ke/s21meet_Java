@@ -1,4 +1,4 @@
-package ru.izpz.edu.dto;
+package ru.izpz.dto;
 
 import java.util.List;
 

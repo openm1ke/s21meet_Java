@@ -4,7 +4,7 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import ru.izpz.edu.dto.StatusChange;
+import ru.izpz.dto.StatusChange;
 import ru.izpz.edu.model.Friends;
 import ru.izpz.edu.model.Online;
 import ru.izpz.edu.repository.FriendsRepository;

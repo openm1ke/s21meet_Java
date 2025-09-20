@@ -13,6 +13,7 @@ val mapstructVersion: String by project
 val springRetryVersion: String by project
 val apacheCommonsVersion: String by project
 val postgresqlVersion: String by project
+val openFeignVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
@@ -22,6 +23,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-validation:$springBootVersion")
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign:$openFeignVersion") {
+        exclude(group = "org.springframework.security", module = "spring-security-crypto")
+    }
     implementation("org.springframework.boot:spring-boot-starter-aop:$springBootVersion")
     implementation("org.springframework.retry:spring-retry:$springRetryVersion")
     implementation("org.mapstruct:mapstruct:$mapstructVersion")

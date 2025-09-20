@@ -31,11 +31,6 @@
       "description": "Description for token.service.enabled."
     },
     {
-      "name": "message.service.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Description for message.service.enabled."
-    },
-    {
       "name": "campus.service.enabled",
       "type": "java.lang.Boolean",
       "description": "Description for campus.service.enabled."

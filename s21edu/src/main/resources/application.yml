@@ -21,6 +21,8 @@ spring:
 edu:
   tokenEndpoint: http://localhost:8081/api/tokens/default
 
+bot.service.url: http://localhost:8083
+
 resilience4j:
   ratelimiter:
     instances:
@@ -41,7 +43,6 @@ notify:
   service.enabled: true
   scheduler.enabled: true
   poll.fixed-delay: PT30S
-message.service.enabled: true
 token.service.enabled: true
 cluster.api.enabled: true
 api.client.enabled: true

@@ -3,31 +3,28 @@ package ru.izpz.edu.scheduler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-import ru.izpz.edu.dto.StatusChange;
-import ru.izpz.edu.service.MessageSender;
+import org.springframework.stereotype.Service;
+import ru.izpz.edu.client.BotClient;
+import ru.izpz.dto.NotifyRequest;
+import ru.izpz.dto.StatusChange;
 import ru.izpz.edu.service.NotifyService;
 
 import java.util.List;
 
-@Component
+@Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "notify.scheduler.enabled", havingValue = "true")
 public class NotifyScheduler {
 
     private final NotifyService notifyService;
-    private final MessageSender messageSender;
+    private final BotClient botClient;
 
     @Scheduled(fixedDelayString = "${notify.poll.fixed-delay:PT30S}")
     public void poll() {
         List<StatusChange> changes = notifyService.computeAndPersistChanges();
-
-        for (StatusChange c : changes) {
-            if (c.newStatus()) {
-                messageSender.sendOnlineNotification(c.login(), c.telegramIds());
-            } else {
-                messageSender.sendOfflineNotification(c.login(), c.telegramIds());
-            }
-        }
+        var request = NotifyRequest.builder()
+                .changes(changes)
+                .build();
+        botClient.notify(request);
     }
 }
