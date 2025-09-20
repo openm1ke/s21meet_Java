@@ -1,5 +1,6 @@
 package ru.izpz.edu.service;
 
+import lombok.extern.slf4j.Slf4j;
 import ru.izpz.auth.exception.TokenResponseException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -7,8 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+@Slf4j
 @Service
-@ConditionalOnProperty(name = "token.service.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "token.service.enabled", havingValue = "true")
 public class TokenService {
 
     @Value("${edu.tokenEndpoint}")

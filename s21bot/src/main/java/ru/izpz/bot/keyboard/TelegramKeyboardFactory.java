@@ -97,7 +97,7 @@ public class TelegramKeyboardFactory {
                 .build();
     }
 
-    public static InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page, int size) {
+    public static InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page) {
         Map<String, String> buttons = new LinkedHashMap<>();
 
         List<FriendDto> content = friends.content();

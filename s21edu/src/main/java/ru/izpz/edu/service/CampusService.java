@@ -26,7 +26,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "campus.service.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "campus.service.enabled", havingValue = "true")
 public class CampusService {
 
     private final CampusApiProxy campusApi;
@@ -78,14 +78,14 @@ public class CampusService {
      * @throws ApiException исключение
      */
     public void getParticipantsByCluster(Long clusterId) throws ApiException {
-        log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
+        //log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
         // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максимум)
         var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);
         // надо удалять старые записи даже если нам ничего не пришло
         workplaceRepository.deleteByIdClusterId(clusterId);
         if(response != null && !response.getClusterMap().isEmpty()) {
             var clusterMap = response.getClusterMap();
-            log.info("Получено {} участников для кластера {} на странице", clusterMap.size(), clusterId);
+            //log.info("Получено {} участников для кластера {} на странице", clusterMap.size(), clusterId);
             // Для каждого полученного логина маппим в сущность и сохраняем
             ArrayList<Workplace> workplaces = new ArrayList<>(clusterMap.size());
             for (var workplace : clusterMap) {
@@ -95,7 +95,7 @@ public class CampusService {
                 workplaceEntity.setLogin(StringUtils.extractLogin(workplace.getLogin()));
                 workplaces.add(workplaceEntity);
             }
-            log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
+            //log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
             workplaceRepository.saveAllAndFlush(workplaces);
         }
     }
@@ -114,7 +114,7 @@ public class CampusService {
      * @throws ApiException исключение
      */
     public void getClustersByCampus(UUID campusId) throws ApiException {
-        log.info("Получение списка кластеров для кампуса {}", campusId);
+        //log.info("Получение списка кластеров для кампуса {}", campusId);
         var response = campusApi.getClustersByCampus(campusId);
 
         if (response == null) {
@@ -133,7 +133,7 @@ public class CampusService {
             clusterEntity.setCampusId(campusId.toString());
             clusterEntities.add(clusterEntity);
         }
-        log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
+        //log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
         clusterRepository.saveAllAndFlush(clusterEntities);
     }
 

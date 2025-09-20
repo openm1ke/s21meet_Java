@@ -42,6 +42,7 @@ public class MessageProcessor {
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
 
+    private static final int ROW_SIZE = 3;
     private static final int PAGE_SIZE = 2;
 
     public void handleTextMessage(Message message) {
@@ -75,17 +76,11 @@ public class MessageProcessor {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
                 case "show_friend" -> {
                     var login = payload.getArgs().get("login");
-                    FriendDto friend = profileService.applyFriend(chatId, login, FriendRequest.Action.NONE);
-                    InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
-                    showProfile(chatId, login, keyboard);
+                    showProfile(chatId, login);
                 }
                 case "friends_page" -> {
                     int page = Integer.parseInt(payload.getArgs().get("page"));
-                    FriendsSliceDto friends = profileService.getFriends(chatId, page, PAGE_SIZE);
-
-                    InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.friendsListKeyboard(friends, 3, page, PAGE_SIZE);
-                    String text = TelegramKeyboardFactory.friendsListText(friends, page);
-                    updateMessage(chatId, messageId, text, keyboard);
+                    showFriends(chatId, page, messageId);
                 }
                 case "add_friend" -> {
                     applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
@@ -100,10 +95,7 @@ public class MessageProcessor {
                         FriendRequest.Action.TOGGLE_SUBSCRIBE, "Подписка переключена");
                 }
                 case "set_name" -> {
-                    var lastCommand = new LastCommandState();
-                    lastCommand.setCommand(LastCommandType.SET_NAME);
-                    lastCommand.setArgs(Map.of("login", payload.getArgs().get("login")));
-                    setLastCommand(chatId, lastCommand);
+                    setLastCommand(chatId, LastCommandType.SET_NAME, Map.of("login", payload.getArgs().get("login")));
                     sendMessage(chatId, "Указать имя", null);
                 }
                 default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
@@ -120,7 +112,7 @@ public class MessageProcessor {
             long chatId, int messageId, String callbackId,
             String login, FriendRequest.Action action, String toastText) throws TelegramApiException {
 
-        FriendDto friend = profileService.applyFriend(chatId, login, action);
+        FriendDto friend = profileService.applyFriend(chatId, login, action, null);
         var kb = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
 
         telegramClient.execute(TelegramKeyboardFactory.editFriendInlineKeyboard(kb, chatId, messageId));
@@ -170,17 +162,15 @@ public class MessageProcessor {
             MenuCommandEnum command = MenuCommandEnum.fromText(text).get();
             switch (command) {
                 case SEARCH -> {
-                    var lastCommand = new LastCommandState();
-                    lastCommand.setCommand(LastCommandType.SEARCH);
-                    setLastCommand(chatId, lastCommand);
+                    setLastCommand(chatId, LastCommandType.SEARCH, null);
                     sendMessage(chatId, "Введите логин для поиска", null);
                 }
                 case FRIENDS -> {
-                    showFriends(chatId, 0);
-                    //sendMessage(chatId, "Друзья", null);
+                    showFriends(chatId, 0, null);
                 }
                 case PROFILE -> {
-                    showProfile(chatId, profile.s21login(), null);
+                    ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
+                    sendMessage(chatId, "Профиль\n" + showProfile, null);
                 }
                 case EVENTS -> sendMessage(chatId, "События", null);
                 case CAMPUS -> {
@@ -197,9 +187,7 @@ public class MessageProcessor {
             switch (cmd) {
                 case SEARCH -> {
                     if (isValidLogin(text)) {
-                        FriendDto friend = profileService.applyFriend(chatId, text, FriendRequest.Action.NONE);
-                        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
-                        showProfile(chatId, text, keyboard);
+                        showProfile(chatId, text);
                     } else {
                         sendMessage(chatId, "Логин должен быть от 3 до 30 символов и состоять только из латинских букв", null);
                     }
@@ -209,30 +197,36 @@ public class MessageProcessor {
                         sendMessage(chatId, "Имя должно быть не более 100 символов", null);
                     } else {
                         var login = profile.lastCommand().getArgs().get("login");
-                        profileService.updateProfileFriendName(chatId, login, FriendRequest.Action.SET_NAME, text);
+                        profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
                         sendMessage(chatId, "Имя успешно обновлено", null);
                     }
                 }
             }
 
-            setLastCommand(chatId, null);
+            setLastCommand(chatId, null, null);
         });
     }
 
-    private void showFriends(Long chatId, int page) {
+    private void showFriends(Long chatId, int page, Integer messageId) {
         try {
             var list = profileService.getFriends(chatId, page, PAGE_SIZE);
-            var keyboard = TelegramKeyboardFactory.friendsListKeyboard(list, 3, page, PAGE_SIZE);
-            String text = TelegramKeyboardFactory.friendsListText(list, page);
-            sendMessage(chatId, text, keyboard);
+            var keyboard = TelegramKeyboardFactory.friendsListKeyboard(list, ROW_SIZE, page);
+            String friendsListText = TelegramKeyboardFactory.friendsListText(list, page);
+            if (messageId != null) {
+                updateMessage(chatId, messageId, friendsListText, keyboard);
+            } else {
+                sendMessage(chatId, friendsListText, keyboard);
+            }
         } catch (FeignException e) {
             sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
             sendMessage(ADMIN_ID, e.contentUTF8(), null);
         }
     }
 
-    private void showProfile(Long chatId, String login, InlineKeyboardMarkup keyboard) {
+    private void showProfile(Long chatId, String login) {
         try {
+            FriendDto friend = profileService.applyFriend(chatId, login, FriendRequest.Action.NONE, null);
+            InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
             ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
             sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
         } catch (FeignException e) {
@@ -241,8 +235,16 @@ public class MessageProcessor {
         }
     }
 
-    private void setLastCommand(Long chatId, LastCommandState command) {
-        profileService.setLastCommand(chatId, command);
+    private void setLastCommand(Long chatId, LastCommandType type, Map<String, String> args) {
+        var lastCommand = new LastCommandState();
+        lastCommand.setCommand(type);
+        lastCommand.setArgs(args);
+        try {
+            profileService.setLastCommand(chatId, lastCommand);
+        }  catch (FeignException e) {
+            sendMessage(chatId, "Ошибка установки lastCommand", null);
+            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+        }
     }
 
     private CampusResponse showCampusMap(Long chatId) {
