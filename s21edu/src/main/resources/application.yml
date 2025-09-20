@@ -36,7 +36,11 @@ logging:
 participant.api.enabled: true
 profile.service.enabled: true
 profile.api.enabled: true
-notify.service.enabled: true
+graphql.api.enabled: true
+notify:
+  service.enabled: true
+  scheduler.enabled: true
+  poll.fixed-delay: PT30S
 message.service.enabled: true
 token.service.enabled: true
 cluster.api.enabled: true

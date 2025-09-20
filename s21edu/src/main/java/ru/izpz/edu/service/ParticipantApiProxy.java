@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.api.ParticipantApi;
@@ -15,8 +15,8 @@ import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.exception.RetryableApiException;
 
 @Slf4j
-@Service
-@ConditionalOnProperty(name = "participant.api.enabled", havingValue = "true", matchIfMissing = true)
+@Component
+@ConditionalOnProperty(name = "participant.api.enabled", havingValue = "true")
 public class ParticipantApiProxy extends ParticipantApi {
 
     @Autowired

@@ -8,7 +8,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "message.service.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "message.service.enabled", havingValue = "true")
 public class MessageSender {
 
     public void sendOnlineNotification(String login, List<String> telegramIds) {

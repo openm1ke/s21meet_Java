@@ -35,10 +35,13 @@ public class FriendService {
             });
 
         switch (action) {
-            case TOGGLE_FRIEND     -> f.setIsFriend(!Boolean.TRUE.equals(f.getIsFriend()));
-            case TOGGLE_FAVORITE   -> f.setIsFavorite(!Boolean.TRUE.equals(f.getIsFavorite()));
-            case TOGGLE_SUBSCRIBE  -> f.setIsSubscribe(!Boolean.TRUE.equals(f.getIsSubscribe()));
-            case SET_NAME          -> f.setName(name == null ? "" : name.trim());
+            case TOGGLE_FRIEND -> f.setIsFriend(!Boolean.TRUE.equals(f.getIsFriend()));
+            case TOGGLE_FAVORITE -> f.setIsFavorite(!Boolean.TRUE.equals(f.getIsFavorite()));
+            case TOGGLE_SUBSCRIBE -> f.setIsSubscribe(!Boolean.TRUE.equals(f.getIsSubscribe()));
+            case SET_NAME -> f.setName(name == null ? "" : name.trim());
+            case NONE -> {
+                return friendsMapper.toDto(f);
+            }
         }
 
         return friendsMapper.toDto(friendsRepository.save(f));

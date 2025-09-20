@@ -20,7 +20,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "campus.api.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "campus.api.enabled", havingValue = "true")
 public class CampusApiProxy extends CampusApi {
 
     @Autowired
@@ -32,7 +32,7 @@ public class CampusApiProxy extends CampusApi {
     @Retryable(retryFor = {RetryableApiException.class}, maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public CampusesV1DTO getCampuses() throws ApiException {
-        log.info("📡 Запрос списка кампусов...");
+        //log.info("📡 Запрос списка кампусов...");
         return super.getCampuses();
     }
 
@@ -40,7 +40,7 @@ public class CampusApiProxy extends CampusApi {
     @Retryable(retryFor = {RetryableApiException.class}, maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public CoalitionsV1DTO getCoalitionsByCampus(UUID campusId, Integer limit, Integer offset) throws ApiException {
-        log.info("📡 Запрос коалиций для кампуса {}...", campusId);
+        //log.info("📡 Запрос коалиций для кампуса {}...", campusId);
         return super.getCoalitionsByCampus(campusId, limit, offset);
     }
 
@@ -48,7 +48,7 @@ public class CampusApiProxy extends CampusApi {
     @Retryable(retryFor = {RetryableApiException.class}, maxAttempts = 5, backoff = @Backoff(delay = 2000))
     @RateLimiter(name = "campusApi")
     public ParticipantLoginsV1DTO getParticipantsByCampusId(UUID campusId, Long limit, Long offset) throws ApiException {
-        log.info("📡 Запрос участников для кампуса {}...", campusId);
+        //log.info("📡 Запрос участников для кампуса {}...", campusId);
         return super.getParticipantsByCampusId(campusId, limit, offset);
     }
 

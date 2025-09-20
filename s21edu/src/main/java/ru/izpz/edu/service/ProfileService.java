@@ -2,6 +2,7 @@ package ru.izpz.edu.service;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.*;
@@ -21,9 +22,10 @@ import ru.izpz.edu.utils.StringUtils;
 
 import java.time.OffsetDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "profile.service.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "profile.service.enabled", havingValue = "true")
 public class ProfileService {
 
     private final ProfileMapper profileMapper;

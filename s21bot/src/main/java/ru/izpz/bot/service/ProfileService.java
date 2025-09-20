@@ -3,6 +3,7 @@ package ru.izpz.bot.service;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import ru.izpz.bot.client.ProfileClient;
 import ru.izpz.bot.client.RocketChatClient;
@@ -128,22 +129,15 @@ public class ProfileService {
         profileClient.setLastCommand(new LastCommandRequest(chatId.toString(), command));
     }
 
-    public FriendDto updateProfileFriendName(Long telegramId, String login, FriendRequest.Action action, String name) {
-        var request = FriendRequest.builder()
+    public FriendDto applyFriend(Long telegramId, String login, FriendRequest.Action action, @Nullable String name) {
+        var builder = FriendRequest.builder()
                 .telegramId(telegramId.toString())
                 .action(action)
-                .login(login)
-                .name(name).build();
-        return profileClient.applyFriend(request);
-    }
-
-    public FriendDto applyFriend(Long telegramId, String login, FriendRequest.Action action) {
-        var request = FriendRequest.builder()
-                .telegramId(telegramId.toString())
-                .action(action)
-                .login(login)
-                .build();
-        return profileClient.applyFriend(request);
+                .login(login);
+        if (name != null) {
+            builder.name(name);
+        }
+        return profileClient.applyFriend(builder.build());
     }
 
     public FriendsSliceDto getFriends(Long chatId, int page, int pageSize) {

@@ -1,83 +1,133 @@
 package ru.izpz.edu.service;
 
-import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import ru.izpz.edu.BaseTestContainer;
-import ru.izpz.edu.config.NotifyServiceConfig;
+import ru.izpz.edu.dto.StatusChange;
 import ru.izpz.edu.model.Online;
+import ru.izpz.edu.repository.FriendsRepository;
 import ru.izpz.edu.repository.OnlineRepository;
-import ru.izpz.edu.S21EduApplication;
+import ru.izpz.edu.repository.WorkplaceRepository;
 
-import java.util.Optional;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest (classes = {S21EduApplication.class, NotifyServiceConfig.class})
-@Sql(scripts = {"/friends_import.sql", "/online_import.sql", "/workplace_import.sql"})
-@TestPropertySource(properties = {"notify.service.enabled=true", "message.service.enabled = true"})
-@Transactional
+@DataJpaTest
+@Sql({"/friends_import.sql", "/online_import.sql", "/workplace_import.sql"})
+@Import({NotifyService.class}) // подключаем ровно один сервис
+@TestPropertySource(properties = {
+        "notify.service.enabled=true",
+        "notify.scheduler.enabled=false",
+        "graphql.api.enabled=false"
+})
 class NotifyServiceTest extends BaseTestContainer {
 
     @Autowired
-    private NotifyService notifyService;
-
+    NotifyService notifyService;
     @Autowired
-    private OnlineRepository onlineRepository;
-
+    OnlineRepository onlineRepository;
     @Autowired
-    private MessageSender messageSender;
+    FriendsRepository friendsRepository;
+    @Autowired
+    WorkplaceRepository workplaceRepository;
 
-    @Test
-    void testStartNotificationProcess_sendsOnlineNotification() {
-        Optional<Online> lucankriOpt = onlineRepository.findByLogin("lucankri");
-        assertTrue(lucankriOpt.isPresent(), "Запись для lucankri должна присутствовать");
-        assertFalse(lucankriOpt.get().getIsOnline(), "Исходный статус для lucankri должен быть FALSE");
-
-        notifyService.startNotificationProcess();
-
-        // Проверяем, что для "lucankri" вызвано уведомление об online
-        verify(messageSender, atLeastOnce())
-                .sendOnlineNotification("lucankri", java.util.List.of("703226616"));
-
-        Online updatedLucankri = onlineRepository.findByLogin("lucankri").orElseThrow();
-        assertTrue(updatedLucankri.getIsOnline(), "Статус для lucankri должен стать TRUE");
+    @BeforeEach
+    void ensureOnlineRowsExistForAllSubscriptions() {
+        // имитируем «создание online=false при подписке»
+        Set<String> subscribed = new HashSet<>(friendsRepository.findDistinctLogins());
+        for (String login : subscribed) {
+            onlineRepository.findByLogin(login).orElseGet(() -> {
+                Online o = new Online();
+                o.setLogin(login);
+                o.setIsOnline(false);
+                return onlineRepository.save(o);
+            });
+        }
     }
 
     @Test
-    void testStartNotificationProcess_noNotificationWhenNoStateChange() {
-        String login = "elevante";
-        Optional<Online> onlineOpt = onlineRepository.findByLogin(login);
-        assertTrue(onlineOpt.isPresent(), "Запись для elevante должна присутствовать");
-        assertTrue(onlineOpt.get().getIsOnline(), "Статус для elevante должен быть TRUE");
+    void computeAndPersistChanges_onlineFor_lucankri_updatesDb_andReturnsChange() {
+        // pre: в workplace есть lucankri, а в online у него false (после @BeforeEach)
+        Online before = onlineRepository.findByLogin("lucankri").orElseThrow();
+        assertFalse(before.getIsOnline(), "Исходный статус lucankri должен быть FALSE");
 
-        notifyService.startNotificationProcess();
+        List<StatusChange> changes = notifyService.computeAndPersistChanges();
 
-        verify(messageSender, never()).sendOnlineNotification(eq(login), anyList());
-        verify(messageSender, never()).sendOfflineNotification(eq(login), anyList());
+        StatusChange ch = changes.stream()
+                .filter(c -> c.login().equals("lucankri"))
+                .findFirst().orElse(null);
+
+        assertNotNull(ch, "Должно быть изменение для lucankri");
+        assertTrue(ch.newStatus(), "Должен быть переход в ONLINE");
+        assertEquals(Set.of("703226616"), new HashSet<>(ch.telegramIds()));
+
+        Online after = onlineRepository.findByLogin("lucankri").orElseThrow();
+        assertTrue(after.getIsOnline(), "Статус lucankri должен стать TRUE");
     }
 
     @Test
-    void testStartNotificationProcess_noNotificationForAbsentOnlineRecord() {
-        String login = "scrimgew";
-        // Проверяем, что в таблице online для "scrimgew" записи нет
-        Optional<Online> onlineOpt = onlineRepository.findByLogin(login);
-        assertTrue(onlineOpt.isEmpty(), "Записи для scrimgew в online не должно быть");
+    void computeAndPersistChanges_noChange_for_elevante() {
+        // pre: elevante и так в кампусе и уже online=true (по фикстурам online_import.sql)
+        Online before = onlineRepository.findByLogin("elevante").orElseThrow();
+        assertTrue(before.getIsOnline());
 
-        notifyService.startNotificationProcess();
+        List<StatusChange> changes = notifyService.computeAndPersistChanges();
 
-        verify(messageSender, never()).sendOnlineNotification(eq(login), anyList());
-        verify(messageSender, never()).sendOfflineNotification(eq(login), anyList());
+        boolean hasElevante = changes.stream().anyMatch(c -> c.login().equals("elevante"));
+        assertFalse(hasElevante, "Изменений для elevante быть не должно");
 
-        // После выполнения процесса записи по-прежнему не должно появиться
-        Optional<Online> onlineAfter = onlineRepository.findByLogin(login);
-        assertTrue(onlineAfter.isEmpty(), "Запись для scrimgew в online не должна появиться");
+        Online after = onlineRepository.findByLogin("elevante").orElseThrow();
+        assertTrue(after.getIsOnline());
     }
 
+    @Test
+    void computeAndPersistChanges_notInCampus_for_scrimgew_noChange_andRemainsFalse() {
+        // scrimgew подписан, но не в workplace → запись создана @BeforeEach со значением false
+        Online online = onlineRepository.findByLogin("scrimgew").orElseThrow();
+        assertFalse(online.getIsOnline(), "scrimgew должен быть FALSE до прогона");
+
+        List<StatusChange> changes = notifyService.computeAndPersistChanges();
+
+        boolean hasScrimgew = changes.stream().anyMatch(c -> c.login().equals("scrimgew"));
+        assertFalse(hasScrimgew, "Изменений для scrimgew быть не должно");
+
+        Online after = onlineRepository.findByLogin("scrimgew").orElseThrow();
+        assertFalse(after.getIsOnline(), "scrimgew остаётся FALSE и запись не удаляется");
+    }
+
+    @Test
+    void computeAndPersistChanges_offline_for_elevante_updatesDb_andReturnsChange() {
+        // pre: elevante online=true и в кампусе
+        Online before = onlineRepository.findByLogin("elevante").orElseThrow();
+        assertTrue(before.getIsOnline());
+
+        // имитируем уход из кампуса
+        workplaceRepository.deleteAll(
+                workplaceRepository.findAll().stream()
+                        .filter(w -> Objects.equals(w.getLogin(), "elevante"))
+                        .toList()
+        );
+
+        List<StatusChange> changes = notifyService.computeAndPersistChanges();
+
+        StatusChange ch = changes.stream()
+                .filter(c -> c.login().equals("elevante"))
+                .findFirst().orElse(null);
+
+        assertNotNull(ch, "Должно быть изменение для elevante (OFFLINE)");
+        assertFalse(ch.newStatus(), "Переход в OFFLINE");
+        assertEquals(Set.of("70735394", "703226616"), new HashSet<>(ch.telegramIds()));
+
+        Online after = onlineRepository.findByLogin("elevante").orElseThrow();
+        assertFalse(after.getIsOnline(), "Статус elevante должен стать FALSE");
+    }
 }
