@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import ru.izpz.edu.BaseTestContainer;
-import ru.izpz.edu.dto.StatusChange;
+import ru.izpz.dto.StatusChange;
 import ru.izpz.edu.model.Online;
 import ru.izpz.edu.repository.FriendsRepository;
 import ru.izpz.edu.repository.OnlineRepository;
@@ -25,9 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Sql({"/friends_import.sql", "/online_import.sql", "/workplace_import.sql"})
 @Import({NotifyService.class}) // подключаем ровно один сервис
 @TestPropertySource(properties = {
-        "notify.service.enabled=true",
-        "notify.scheduler.enabled=false",
-        "graphql.api.enabled=false"
+        "notify.service.enabled=true"
 })
 class NotifyServiceTest extends BaseTestContainer {
 
