@@ -17,6 +17,7 @@ val telegramBotsVersion: String by project
 val okioJvmVersion: String by project
 val openFeignVersion: String by project
 val springSecurityCryptoVersion: String by project
+val resilience4jVersion: String by project
 
 dependencies {
     implementation(project(":common"))
@@ -28,6 +29,8 @@ dependencies {
         exclude(group = "org.springframework.security", module = "spring-security-crypto")
     }
     implementation("org.springframework.security:spring-security-crypto:$springSecurityCryptoVersion")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}")
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:${resilience4jVersion}")
     implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
     implementation("org.telegram:telegrambots-meta:$telegramBotsVersion")
     implementation("org.telegram:telegrambots-longpolling:$telegramBotsVersion")
