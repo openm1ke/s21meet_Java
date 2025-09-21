@@ -41,6 +41,7 @@ public class MessageProcessor {
     private final OkHttpTelegramClient telegramClient;
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
+    private final MessageSender messageSender;
 
     private static final int ROW_SIZE = 3;
     private static final int PAGE_SIZE = 2;
@@ -54,8 +55,8 @@ public class MessageProcessor {
             //sendMessage(chatId, profile.toString());
             parseMessage(chatId, profile, text);
         } catch (FeignException e) {
-            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
-            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
+            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
         }
     }
 
@@ -96,13 +97,13 @@ public class MessageProcessor {
                 }
                 case "set_name" -> {
                     setLastCommand(chatId, LastCommandType.SET_NAME, Map.of("login", payload.getArgs().get("login")));
-                    sendMessage(chatId, "Указать имя", null);
+                    messageSender.sendMessage(chatId, "Указать имя", null);
                 }
-                default -> sendMessage(chatId, "Неизвестная команда: " + data, null);
+                default -> messageSender.sendMessage(chatId, "Неизвестная команда: " + data, null);
             }
         } catch (InvalidCallbackPayloadException e) {
             log.error("Получены некорректные данные в callback: {}", data, e);
-            sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
+            messageSender.sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
@@ -136,7 +137,7 @@ public class MessageProcessor {
         // проверка подписан ли на канал
         if (!isUserInGroup(chatId)) {
             ReplyKeyboard keyboard = TelegramKeyboardFactory.createUrlKeyboard(telegramButtons.getSubscribeButton(),1);
-            sendMessage(chatId, "Подпишитесь на канал", keyboard);
+            messageSender.sendMessage(chatId, "Подпишитесь на канал", keyboard);
             return;
         }
 
@@ -145,15 +146,15 @@ public class MessageProcessor {
             switch (command) {
                 case START -> {
                     ReplyKeyboard keyboard = TelegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
-                    sendMessage(chatId, "Выберите команду", keyboard);
+                    messageSender.sendMessage(chatId, "Выберите команду", keyboard);
                 }
                 case ME -> {
-                    sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
+                    messageSender.sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
                 }
                 case HELP -> {
-                    sendMessage(chatId, "Помощь по командам бота", null);
+                    messageSender.sendMessage(chatId, "Помощь по командам бота", null);
                 }
-                case DONATE -> sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
+                case DONATE -> messageSender.sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
             }
         }
 
@@ -163,21 +164,21 @@ public class MessageProcessor {
             switch (command) {
                 case SEARCH -> {
                     setLastCommand(chatId, LastCommandType.SEARCH, null);
-                    sendMessage(chatId, "Введите логин для поиска", null);
+                    messageSender.sendMessage(chatId, "Введите логин для поиска", null);
                 }
                 case FRIENDS -> {
                     showFriends(chatId, 0, null);
                 }
                 case PROFILE -> {
                     ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
-                    sendMessage(chatId, "Профиль\n" + showProfile, null);
+                    messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
                 }
-                case EVENTS -> sendMessage(chatId, "События", null);
+                case EVENTS -> messageSender.sendMessage(chatId, "События", null);
                 case CAMPUS -> {
                     var campusMap = showCampusMap(chatId);
-                    sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
+                    messageSender.sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
                 }
-                case PROJECTS -> sendMessage(chatId, "Проекты", null);
+                case PROJECTS -> messageSender.sendMessage(chatId, "Проекты", null);
             }
             return;
         }
@@ -186,19 +187,15 @@ public class MessageProcessor {
         LastCommandType.fromName(profile.lastCommand()).ifPresent(cmd -> {
             switch (cmd) {
                 case SEARCH -> {
-                    if (isValidLogin(text)) {
-                        showProfile(chatId, text);
-                    } else {
-                        sendMessage(chatId, "Логин должен быть от 3 до 30 символов и состоять только из латинских букв", null);
-                    }
+                    showProfile(chatId, text);
                 }
                 case SET_NAME -> {
                     if (text.length() > 100) {
-                        sendMessage(chatId, "Имя должно быть не более 100 символов", null);
+                        messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);
                     } else {
                         var login = profile.lastCommand().getArgs().get("login");
                         profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
-                        sendMessage(chatId, "Имя успешно обновлено", null);
+                        messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
                     }
                 }
             }
@@ -215,23 +212,28 @@ public class MessageProcessor {
             if (messageId != null) {
                 updateMessage(chatId, messageId, friendsListText, keyboard);
             } else {
-                sendMessage(chatId, friendsListText, keyboard);
+                messageSender.sendMessage(chatId, friendsListText, keyboard);
             }
         } catch (FeignException e) {
-            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
-            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
+            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
         }
     }
 
     private void showProfile(Long chatId, String login) {
+        if (!isValidLogin(login)) {
+            messageSender.sendMessage(chatId, "Логин должен быть от 3 до 30 символов и состоять только из латинских букв", null);
+            return;
+        }
         try {
+            profileService.checkEduLogin(login);
             FriendDto friend = profileService.applyFriend(chatId, login, FriendRequest.Action.NONE, null);
             InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
             ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
-            sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
-        } catch (FeignException e) {
-            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
-            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
+        } catch (EduLoginCheckException e) {
+            messageSender.sendMessage(chatId, "Ошибка проверки логина: " + e.getError().getMessage(), null);
+            messageSender.sendMessage(ADMIN_ID, "Ошибка проверки логина: " + e.getError(), null);
         }
     }
 
@@ -242,8 +244,8 @@ public class MessageProcessor {
         try {
             profileService.setLastCommand(chatId, lastCommand);
         }  catch (FeignException e) {
-            sendMessage(chatId, "Ошибка установки lastCommand", null);
-            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(chatId, "Ошибка установки lastCommand", null);
+            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
         }
     }
 
@@ -255,15 +257,15 @@ public class MessageProcessor {
         var code = profileService.getVerificationCode(profile.s21login());
         if (code.getSecretCode().equals(text)) {
             profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
-            sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", TelegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
+            messageSender.sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", TelegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
         } else {
-            sendMessage(chatId, "Введенный код не совпадает!", TelegramKeyboardFactory.removeReplyKeyboard());
+            messageSender.sendMessage(chatId, "Введенный код не совпадает!", TelegramKeyboardFactory.removeReplyKeyboard());
         }
     }
 
     private void startRegistration(Long chatId, ProfileDto profile, String text) {
         if (!isValidLogin(text)) {
-            sendMessage(chatId, "Введенный логин не соответствует требованиям", null);
+            messageSender.sendMessage(chatId, "Введенный логин не соответствует требованиям", null);
             return;
         }
 
@@ -272,20 +274,20 @@ public class MessageProcessor {
             participant = profileService.checkEduLogin(text);
         } catch (EduLoginCheckException e) {
             ErrorResponseDTO error = e.getError();
-            sendMessage(chatId, "Ошибка проверки логина: " + error.getMessage(), null);
-            sendMessage(ADMIN_ID, "Ошибка проверки логина: " + error, null);
+            messageSender.sendMessage(chatId, "Ошибка проверки логина: " + error.getMessage(), null);
+            messageSender.sendMessage(ADMIN_ID, "Ошибка проверки логина: " + error, null);
             return;
         }
 
         // проверяем что профиль активный
         if (participant.getStatus() != ParticipantV1DTO.StatusEnum.ACTIVE) {
-            sendMessage(chatId, "Введенный логин не активен", null);
+            messageSender.sendMessage(chatId, "Введенный логин не активен", null);
             return;
         }
 
         // тут можно проверить что профиль на основе Core program
         if (participant.getParallelName() == null || !participant.getParallelName().equals("Core program")) {
-            sendMessage(chatId, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
+            messageSender.sendMessage(chatId, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
             return;
         }
 
@@ -293,8 +295,8 @@ public class MessageProcessor {
         try {
             profileDto = profileService.checkAndSetLogin(chatId, text);
         } catch (FeignException e) {
-            sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
-            sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
+            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
             return;
         }
         // если логин совпадает значит мы его сохранили
@@ -303,17 +305,17 @@ public class MessageProcessor {
             try {
                 rocketChatResponse = profileService.sendVerificationCode(text);
             } catch (RocketChatSendException e) {
-                sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
-                sendMessage(ADMIN_ID, e.getMessage(), null);
+                messageSender.sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
+                messageSender.sendMessage(ADMIN_ID, e.getMessage(), null);
                 return;
             } catch (FeignException e) {
-                sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
-                sendMessage(ADMIN_ID, e.contentUTF8(), null);
+                messageSender.sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
+                messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
                 return;
             }
 
-            sendMessage(chatId, "В рокет чат был отправлен код для подтверждения для логина " + text, null);
-            sendMessage(ADMIN_ID, "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(), null);
+            messageSender.sendMessage(chatId, "В рокет чат был отправлен код для подтверждения для логина " + text, null);
+            messageSender.sendMessage(ADMIN_ID, "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(), null);
             profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
         }
 
@@ -334,26 +336,13 @@ public class MessageProcessor {
 
     private void startOnboarding(Long chatId) {
         InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.createInlineKeyboardMarkup(telegramButtons.getRegistrationButton(), 1);
-        sendMessage(chatId, "Для регистрации нажмите кнопку ниже", keyboard);
+        messageSender.sendMessage(chatId, "Для регистрации нажмите кнопку ниже", keyboard);
     }
 
     private boolean isValidLogin(String login) {
         return login != null && login.matches("^[a-zA-Z]{3,30}$");
     }
 
-    public void sendMessage(Long chatId, String text, ReplyKeyboard replyKeyboard) {
-        SendMessage response = SendMessage.builder()
-                .chatId(chatId)
-                .text(text)
-                .replyMarkup(replyKeyboard)
-                .build();
-
-        try {
-            telegramClient.execute(response);
-        } catch (TelegramApiException e) {
-            log.error("Ошибка отправки сообщения для {}: {}", chatId, text, e);
-        }
-    }
 
     public void removeInlineKeyboard(Long chatId, Integer messageId) {
         EditMessageReplyMarkup editMarkup = EditMessageReplyMarkup.builder()
