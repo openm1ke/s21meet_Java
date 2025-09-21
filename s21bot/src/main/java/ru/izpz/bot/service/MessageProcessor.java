@@ -5,16 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.exception.EduLoginCheckException;
@@ -38,7 +33,7 @@ public class MessageProcessor {
     @Value("${bot.group}")
     private Long GROUP_ID;
 
-    private final OkHttpTelegramClient telegramClient;
+    private final TelegramClientProxy telegramClient;
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
     private final MessageSender messageSender;
@@ -210,7 +205,7 @@ public class MessageProcessor {
             var keyboard = TelegramKeyboardFactory.friendsListKeyboard(list, ROW_SIZE, page);
             String friendsListText = TelegramKeyboardFactory.friendsListText(list, page);
             if (messageId != null) {
-                updateMessage(chatId, messageId, friendsListText, keyboard);
+                messageSender.updateMessage(chatId, messageId, friendsListText, keyboard);
             } else {
                 messageSender.sendMessage(chatId, friendsListText, keyboard);
             }
@@ -343,52 +338,9 @@ public class MessageProcessor {
         return login != null && login.matches("^[a-zA-Z]{3,30}$");
     }
 
-
-    public void removeInlineKeyboard(Long chatId, Integer messageId) {
-        EditMessageReplyMarkup editMarkup = EditMessageReplyMarkup.builder()
-                .chatId(chatId.toString()) // обязательно String, а не Long
-                .messageId(messageId)
-                .replyMarkup(null) // это удаляет клавиатуру
-                .build();
-
-        try {
-            telegramClient.execute(editMarkup);
-        } catch (TelegramApiException e) {
-            log.error("Ошибка при удалении клавиатуры у сообщения {}: {}", messageId, e.getMessage());
-        }
-    }
-
-    public void removeReplyKeyboard(Long chatId, String message) {
-        SendMessage sendMessage = SendMessage.builder()
-                .chatId(chatId.toString())
-                .text(message)
-                .replyMarkup(new ReplyKeyboardRemove(true)) // удаляет клавиатуру
-                .build();
-
-        try {
-            telegramClient.execute(sendMessage);
-        } catch (TelegramApiException e) {
-            log.error("Ошибка при удалении reply keyboard: {}", e.getMessage());
-        }
-    }
-
-    public void updateMessage(Long chatId, Integer messageId, String text, InlineKeyboardMarkup keyboard) {
-        EditMessageText editMessage = EditMessageText.builder()
-                .chatId(chatId.toString()) // обязательно как String
-                .messageId(messageId)
-                .text(text)
-                .replyMarkup(keyboard) // удаляет кнопки
-                .build();
-        try {
-            telegramClient.execute(editMessage);
-        } catch (TelegramApiException e) {
-            log.error("Ошибка при редактировании сообщения {}: {}", messageId, e.getMessage());
-        }
-    }
-
     public void updateMessageAndChangeStatusRegistration(Long chatId, Integer messageId, String newText) {
         try {
-            updateMessage(chatId, messageId, newText, null);
+            messageSender.updateMessage(chatId, messageId, newText, null);
             profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
         } catch (FeignException e) {
             log.error("Ошибка обработки профиля", e);
