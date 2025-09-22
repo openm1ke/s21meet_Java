@@ -5,9 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.Clusters;
+import ru.izpz.dto.api.CampusApi;
+import ru.izpz.dto.api.ClusterApi;
+import ru.izpz.dto.api.ParticipantApi;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.dto.CampusDto;
 import ru.izpz.edu.exception.ProfileNotFoundException;
@@ -29,20 +31,16 @@ import java.util.UUID;
 @ConditionalOnProperty(name = "campus.service.enabled", havingValue = "true")
 public class CampusService {
 
-    private final CampusApiProxy campusApi;
-    private final ClusterApiProxy clusterApi;
+    private final CampusApi campusApi;
+    private final ClusterApi clusterApi;
     private final GraphQLService graphQLService;
-    private final ParticipantApiProxy participantApi;
+    private final ParticipantApi participantApi;
     private final ClusterRepository clusterRepository;
     private final WorkplaceRepository workplaceRepository;
-    private final ApiClient apiClient;
-    private final TokenService tokenService;
     private final ProfileRepository profileRepository;
 
     @Scheduled(fixedDelay = 30000)
     public void parseMskKznNsk() {
-        // установка токена для всех клиентов
-        apiClient.setApiKey(tokenService.getToken());
         // список целевых кампусов
         List<String> campuses = List.of(
             "6bfe3c56-0211-4fe1-9e59-51616caac4dd", // MSK

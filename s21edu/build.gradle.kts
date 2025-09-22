@@ -14,6 +14,7 @@ val springRetryVersion: String by project
 val apacheCommonsVersion: String by project
 val postgresqlVersion: String by project
 val openFeignVersion: String by project
+val squareupOkhttpVersion: String by project
 
 dependencies {
     implementation(project(":s21auth"))
@@ -28,6 +29,8 @@ dependencies {
     }
     implementation("org.springframework.boot:spring-boot-starter-aop:$springBootVersion")
     implementation("org.springframework.retry:spring-retry:$springRetryVersion")
+    implementation("com.squareup.okhttp3:okhttp:${squareupOkhttpVersion}")
+    implementation("com.squareup.okhttp3:logging-interceptor:${squareupOkhttpVersion}")
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     implementation("org.postgresql:postgresql:$postgresqlVersion")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")

@@ -1,13 +1,14 @@
 package ru.izpz.edu.service;
 
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.ApiException;
+import ru.izpz.dto.api.CampusApi;
+import ru.izpz.dto.api.ClusterApi;
+import ru.izpz.dto.api.ParticipantApi;
 import ru.izpz.dto.model.*;
 import ru.izpz.edu.repository.ClusterRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
@@ -25,25 +26,19 @@ class CampusServiceTest {
     private CampusService campusService;
 
     @Mock
-    private CampusApiProxy campusApi;
+    private CampusApi campusApi;
 
     @Mock
-    private ClusterApiProxy clusterApi;
+    private ClusterApi clusterApi;
 
     @Mock
-    private ParticipantApiProxy participantApi;
+    private ParticipantApi participantApi;
 
     @Mock
     private ClusterRepository clusterRepository;
 
     @Mock
     private WorkplaceRepository workplaceRepository;
-
-    @Mock
-    private ApiClient apiClient;
-
-    @Mock
-    private TokenService tokenService;
 
     private static final UUID CAMPUS_ID = UUID.fromString("6bfe3c56-0211-4fe1-9e59-51616caac4dd");
     private static final Long CLUSTER_ID = 123L;
