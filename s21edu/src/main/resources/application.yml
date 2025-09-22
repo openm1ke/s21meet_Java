@@ -26,26 +26,29 @@ bot.service.url: http://localhost:8083
 resilience4j:
   ratelimiter:
     instances:
-      campusApi:
+      platform:
         limitForPeriod: 10
         limitRefreshPeriod: 100ms
         timeoutDuration: 1s
+  retry:
+    instances:
+      platform:
+        maxAttempts: 3
+        waitDuration: 200ms
 
 logging:
   level:
     io.github.resilience4j: INFO
 
-participant.api.enabled: true
+api.client.enabled: true
+cluster.api.enabled: true
 profile.service.enabled: true
-profile.api.enabled: true
+participant.api.enabled: true
 graphql.api.enabled: true
 notify:
   service.enabled: true
   scheduler.enabled: true
   poll.fixed-delay: PT30S
-token.service.enabled: true
-cluster.api.enabled: true
-api.client.enabled: true
 campus:
   api.enabled: true
   service.enabled: true

@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @Sql({"/friends_import.sql", "/online_import.sql", "/workplace_import.sql"})
-@Import({NotifyService.class}) // подключаем ровно один сервис
+@Import({NotifyService.class})
 @TestPropertySource(properties = {
         "notify.service.enabled=true"
 })
