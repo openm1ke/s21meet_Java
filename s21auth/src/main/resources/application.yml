@@ -18,6 +18,27 @@ spring:
     console:
       enabled: true
       path: /h2-console
+token:
+  scheduler:
+    enabled: true
+    refresh-delay: 30000
+
+security:
+  crypto:
+    key-base64: ${CRYPTO_KEY_BASE64}
+
+resilience4j:
+  ratelimiter:
+    instances:
+      auth:
+        limitForPeriod: 5
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+  retry:
+    instances:
+      auth:
+        maxAttempts: 3
+        waitDuration: 500ms
 
 logging:
   level:

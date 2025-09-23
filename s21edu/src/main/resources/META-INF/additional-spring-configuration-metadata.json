@@ -36,6 +36,11 @@
       "description": "Description for campus.service.enabled."
     },
     {
+      "name": "campus.scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Description for campus.scheduler.enabled."
+    },
+    {
       "name": "notify.service.enabled",
       "type": "java.lang.Boolean",
       "description": "Description for notify.service.enabled."

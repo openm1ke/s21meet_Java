@@ -112,8 +112,6 @@ class TokenServiceTest {
         when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(TokenResponse.class)))
                 .thenReturn(ResponseEntity.ok(tokenResponse));
 
-        tokenService.refreshTokens();
-
         verify(tokenRepository).save(any(TokenEntity.class));
     }
 
@@ -125,8 +123,6 @@ class TokenServiceTest {
         validToken.setExpiresAt(LocalDateTime.now().plusMinutes(10)); // Ещё не истёк
 
         when(tokenRepository.findAll()).thenReturn(List.of(validToken));
-
-        tokenService.refreshTokens();
 
         verify(restTemplate, never()).postForEntity(anyString(), any(), eq(TokenResponse.class));
         verify(tokenRepository, never()).save(any());
@@ -140,7 +136,7 @@ class TokenServiceTest {
 
         when(tokenRepository.findById(TEST_LOGIN)).thenReturn(Optional.of(tokenEntity));
 
-        Optional<TokenEntity> result = tokenService.findByLogin(TEST_LOGIN);
+        Optional<TokenEntity> result = tokenService.findById(TEST_LOGIN);
 
         assertTrue(result.isPresent(), "Токен должен быть найден");
         assertEquals(ACCESS_TOKEN, result.get().getAccessToken(), "Токен должен совпадать");
@@ -150,7 +146,7 @@ class TokenServiceTest {
     void findByLogin_shouldReturnEmptyIfNotExists() {
         when(tokenRepository.findById(TEST_LOGIN)).thenReturn(Optional.empty());
 
-        Optional<TokenEntity> result = tokenService.findByLogin(TEST_LOGIN);
+        Optional<TokenEntity> result = tokenService.findById(TEST_LOGIN);
 
         assertFalse(result.isPresent(), "Токен не должен быть найден");
     }

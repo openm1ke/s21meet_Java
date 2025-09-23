@@ -42,7 +42,7 @@ public class ProfileController {
     @GetMapping("/login")
     ResponseEntity<ParticipantV1DTO> checkEduLogin(@RequestParam String login) throws ApiException {
         log.info("Получен запрос на проверку логина: login = {}", login);
-        var participant = campusService.checkEduLogin(login);
+        var participant = profileService.checkEduLogin(login);
         return ResponseEntity.ok(participant);
     }
 
@@ -63,7 +63,7 @@ public class ProfileController {
     @PostMapping("/campus")
     ResponseEntity<CampusResponse> getCampus(@Valid @RequestBody CampusRequest request) throws ApiException {
         log.info("Получен запрос на вывод карты кампуса для {}", request.getTelegramId());
-        CampusDto campus = campusService.getCampus(request.getTelegramId());
+        CampusDto campus = profileService.getCampus(request.getTelegramId());
         var clusters = campusService.getClusters(campus);
         var response = CampusResponse.builder()
                 .campusName(campus.name)

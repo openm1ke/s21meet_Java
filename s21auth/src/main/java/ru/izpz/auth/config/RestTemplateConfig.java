@@ -18,7 +18,7 @@ public class RestTemplateConfig {
         return builder
                 .rootUri(BASE_URL)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                .additionalMessageConverters(new FormHttpMessageConverter()) // Добавляем поддержку form-data
+                .additionalMessageConverters(new FormHttpMessageConverter())
                 .build();
     }
 }

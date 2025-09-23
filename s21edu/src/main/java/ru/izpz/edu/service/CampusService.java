@@ -3,21 +3,16 @@ package ru.izpz.edu.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.Clusters;
 import ru.izpz.dto.api.CampusApi;
 import ru.izpz.dto.api.ClusterApi;
-import ru.izpz.dto.api.ParticipantApi;
-import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.dto.CampusDto;
-import ru.izpz.edu.exception.ProfileNotFoundException;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;
 import ru.izpz.edu.repository.ClusterRepository;
-import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.utils.StringUtils;
 
@@ -34,41 +29,8 @@ public class CampusService {
     private final CampusApi campusApi;
     private final ClusterApi clusterApi;
     private final GraphQLService graphQLService;
-    private final ParticipantApi participantApi;
     private final ClusterRepository clusterRepository;
     private final WorkplaceRepository workplaceRepository;
-    private final ProfileRepository profileRepository;
-
-    @Scheduled(fixedDelay = 30000)
-    public void parseMskKznNsk() {
-        // список целевых кампусов
-        List<String> campuses = List.of(
-            "6bfe3c56-0211-4fe1-9e59-51616caac4dd", // MSK
-            "7c293c9c-f28c-4b10-be29-560e4b000a34", // KZN
-            "46e7d965-21e9-4936-bea9-f5ea0d1fddf2"  // NSK
-        );
-
-        log.info("Получение кластеров для Москвы, Казани и Новосибирска");
-        campuses.parallelStream().forEach(campus -> {
-            try {
-                getClustersByCampus(UUID.fromString(campus));
-            } catch (ApiException e) {
-                log.error("Ошибка получения кластеров для кампуса {}", campus);
-            }
-        });
-
-        List<Cluster> clusters = clusterRepository.findAll();
-
-        clusters.parallelStream().forEach(cluster -> {
-            try {
-                getParticipantsByCluster(cluster.getClusterId());
-            } catch (ApiException e) {
-                log.error("Ошибка получения участников для кластера {}", cluster.getClusterId());
-            }
-        });
-
-        log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
-    }
 
     /**
      * Метод получения списка занятых рабочих мест по кластерам
@@ -133,22 +95,6 @@ public class CampusService {
         }
         //log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
         clusterRepository.saveAllAndFlush(clusterEntities);
-    }
-
-
-    public ParticipantV1DTO checkEduLogin(String login) throws ApiException {
-        log.info("Получен запрос на проверку логина: login = {}", login);
-        return participantApi.getParticipantByLogin(login);
-    }
-
-    public CampusDto getCampus(String telegramId) throws ApiException {
-        log.info("Получен запрос на получение кампуса для telegramId = {}", telegramId);
-        var profile = profileRepository.findByTelegramId(telegramId);
-        if (profile.isEmpty()) {
-            throw new ProfileNotFoundException("Не найден логин для данного телеграм айди");
-        }
-        var participant = checkEduLogin(profile.get().getS21login());
-        return new CampusDto(participant.getCampus().getShortName(), participant.getCampus().getId().toString());
     }
 
     public List<Clusters> getClusters(CampusDto campus) {

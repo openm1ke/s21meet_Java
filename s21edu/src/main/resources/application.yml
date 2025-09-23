@@ -47,8 +47,12 @@ participant.api.enabled: true
 graphql.api.enabled: true
 notify:
   service.enabled: true
-  scheduler.enabled: true
-  poll.fixed-delay: PT30S
+  scheduler:
+    enabled: true
+    fixed-delay: PT30S
 campus:
   api.enabled: true
   service.enabled: true
+  scheduler:
+    enabled: true
+    fixed-delay: PT30S
