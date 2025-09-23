@@ -19,7 +19,7 @@ public class NotifyScheduler {
     private final NotifyService notifyService;
     private final BotClient botClient;
 
-    @Scheduled(fixedDelayString = "${notify.poll.fixed-delay:PT30S}")
+    @Scheduled(fixedDelayString = "${notify.scheduler.fixed-delay:PT30S}")
     public void poll() {
         List<StatusChange> changes = notifyService.computeAndPersistChanges();
         var request = NotifyRequest.builder()

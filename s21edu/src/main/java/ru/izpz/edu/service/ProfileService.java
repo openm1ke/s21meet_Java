@@ -6,6 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.*;
+import ru.izpz.dto.api.ParticipantApi;
+import ru.izpz.dto.model.ParticipantV1DTO;
+import ru.izpz.edu.dto.CampusDto;
 import ru.izpz.edu.exception.ProfileNotFoundException;
 import ru.izpz.edu.mapper.LastCommandConverter;
 import ru.izpz.edu.mapper.ProfileMapper;
@@ -32,37 +35,37 @@ public class ProfileService {
     private final ProfileVerificationMapper profileVerificationMapper;
     private final ProfileRepository profileRepository;
     private final ProfileValidationRepository profileValidationRepository;
-    private final CampusService campusService;
+    private final ParticipantApi participantApi;
     private final ParticipantRepository participantRepository;
     private final ParticipantCampusRepository participantCampusRepository;
 
     public ProfileDto getOrCreateProfile(String telegramId) {
         return profileRepository.findByTelegramId(telegramId)
-                .map(profileMapper::toDto)
-                .orElseGet(() -> {
-                    Profile profile = new Profile();
-                    profile.setTelegramId(telegramId);
-                    profile.setStatus(ProfileStatus.CREATED);
-                    Profile saved = profileRepository.save(profile);
-                    return profileMapper.toDto(saved);
-                });
+            .map(profileMapper::toDto)
+            .orElseGet(() -> {
+                Profile profile = new Profile();
+                profile.setTelegramId(telegramId);
+                profile.setStatus(ProfileStatus.CREATED);
+                Profile saved = profileRepository.save(profile);
+                return profileMapper.toDto(saved);
+            });
     }
 
     public ProfileDto getProfile(String telegramId) {
         return profileRepository.findByTelegramId(telegramId)
-                .map(profileMapper::toDto)
-                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + telegramId)
+            .map(profileMapper::toDto)
+            .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + telegramId)
         );
     }
 
     public ProfileDto updateProfileStatus(ProfileRequest request) {
         return profileRepository.findByTelegramId(request.getTelegramId())
-                .map(existing -> {
-                    existing.setStatus(request.getStatus());
-                    return profileRepository.save(existing);
-                })
-                .map(profileMapper::toDto)
-                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
+            .map(existing -> {
+                existing.setStatus(request.getStatus());
+                return profileRepository.save(existing);
+            })
+            .map(profileMapper::toDto)
+            .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
     }
 
     public ProfileDto checkAndSetLogin(String telegramId, String s21login) {
@@ -91,7 +94,7 @@ public class ProfileService {
     }
 
     public ParticipantDto getParticipant(String eduLogin) throws ApiException {
-        var participantV1DTO = campusService.checkEduLogin(eduLogin);
+        var participantV1DTO = checkEduLogin(eduLogin);
 
         ParticipantCampus campus = profileMapper.toEntity(participantV1DTO.getCampus());
         participantCampusRepository.save(campus);
@@ -109,5 +112,20 @@ public class ProfileService {
         String serialized = request.getCommand() == null ? null : LastCommandConverter.serialize(request.getCommand());
         profile.setLastCommand(serialized);
         return profileMapper.toDto(profileRepository.save(profile));
+    }
+
+    public ParticipantV1DTO checkEduLogin(String login) throws ApiException {
+        log.info("Получен запрос на проверку логина: login = {}", login);
+        return participantApi.getParticipantByLogin(login);
+    }
+
+    public CampusDto getCampus(String telegramId) throws ApiException {
+        log.info("Получен запрос на получение кампуса для telegramId = {}", telegramId);
+        var profile = profileRepository.findByTelegramId(telegramId);
+        if (profile.isEmpty()) {
+            throw new ProfileNotFoundException("Не найден логин для данного телеграм айди");
+        }
+        var participant = checkEduLogin(profile.get().getS21login());
+        return new CampusDto(participant.getCampus().getShortName(), participant.getCampus().getId().toString());
     }
 }

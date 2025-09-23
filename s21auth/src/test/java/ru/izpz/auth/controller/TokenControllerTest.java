@@ -1,11 +1,6 @@
 package ru.izpz.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ru.izpz.auth.config.TokenControllerConfig;
-import ru.izpz.auth.dto.TokenRequest;
-import ru.izpz.auth.model.TokenEntity;
-import ru.izpz.auth.service.TokenService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -13,10 +8,15 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.izpz.auth.config.TokenControllerConfig;
+import ru.izpz.auth.dto.TokenRequest;
+import ru.izpz.auth.model.TokenEntity;
+import ru.izpz.auth.service.TokenService;
 
 import java.util.Optional;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -35,10 +35,6 @@ class TokenControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @BeforeEach
-    void setUp() {
-        doNothing().when(tokenService).refreshTokens();
-    }
 
     @Test
     void generateToken_returnsOk_whenTokenIsGenerated() throws Exception {
@@ -95,7 +91,7 @@ class TokenControllerTest {
         tokenEntity.setExpiresAt(null);
         tokenEntity.setRefreshToken(null);
         Optional<TokenEntity> token = Optional.of(tokenEntity);
-        when(tokenService.findByLogin(login)).thenReturn(token);
+        when(tokenService.findById(login)).thenReturn(token);
         mockMvc.perform(get("/api/tokens").param("login", login))
                 .andExpect(status().isOk())
                 .andExpect(content().string("generatedToken"));
