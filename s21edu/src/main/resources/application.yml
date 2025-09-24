@@ -42,7 +42,9 @@ logging:
 
 api.client.enabled: true
 cluster.api.enabled: true
-profile.service.enabled: true
+profile:
+  api.enabled: true
+  service.enabled: true
 participant.api.enabled: true
 graphql.api.enabled: true
 notify:
@@ -54,5 +56,5 @@ campus:
   api.enabled: true
   service.enabled: true
   scheduler:
-    enabled: true
+    enabled: false
     fixed-delay: PT30S

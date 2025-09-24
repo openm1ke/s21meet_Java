@@ -1,0 +1,13 @@
+{
+  "properties": [
+    {
+      "name": "token.scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Description for token.scheduler.enabled."
+    },
+    {
+      "name": "token.scheduler.refresh-delay",
+      "type": "java.lang.String",
+      "description": "Description for token.scheduler.refresh-delay."
+    }
+  ] }
