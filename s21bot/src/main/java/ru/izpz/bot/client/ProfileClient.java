@@ -10,40 +10,39 @@ import ru.izpz.dto.model.ParticipantV1DTO;
 
 @FeignClient(
     name = "profile",
-    url = "${profile.service.url}"
+    url = "${profile.service.url}",
+    path = "/profile"
 )
 public interface ProfileClient {
 
-    @GetMapping("/profile")
+    @GetMapping
     ProfileDto getOrCreateProfile(@RequestParam String telegramId);
 
-    @PostMapping("/profile")
+    @PostMapping
     ProfileDto updateProfileStatus(@RequestBody ProfileRequest request);
 
-    @GetMapping("/profile/login")
+    @GetMapping("/login")
     ParticipantV1DTO checkEduLogin(@RequestParam String login);
 
-    @PostMapping("/profile/login")
+    @PostMapping("/login")
     ProfileDto checkAndSetLogin(@RequestBody ProfileRequest request);
 
-    @PostMapping("/profile/code")
+    @PostMapping("/code")
     ProfileCodeResponse getProfileCode(@RequestBody ProfileCodeRequest request);
 
-    @PostMapping("/profile/campus")
+    @PostMapping("/campus")
     CampusResponse getCampusMap(@RequestBody CampusRequest request);
 
-    @PostMapping("/profile/participant")
+    @PostMapping("/participant")
     ParticipantDto getParticipant(@RequestBody ParticipantRequest request);
 
-    @PostMapping("/profile/lastcommand")
+    @PostMapping("/lastcommand")
     ProfileDto setLastCommand(@RequestBody LastCommandRequest request);
 
-    @PostMapping("/profile/friend")
+    @PostMapping("/friend")
     FriendDto applyFriend(FriendRequest friendRequest);
 
-    @GetMapping("/profile/friends")
+    @GetMapping("/friends")
     FriendsSliceDto getFriends(@RequestParam String telegramId, @RequestParam int page, @RequestParam int size);
 
-//    @PostMapping("/profile/setfriendname")
-//    ProfileDto setFriendName(@RequestBody FriendNameRequest request);
 }

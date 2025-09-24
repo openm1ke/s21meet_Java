@@ -8,7 +8,7 @@ import ru.izpz.dto.ApiException;
 import ru.izpz.dto.Clusters;
 import ru.izpz.dto.api.CampusApi;
 import ru.izpz.dto.api.ClusterApi;
-import ru.izpz.edu.dto.CampusDto;
+import ru.izpz.dto.CampusDto;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;

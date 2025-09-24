@@ -8,9 +8,8 @@ import org.springframework.stereotype.Service;
 import ru.izpz.dto.*;
 import ru.izpz.dto.api.ParticipantApi;
 import ru.izpz.dto.model.ParticipantV1DTO;
-import ru.izpz.edu.dto.CampusDto;
+import ru.izpz.dto.CampusDto;
 import ru.izpz.edu.exception.ProfileNotFoundException;
-import ru.izpz.edu.mapper.LastCommandConverter;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
 import ru.izpz.edu.model.Participant;
@@ -109,8 +108,7 @@ public class ProfileService {
     public ProfileDto updateLastCommand(@Valid LastCommandRequest request) {
         Profile profile = profileRepository.findByTelegramId(request.getTelegramId())
                 .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
-        String serialized = request.getCommand() == null ? null : LastCommandConverter.serialize(request.getCommand());
-        profile.setLastCommand(serialized);
+        profile.setLastCommand(request.getCommand());
         return profileMapper.toDto(profileRepository.save(profile));
     }
 

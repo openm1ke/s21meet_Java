@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
-import ru.izpz.edu.dto.CampusDto;
+import ru.izpz.dto.CampusDto;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.FriendService;
 import ru.izpz.edu.service.ProfileService;
@@ -18,7 +18,7 @@ import ru.izpz.edu.service.ProfileService;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/profile")
-@ConditionalOnProperty(name = "profile.api.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "profile.api.enabled", havingValue = "true")
 public class ProfileController {
 
     private final ProfileService profileService;
@@ -96,8 +96,7 @@ public class ProfileController {
 
     @GetMapping("/friends")
     ResponseEntity<FriendsSliceDto> getFriends(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int size) {
-        return ResponseEntity.ok(
-                friendsService.getFriends(telegramId, page, size)
-        );
+        log.info("Получен запрос на вывод друзей для telegramId = {}, page = {}, size = {}", telegramId, page, size);
+        return ResponseEntity.ok(friendsService.getFriends(telegramId, page, size));
     }
 }

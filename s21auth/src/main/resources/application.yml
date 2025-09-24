@@ -18,6 +18,7 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
 token:
   scheduler:
     enabled: true

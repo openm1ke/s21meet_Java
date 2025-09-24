@@ -188,7 +188,7 @@ public class MessageProcessor {
                     if (text.length() > 100) {
                         messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);
                     } else {
-                        var login = profile.lastCommand().getArgs().get("login");
+                        var login = profile.lastCommand().args().get("login").toString();
                         profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
                         messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
                     }
@@ -232,10 +232,8 @@ public class MessageProcessor {
         }
     }
 
-    private void setLastCommand(Long chatId, LastCommandType type, Map<String, String> args) {
-        var lastCommand = new LastCommandState();
-        lastCommand.setCommand(type);
-        lastCommand.setArgs(args);
+    private void setLastCommand(Long chatId, LastCommandType type, Map<String, Object> args) {
+        var lastCommand = new LastCommandState(type, args);
         try {
             profileService.setLastCommand(chatId, lastCommand);
         }  catch (FeignException e) {

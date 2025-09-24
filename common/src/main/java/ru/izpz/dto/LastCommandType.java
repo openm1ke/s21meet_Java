@@ -5,15 +5,15 @@ import java.util.Optional;
 
 public enum LastCommandType {
     SEARCH,
-    ADD_FRIEND,
-    SET_NAME;
+    SET_NAME,
+    NONE;
 
     public static Optional<LastCommandType> fromName(LastCommandState state) {
-        if (state == null || state.command == null) {
+        if (state == null || state.command() == null) {
             return Optional.empty();
         }
         return Arrays.stream(values())
-                .filter(e -> e.name().equalsIgnoreCase(state.command.name()))
+                .filter(e -> e.name().equalsIgnoreCase(state.command().name()))
                 .findFirst();
     }
 }

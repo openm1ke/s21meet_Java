@@ -1,6 +1,5 @@
 package ru.izpz.auth.scheduler;
 
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +27,7 @@ public class TokenScheduler {
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
-        log.info("Init default token");
+        log.info("Init default token for {}", defaultLogin);
         tokenService.getAccessToken(defaultLogin, defaultPassword);
     }
 
