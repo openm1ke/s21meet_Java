@@ -4,21 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import ru.izpz.dto.ApiException;
-import ru.izpz.dto.Clusters;
-import ru.izpz.dto.api.CampusApi;
-import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.CampusDto;
+import ru.izpz.dto.Clusters;
+import ru.izpz.dto.model.ClusterV1DTO;
+import ru.izpz.dto.model.WorkplaceV1DTO;
+import ru.izpz.edu.mapper.CampusMapper;
 import ru.izpz.edu.model.Cluster;
-import ru.izpz.edu.model.Workplace;
-import ru.izpz.edu.model.WorkplaceId;
-import ru.izpz.edu.repository.ClusterRepository;
-import ru.izpz.edu.repository.WorkplaceRepository;
-import ru.izpz.edu.utils.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -26,79 +19,12 @@ import java.util.UUID;
 @ConditionalOnProperty(name = "campus.service.enabled", havingValue = "true")
 public class CampusService {
 
-    private final CampusApi campusApi;
-    private final ClusterApi clusterApi;
     private final GraphQLService graphQLService;
-    private final ClusterRepository clusterRepository;
-    private final WorkplaceRepository workplaceRepository;
-
-    /**
-     * Метод получения списка занятых рабочих мест по кластерам
-     * @param clusterId айди кластера определенного кампуса
-     * @throws ApiException исключение
-     */
-    public void getParticipantsByCluster(Long clusterId) throws ApiException {
-        //log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
-        // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максимум)
-        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);
-        // надо удалять старые записи даже если нам ничего не пришло
-        workplaceRepository.deleteByIdClusterId(clusterId);
-        if(response != null && !response.getClusterMap().isEmpty()) {
-            var clusterMap = response.getClusterMap();
-            //log.info("Получено {} участников для кластера {} на странице", clusterMap.size(), clusterId);
-            // Для каждого полученного логина маппим в сущность и сохраняем
-            ArrayList<Workplace> workplaces = new ArrayList<>(clusterMap.size());
-            for (var workplace : clusterMap) {
-                WorkplaceId workplaceId = new WorkplaceId(clusterId, workplace.getRow(), workplace.getNumber());
-                Workplace workplaceEntity = new Workplace();
-                workplaceEntity.setId(workplaceId);
-                workplaceEntity.setLogin(StringUtils.extractLogin(workplace.getLogin()));
-                workplaces.add(workplaceEntity);
-            }
-            //log.info("Сохраняем {} участников для кластера {}", workplaces.size(), clusterId);
-            workplaceRepository.saveAllAndFlush(workplaces);
-        }
-    }
-
-    public void getParticipantsByClusterV2(Long clusterId) throws ApiException {
-        log.info("Получение списка занятых рабочих мест по кластерам {} через GraphQL", clusterId);
-        var response = graphQLService.getOccupiedSeats(String.valueOf(clusterId));
-        for (var workplace : response) {
-            System.out.println(workplace);
-        }
-    }
-
-    /**
-     * Получение списка кластеров для кампуса
-     * @param campusId айди кампуса
-     * @throws ApiException исключение
-     */
-    public void getClustersByCampus(UUID campusId) throws ApiException {
-        //log.info("Получение списка кластеров для кампуса {}", campusId);
-        var response = campusApi.getClustersByCampus(campusId);
-
-        if (response == null) {
-            log.warn("API вернул null для кампуса {}", campusId);
-            return; // Выход без ошибки
-        }
-        var clusters = response.getClusters();
-        ArrayList<Cluster> clusterEntities = new ArrayList<>(clusters.size());
-        for (var cluster : clusters) {
-            Cluster clusterEntity = new Cluster();
-            clusterEntity.setClusterId(cluster.getId());
-            clusterEntity.setName(cluster.getName());
-            clusterEntity.setCapacity(cluster.getCapacity());
-            clusterEntity.setAvailableCapacity(cluster.getAvailableCapacity());
-            clusterEntity.setFloor(cluster.getFloor());
-            clusterEntity.setCampusId(campusId.toString());
-            clusterEntities.add(clusterEntity);
-        }
-        //log.info("Сохраняем {} кластеров для кампуса {}", clusterEntities.size(), campusId);
-        clusterRepository.saveAllAndFlush(clusterEntities);
-    }
+    private final CampusPersistenceService persistenceService;
+    private final CampusMapper campusMapper;
 
     public List<Clusters> getClusters(CampusDto campus) {
-        return clusterRepository.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
+        return persistenceService.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
             .map(cluster -> Clusters.builder()
                 .name(cluster.getName())
                 .capacity(cluster.getCapacity())
@@ -106,5 +32,27 @@ public class CampusService {
                 .floor(cluster.getFloor())
                 .build())
             .toList();
+    }
+
+    public void replaceClustersByCampusId(String campusId, List<ClusterV1DTO> clustersDto) {
+        if (!clustersDto.isEmpty()) {
+            var clusters = clustersDto.stream()
+                .map(dto -> campusMapper.toClusterEntity(dto, campusId))
+            .toList();
+            persistenceService.replaceClusters(campusId, clusters);
+        }
+    }
+
+    public List<Cluster> findAllByOrderByCampusIdAsc() {
+        return persistenceService.findAllByOrderByCampusIdAsc();
+    }
+
+    public void replaceParticipantsByClusterId(Long clusterId, List<WorkplaceV1DTO> workplacesDto) {
+        if (!workplacesDto.isEmpty()) {
+            var workplaces = workplacesDto.stream()
+                .map(dto -> campusMapper.toWorkplaceEntity(dto, clusterId))
+            .toList();
+            persistenceService.replaceParticipants(clusterId, workplaces);
+        }
     }
 }
