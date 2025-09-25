@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
 import ru.izpz.dto.ApiException;
 import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.service.CampusService;
@@ -32,13 +33,15 @@ public class CampusScheduler {
         );
 
         log.info("Получение кластеров для Москвы, Казани и Новосибирска");
+        StopWatch stopWatch = new StopWatch("campus");
+        stopWatch.start("get clusters");
         try (var vexec = Executors.newVirtualThreadPerTaskExecutor()) {
             List<? extends Future<?>> f1 = campuses.stream()
-                .map(id -> vexec.submit((Runnable) () -> {
+                .map(id -> vexec.submit(() -> {
                     try {
                         var clusters = campusClient.getClustersByCampus(id);
                         campusService.replaceClustersByCampusId(id, clusters);
-                        log.info("Кампус {}: кластеров {}", id, clusters.size());
+                        //log.info("Кампус {}: кластеров {}", id, clusters.size());
                     } catch (ApiException e) {
                         log.error("Ошибка получения кластеров для кампуса {}", id, e);
                     }
@@ -48,7 +51,8 @@ public class CampusScheduler {
             for (var f : f1) {
                 try { f.get(); } catch (Exception e) { log.error("Ошибка получение кластеров для кампуса", e); }
             }
-
+            stopWatch.stop();
+            stopWatch.start("get participants");
             var clusterList = campusService.findAllByOrderByCampusIdAsc();
             List<? extends Future<?>> f2 = clusterList.stream()
                 .map(c -> vexec.submit(() -> {
@@ -56,7 +60,7 @@ public class CampusScheduler {
                     try {
                         var seats = campusClient.getParticipantsByCluster(cid);
                         campusService.replaceParticipantsByClusterId(cid, seats);
-                        log.info("мест: {} в {} ({})", seats.size(), c.getName(), cid);
+                        //log.info("мест: {} в {} ({})", seats.size(), c.getName(), cid);
                     } catch (ru.izpz.dto.ApiException e) {
                         log.error("Ошибка получения участников для кластера {}", cid, e);
                     }
@@ -69,5 +73,7 @@ public class CampusScheduler {
         }
 
         log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
+        stopWatch.stop();
+        log.info("Время обновления: {}", stopWatch.prettyPrint());
     }
 }
