@@ -27,7 +27,7 @@ resilience4j:
   ratelimiter:
     instances:
       platform:
-        limitForPeriod: 10
+        limitForPeriod: 30
         limitRefreshPeriod: 100ms
         timeoutDuration: 1s
   retry:
