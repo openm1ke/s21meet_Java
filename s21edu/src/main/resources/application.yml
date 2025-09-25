@@ -56,5 +56,5 @@ campus:
   api.enabled: true
   service.enabled: true
   scheduler:
-    enabled: false
+    enabled: true
     fixed-delay: PT30S

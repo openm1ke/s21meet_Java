@@ -8,5 +8,7 @@ import java.util.List;
 public interface ClusterRepository extends JpaRepository<Cluster, Long> {
     List<Cluster> findAllByCampusIdOrderByFloorAsc(String campusId);
 
-    Cluster findByClusterId(Long clusterId);
+    void deleteAllByCampusId(String campusId);
+
+    List<Cluster> findAllByOrderByCampusIdAsc();
 }

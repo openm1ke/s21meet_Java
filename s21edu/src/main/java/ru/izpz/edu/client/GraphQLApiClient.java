@@ -1,4 +1,4 @@
-package ru.izpz.edu.service;
+package ru.izpz.edu.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.edu.repository.ClusterRepository;
+import ru.izpz.edu.service.TokenService;
 
 import java.util.Map;
 

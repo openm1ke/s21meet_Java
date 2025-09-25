@@ -3,6 +3,7 @@ package ru.izpz.edu.service;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import ru.izpz.edu.client.GraphQLApiClient;
 
 import java.util.List;
 import java.util.Map;
