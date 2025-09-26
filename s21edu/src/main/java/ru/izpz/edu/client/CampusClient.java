@@ -58,11 +58,8 @@ public class CampusClient {
     }
 
 
-    public void getParticipantsByClusterV2(Long clusterId) throws ApiException {
-        log.info("Получение списка занятых рабочих мест по кластерам {} через GraphQL", clusterId);
-        var response = graphQLService.getOccupiedSeats(String.valueOf(clusterId));
-        for (var workplace : response) {
-            System.out.println(workplace);
-        }
+    public List<GraphQLService.ClusterSeat> getParticipantsByClusterV2(Long clusterId) throws ApiException {
+        //log.info("Получение списка занятых рабочих мест по кластерам {} через GraphQL", clusterId);
+        return graphQLService.getOccupiedSeats(String.valueOf(clusterId));
     }
 }

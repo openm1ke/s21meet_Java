@@ -44,7 +44,7 @@ public class GraphQLService {
             String clusterId, String row, int number,
             String login,
             Integer expValue, Integer levelCode,
-            String stageGroupName, String stageName, String studentType
+            String stageGroupName, String stageName
     ) {}
 
     public List<ClusterSeat> getOccupiedSeats(String clusterId) {
@@ -71,8 +71,7 @@ public class GraphQLService {
                         (p.experience() != null && p.experience().level() != null && p.experience().level().range() != null)
                                 ? p.experience().level().range().levelCode() : null,
                         p.stageGroupName(),
-                        p.stageName(),
-                        p.studentType()
+                        p.stageName()
                 ))
                 .toList();
     }

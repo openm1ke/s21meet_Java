@@ -58,10 +58,12 @@ public class CampusScheduler {
                 .map(c -> vexec.submit(() -> {
                     long cid = c.getClusterId();
                     try {
-                        var seats = campusClient.getParticipantsByCluster(cid);
-                        campusService.replaceParticipantsByClusterId(cid, seats);
-                        //log.info("мест: {} в {} ({})", seats.size(), c.getName(), cid);
-                    } catch (ru.izpz.dto.ApiException e) {
+                        //var seats = campusClient.getParticipantsByCluster(cid);
+                        //campusService.replaceParticipantsByClusterId(cid, seats);
+                        var seats = campusClient.getParticipantsByClusterV2(cid);
+                        campusService.replaceParticipantsByClusterIdV2(cid, seats);
+                        log.info("мест: {} в {} ({})", seats.size(), c.getName(), cid);
+                    } catch (ApiException e) {
                         log.error("Ошибка получения участников для кластера {}", cid, e);
                     }
                 }))
