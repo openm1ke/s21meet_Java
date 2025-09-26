@@ -205,7 +205,7 @@ public class MessageProcessor {
         try {
             var list = profileService.getFriends(chatId, page, PAGE_SIZE);
             var keyboard = telegramKeyboardFactory.friendsListKeyboard(list, ROW_SIZE, page);
-            String friendsListText = telegramKeyboardFactory.friendsListText(list, page);
+            String friendsListText = telegramKeyboardFactory.friendsListText(list);
             if (messageId != null) {
                 messageSender.updateMessage(chatId, messageId, friendsListText, keyboard);
             } else {

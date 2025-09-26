@@ -141,9 +141,9 @@ public class TelegramKeyboardFactory {
         return createInlineKeyboardMarkup(buttons, rowSize);
     }
 
-    public String friendsListText(FriendsSliceDto friends, int page) {
+    public String friendsListText(FriendsSliceDto friends) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Друзья (стр. ").append(page + 1).append(")\n\n");
+        sb.append("\uD83D\uDE38 Мои друзья \uD83D\uDE3D").append("\n\n");
 
         List<FriendDto> content = friends.content();
 
@@ -153,6 +153,18 @@ public class TelegramKeyboardFactory {
             sb.append(ordinal)
                     .append(". ")
                     .append(f.getLogin());
+            if (f.getName() != null && !f.getName().isBlank()) {
+                sb.append(" (")
+                    .append(f.getName())
+                    .append(")");
+            }
+            if (f.getIsFavorite()) sb.append("⭐");
+            if (f.getIsSubscribe()) sb.append("\uD83D\uDD14");
+            if (f.getIsOnline()) {
+                sb.append("\uD83D\uDFE2");
+            } else {
+                sb.append("\uD83D\uDCA4");
+            }
             sb.append("\n");
         }
 
