@@ -55,4 +55,13 @@ public class CampusService {
             persistenceService.replaceParticipants(clusterId, workplaces);
         }
     }
+
+    public void replaceParticipantsByClusterIdV2(long cid, List<GraphQLService.ClusterSeat> seats) {
+        if (!seats.isEmpty()) {
+            var workplaces = seats.stream()
+                .map(seat -> campusMapper.toWorkplaceEntityV2(seat, cid))
+            .toList();
+            persistenceService.replaceParticipants(cid, workplaces);
+        }
+    }
 }
