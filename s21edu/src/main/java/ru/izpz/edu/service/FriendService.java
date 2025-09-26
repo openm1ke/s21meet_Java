@@ -23,6 +23,7 @@ public class FriendService {
 
     private final FriendsRepository friendsRepository;
     private final FriendsMapper friendsMapper;
+    private final WorkplaceService workplaceService;
 
     public FriendDto applyFriend(String telegramId, @NotBlank String login, FriendRequest.@NotNull Action action, String name) {
         Friends f = friendsRepository.findFirstByTelegramIdAndLogin(telegramId, login)
@@ -31,6 +32,9 @@ public class FriendService {
                 nf.setTelegramId(telegramId);
                 nf.setLogin(login);
                 nf.setDate(LocalDateTime.now());
+                nf.setIsFriend(false);
+                nf.setIsFavorite(false);
+                nf.setIsSubscribe(false);
                 return friendsRepository.save(nf);
             });
 

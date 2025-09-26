@@ -32,7 +32,6 @@ public class TokenPersistenceService {
 
             token.setPassword(password);
             token.setAccessToken(tr.getAccessToken());
-            token.setRefreshToken(tr.getRefreshToken());
             token.setExpiresAt(LocalDateTime.now().plusSeconds(tr.getExpiresIn()));
 
             tokenRepository.save(token);

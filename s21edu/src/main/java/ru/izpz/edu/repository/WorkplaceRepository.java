@@ -6,7 +6,9 @@ import org.springframework.stereotype.Repository;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceId> {
@@ -16,4 +18,8 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
 
     @Query("select distinct w.login from Workplace w")
     List<String> findDistinctLogins();
+
+    Optional<Workplace> findByLogin(String telegramId);
+
+    List<Workplace> findAllByLoginIn(Collection<String> logins);
 }
