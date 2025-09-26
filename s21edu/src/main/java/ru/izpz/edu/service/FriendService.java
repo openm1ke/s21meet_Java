@@ -3,6 +3,7 @@ package ru.izpz.edu.service;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -12,11 +13,15 @@ import ru.izpz.dto.FriendRequest;
 import ru.izpz.dto.FriendsSliceDto;
 import ru.izpz.edu.mapper.FriendsMapper;
 import ru.izpz.edu.model.Friends;
+import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.repository.FriendsRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FriendService {
@@ -32,12 +37,9 @@ public class FriendService {
                 nf.setTelegramId(telegramId);
                 nf.setLogin(login);
                 nf.setDate(LocalDateTime.now());
-                nf.setIsFriend(false);
-                nf.setIsFavorite(false);
-                nf.setIsSubscribe(false);
                 return friendsRepository.save(nf);
             });
-
+        log.info("applyFriend: {}", f);
         switch (action) {
             case TOGGLE_FRIEND -> {
                 f.setIsFriend(!Boolean.TRUE.equals(f.getIsFriend()));
@@ -61,7 +63,27 @@ public class FriendService {
     public FriendsSliceDto getFriends(String telegramId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Slice<Friends> slice = friendsRepository.findAllOrdered(telegramId, pageable);
-        List<FriendDto> items = friendsMapper.toDtos(slice.getContent());
+
+        List<String> friendLogins = slice.getContent().stream()
+                .map(Friends::getLogin)
+                .toList();
+
+        Map<String, Workplace> occupied = workplaceService.findAllByLoginIn(friendLogins).stream()
+                .collect(Collectors.toMap(Workplace::getLogin, w -> w, (a, b) -> a));
+
+        List<FriendDto> items = slice.getContent().stream()
+                .map(f -> {
+                    FriendDto base = friendsMapper.toDto(f);
+                    Workplace seat = occupied.get(f.getLogin());
+                    base.setIsOnline(seat != null);
+                    // TODO: add seat info
+                    return base;
+                })
+                .toList();
+
         return new FriendsSliceDto(items, page, size, slice.hasNext());
+
+//        List<FriendDto> items = friendsMapper.toDtos(slice.getContent());
+//        return new FriendsSliceDto(items, page, size, slice.hasNext());
     }
 }

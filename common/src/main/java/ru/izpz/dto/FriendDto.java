@@ -15,4 +15,5 @@ public class FriendDto {
     Boolean isFriend;
     Boolean isSubscribe;
     Boolean isFavorite;
+    Boolean isOnline;
 }
