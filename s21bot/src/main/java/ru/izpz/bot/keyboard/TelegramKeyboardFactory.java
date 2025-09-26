@@ -1,5 +1,7 @@
 package ru.izpz.bot.keyboard;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -19,9 +21,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Component
+@RequiredArgsConstructor
 public class TelegramKeyboardFactory {
 
-    public static ReplyKeyboardMarkup createReplyKeyboard(List<String> buttonTexts, int buttonsPerRow) {
+    private final CallbackPayloadSerializer serializer;
+
+    public ReplyKeyboardMarkup createReplyKeyboard(List<String> buttonTexts, int buttonsPerRow) {
         List<KeyboardRow> keyboard = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
 
@@ -45,7 +51,7 @@ public class TelegramKeyboardFactory {
             .build();
     }
 
-    public static InlineKeyboardMarkup createUrlKeyboard(Map<String, String> buttons, int rowSize) {
+    public InlineKeyboardMarkup createUrlKeyboard(Map<String, String> buttons, int rowSize) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         InlineKeyboardRow currentRow = new InlineKeyboardRow();
 
@@ -71,7 +77,7 @@ public class TelegramKeyboardFactory {
             .build();
     }
 
-    public static InlineKeyboardMarkup createInlineKeyboardMarkup(Map<String, String> buttons, int rowSize) {
+    public InlineKeyboardMarkup createInlineKeyboardMarkup(Map<String, String> buttons, int rowSize) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         InlineKeyboardRow currentRow = new InlineKeyboardRow();
 
@@ -97,7 +103,7 @@ public class TelegramKeyboardFactory {
             .build();
     }
 
-    public static InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page) {
+    public InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page) {
         Map<String, String> buttons = new LinkedHashMap<>();
 
         List<FriendDto> content = friends.content();
@@ -107,7 +113,7 @@ public class TelegramKeyboardFactory {
             int ordinal = i + 1;
             buttons.put(
                 String.valueOf(ordinal),
-                CallbackPayloadSerializer.serialize(
+                    serializer.serialize(
                         new CallbackPayload("show_friend", Map.of("login", friend.getLogin()))
                 )
             );
@@ -117,7 +123,7 @@ public class TelegramKeyboardFactory {
         if (page > 0) {
             buttons.put(
                 "◀ Назад",
-                CallbackPayloadSerializer.serialize(
+                    serializer.serialize(
                         new CallbackPayload("friends_page", Map.of("page", String.valueOf(page - 1)))
                 )
             );
@@ -126,7 +132,7 @@ public class TelegramKeyboardFactory {
         if (friends.hasNext()) { // использовать slice.hasNext()
             buttons.put(
                 "Вперёд ▶",
-                CallbackPayloadSerializer.serialize(
+                    serializer.serialize(
                         new CallbackPayload("friends_page", Map.of("page", String.valueOf(page + 1)))
                 )
             );
@@ -135,7 +141,7 @@ public class TelegramKeyboardFactory {
         return createInlineKeyboardMarkup(buttons, rowSize);
     }
 
-    public static String friendsListText(FriendsSliceDto friends, int page) {
+    public String friendsListText(FriendsSliceDto friends, int page) {
         StringBuilder sb = new StringBuilder();
         sb.append("Друзья (стр. ").append(page + 1).append(")\n\n");
 
@@ -143,7 +149,7 @@ public class TelegramKeyboardFactory {
 
         for (int i = 0; i < content.size(); i++) {
             FriendDto f = content.get(i);
-            int ordinal = i + 1; // локальная нумерация на странице
+            int ordinal = i + 1;
             sb.append(ordinal)
                     .append(". ")
                     .append(f.getLogin());
@@ -157,31 +163,30 @@ public class TelegramKeyboardFactory {
         return sb.toString();
     }
 
-    public static AnswerCallbackQuery createAnswerCallbackQuery(String callbackId, String text, boolean showAlert) {
+    public AnswerCallbackQuery createAnswerCallbackQuery(String callbackId, String text, boolean showAlert) {
         AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery(callbackId);
         answerCallbackQuery.setText(text);
         answerCallbackQuery.setShowAlert(showAlert);
         return answerCallbackQuery;
     }
 
-    public static InlineKeyboardMarkup getFriendInlineKeyboard(FriendDto friend) {
-        var login = friend.getLogin();
+    public InlineKeyboardMarkup getFriendInlineKeyboard(String login, FriendDto friend) {
         LinkedHashMap<String, String> data = new LinkedHashMap<>();
         var isFriendLabel = friend.getIsFriend() ? "Удалить из друзей" : "Добавить в друзья";
         var isFavoriteLabel = friend.getIsFavorite() ? "Удалить из избранного" : "Добавить в избранное";
         var isSubscribedLabel = friend.getIsSubscribe() ? "Отписаться" : "Подписаться";
         var setNameLabel = friend.getName() == null ? "Указать имя" : "Изменить имя";
 
-        data.put(isFriendLabel, CallbackPayloadSerializer.serialize(new CallbackPayload("add_friend", Map.of("login", login))));
+        data.put(isFriendLabel, serializer.serialize(new CallbackPayload("add_friend", Map.of("login", login))));
         if (friend.getIsFriend()) {
-            data.put(setNameLabel, CallbackPayloadSerializer.serialize(new CallbackPayload("set_name", Map.of("login", login))));
-            data.put(isSubscribedLabel, CallbackPayloadSerializer.serialize(new CallbackPayload("subscribe", Map.of("login", login))));
-            data.put(isFavoriteLabel, CallbackPayloadSerializer.serialize(new CallbackPayload("favorite", Map.of("login", login))));
+            data.put(setNameLabel, serializer.serialize(new CallbackPayload("set_name", Map.of("login", login))));
+            data.put(isSubscribedLabel, serializer.serialize(new CallbackPayload("subscribe", Map.of("login", login))));
+            data.put(isFavoriteLabel, serializer.serialize(new CallbackPayload("favorite", Map.of("login", login))));
         }
-        return TelegramKeyboardFactory.defaultInlineKeyboard(data);
+        return this.defaultInlineKeyboard(data);
     }
 
-    public static EditMessageReplyMarkup editFriendInlineKeyboard(InlineKeyboardMarkup keyboard, Long chatId, int messageId) {
+    public EditMessageReplyMarkup editFriendInlineKeyboard(InlineKeyboardMarkup keyboard, Long chatId, int messageId) {
         EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup();
         editMessageReplyMarkup.setChatId(chatId);
         editMessageReplyMarkup.setMessageId(messageId);
@@ -189,21 +194,21 @@ public class TelegramKeyboardFactory {
         return editMessageReplyMarkup;
     }
 
-    public static ReplyKeyboard removeReplyKeyboard() {
+    public ReplyKeyboard removeReplyKeyboard() {
         return new ReplyKeyboardRemove(true);
     }
 
     /**
      * Упрощённый метод для обычной клавиатуры 3 в ряд.
      */
-    public static ReplyKeyboardMarkup defaultReplyKeyboard(List<String> buttonTexts) {
+    public ReplyKeyboardMarkup defaultReplyKeyboard(List<String> buttonTexts) {
         return createReplyKeyboard(buttonTexts, 3);
     }
 
     /**
      * Упрощённый метод для inline клавиатуры 2 в ряд.
      */
-    public static InlineKeyboardMarkup defaultInlineKeyboard(Map<String, String> buttonMap) {
+    public InlineKeyboardMarkup defaultInlineKeyboard(Map<String, String> buttonMap) {
         return createInlineKeyboardMarkup(buttonMap, 2);
     }
 }

@@ -37,6 +37,8 @@ public class MessageProcessor {
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
     private final MessageSender messageSender;
+    private final TelegramKeyboardFactory telegramKeyboardFactory;
+    private final CallbackPayloadSerializer callbackPayloadSerializer;
 
     private static final int ROW_SIZE = 3;
     private static final int PAGE_SIZE = 2;
@@ -66,7 +68,7 @@ public class MessageProcessor {
 
     public void handleCallbackMessage(Long chatId, String data, Integer messageId, String callbackId) {
         try {
-            CallbackPayload payload = CallbackPayloadSerializer.deserialize(data);
+            CallbackPayload payload = callbackPayloadSerializer.deserialize(data);
 
             switch (payload.getCommand()) {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
@@ -109,10 +111,10 @@ public class MessageProcessor {
             String login, FriendRequest.Action action, String toastText) throws TelegramApiException {
 
         FriendDto friend = profileService.applyFriend(chatId, login, action, null);
-        var kb = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
+        var kb = telegramKeyboardFactory.getFriendInlineKeyboard(login, friend);
 
-        telegramClient.execute(TelegramKeyboardFactory.editFriendInlineKeyboard(kb, chatId, messageId));
-        telegramClient.execute(TelegramKeyboardFactory.createAnswerCallbackQuery(callbackId, toastText, false));
+        telegramClient.execute(telegramKeyboardFactory.editFriendInlineKeyboard(kb, chatId, messageId));
+        telegramClient.execute(telegramKeyboardFactory.createAnswerCallbackQuery(callbackId, toastText, false));
     }
 
     private boolean isUserInGroup(Long chatId) {
@@ -131,7 +133,7 @@ public class MessageProcessor {
     private void startConfirmed(Long chatId, ProfileDto profile, String text) {
         // проверка подписан ли на канал
         if (!isUserInGroup(chatId)) {
-            ReplyKeyboard keyboard = TelegramKeyboardFactory.createUrlKeyboard(telegramButtons.getSubscribeButton(),1);
+            ReplyKeyboard keyboard = telegramKeyboardFactory.createUrlKeyboard(telegramButtons.getSubscribeButton(),1);
             messageSender.sendMessage(chatId, "Подпишитесь на канал", keyboard);
             return;
         }
@@ -140,7 +142,7 @@ public class MessageProcessor {
             SlashCommandEnum command = SlashCommandEnum.fromText(text).get();
             switch (command) {
                 case START -> {
-                    ReplyKeyboard keyboard = TelegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
+                    ReplyKeyboard keyboard = telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
                     messageSender.sendMessage(chatId, "Выберите команду", keyboard);
                 }
                 case ME -> {
@@ -202,8 +204,8 @@ public class MessageProcessor {
     private void showFriends(Long chatId, int page, Integer messageId) {
         try {
             var list = profileService.getFriends(chatId, page, PAGE_SIZE);
-            var keyboard = TelegramKeyboardFactory.friendsListKeyboard(list, ROW_SIZE, page);
-            String friendsListText = TelegramKeyboardFactory.friendsListText(list, page);
+            var keyboard = telegramKeyboardFactory.friendsListKeyboard(list, ROW_SIZE, page);
+            String friendsListText = telegramKeyboardFactory.friendsListText(list, page);
             if (messageId != null) {
                 messageSender.updateMessage(chatId, messageId, friendsListText, keyboard);
             } else {
@@ -223,7 +225,7 @@ public class MessageProcessor {
         try {
             profileService.checkEduLogin(login);
             FriendDto friend = profileService.applyFriend(chatId, login, FriendRequest.Action.NONE, null);
-            InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.getFriendInlineKeyboard(friend);
+            InlineKeyboardMarkup keyboard = telegramKeyboardFactory.getFriendInlineKeyboard(login, friend);
             ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
             messageSender.sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
         } catch (EduLoginCheckException e) {
@@ -250,9 +252,9 @@ public class MessageProcessor {
         var code = profileService.getVerificationCode(profile.s21login());
         if (code.getSecretCode().equals(text)) {
             profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
-            messageSender.sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", TelegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
+            messageSender.sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
         } else {
-            messageSender.sendMessage(chatId, "Введенный код не совпадает!", TelegramKeyboardFactory.removeReplyKeyboard());
+            messageSender.sendMessage(chatId, "Введенный код не совпадает!", telegramKeyboardFactory.removeReplyKeyboard());
         }
     }
 
@@ -328,7 +330,7 @@ public class MessageProcessor {
     }
 
     private void startOnboarding(Long chatId) {
-        InlineKeyboardMarkup keyboard = TelegramKeyboardFactory.createInlineKeyboardMarkup(telegramButtons.getRegistrationButton(), 1);
+        InlineKeyboardMarkup keyboard = telegramKeyboardFactory.createInlineKeyboardMarkup(telegramButtons.getRegistrationButton(), 1);
         messageSender.sendMessage(chatId, "Для регистрации нажмите кнопку ниже", keyboard);
     }
 

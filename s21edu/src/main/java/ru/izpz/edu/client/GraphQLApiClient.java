@@ -3,7 +3,7 @@ package ru.izpz.edu.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -12,26 +12,20 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
-import ru.izpz.edu.repository.ClusterRepository;
 import ru.izpz.edu.service.TokenService;
 
 import java.util.Map;
 
 @Component
 @ConditionalOnProperty(name = "graphql.api.enabled", havingValue = "true")
+@RequiredArgsConstructor
 public class GraphQLApiClient {
 
     private final String GRAPHQL_URL = "https://platform.21-school.ru/services/graphql";
     private final String SCHOOL_ID = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
     private final RestTemplate restTemplate;
     private final TokenService tokenService;
-    private final ObjectMapper om = new ObjectMapper()
-            .registerModule(new JavaTimeModule());
-
-    public GraphQLApiClient(RestTemplate restTemplate, TokenService tokenService, ClusterRepository clusterRepository) {
-        this.restTemplate = restTemplate;
-        this.tokenService = tokenService;
-    }
+    private final ObjectMapper om;
 
     public <T> T execute(String operationName,
                          Map<String, Object> variables,
