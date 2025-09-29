@@ -1,5 +1,7 @@
 package ru.izpz.edu.client;
 
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,8 @@ public class CampusClient {
      * @param campusId айди кампуса
      * @throws ApiException исключение
      */
+    @RateLimiter(name = "platform")
+    @Retry(name = "platform")
     public List<ClusterV1DTO> getClustersByCampus(String campusId) throws ApiException {
         //log.info("Получение списка кластеров для кампуса {}", campusId);
         var response = campusApi.getClustersByCampus(UUID.fromString(campusId));
@@ -44,6 +48,8 @@ public class CampusClient {
      * @param clusterId айди кластера определенного кампуса
      * @throws ApiException исключение
      */
+    @RateLimiter(name = "platform")
+    @Retry(name = "platform")
     public List<WorkplaceV1DTO> getParticipantsByCluster(Long clusterId) throws ApiException {
         //log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
         // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максимум)
@@ -57,7 +63,8 @@ public class CampusClient {
         return response.getClusterMap();
     }
 
-
+    @RateLimiter(name = "platform")
+    @Retry(name = "platform")
     public List<GraphQLService.ClusterSeat> getParticipantsByClusterV2(Long clusterId) throws ApiException {
         //log.info("Получение списка занятых рабочих мест по кластерам {} через GraphQL", clusterId);
         return graphQLService.getOccupiedSeats(String.valueOf(clusterId));

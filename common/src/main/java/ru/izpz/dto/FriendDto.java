@@ -16,4 +16,10 @@ public class FriendDto {
     Boolean isSubscribe;
     Boolean isFavorite;
     Boolean isOnline;
+    ParticipantStatusEnum status;
+    String clusterName;
+    String row;
+    Integer number;
+    String stageGroupName;
+    String stageName;
 }
