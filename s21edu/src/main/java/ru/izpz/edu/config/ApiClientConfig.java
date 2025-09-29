@@ -10,7 +10,6 @@ import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.api.CampusApi;
 import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.api.ParticipantApi;
-import ru.izpz.edu.client.ResilientApiClient;
 import ru.izpz.edu.service.TokenService;
 
 @Slf4j
@@ -21,14 +20,14 @@ public class ApiClientConfig {
     @ConditionalOnProperty(name = "api.client.enabled", havingValue = "true")
     public ApiClient apiClient(TokenService tokenService) {
         OkHttpClient client = new OkHttpClient.Builder()
-                .addInterceptor(chain -> {
-                    var req = chain.request().newBuilder()
-                            .header("Authorization", "Bearer " + tokenService.getToken())
-                            .build();
-                    return chain.proceed(req);
-                })
-                .build();
-        return new ResilientApiClient(client);
+            .addInterceptor(chain -> {
+                var req = chain.request().newBuilder()
+                    .header("Authorization", "Bearer " + tokenService.getToken())
+                    .build();
+                return chain.proceed(req);
+            })
+            .build();
+        return new ApiClient(client);
     }
 
     @Bean

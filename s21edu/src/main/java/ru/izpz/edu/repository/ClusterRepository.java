@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ru.izpz.edu.model.Cluster;
 
 import java.util.List;
+import java.util.Set;
 
 public interface ClusterRepository extends JpaRepository<Cluster, Long> {
     List<Cluster> findAllByCampusIdOrderByFloorAsc(String campusId);
@@ -11,4 +12,6 @@ public interface ClusterRepository extends JpaRepository<Cluster, Long> {
     void deleteAllByCampusId(String campusId);
 
     List<Cluster> findAllByOrderByCampusIdAsc();
+
+    List<Cluster> findAllByClusterIdIn(Set<Long> clusterIds);
 }

@@ -160,8 +160,10 @@ public class TelegramKeyboardFactory {
             }
             if (f.getIsFavorite()) sb.append("⭐");
             if (f.getIsSubscribe()) sb.append("\uD83D\uDD14");
+            sb.append(f.getStatus() != null ? f.getStatus().getEmoji() : "❓");
             if (f.getIsOnline()) {
                 sb.append("\uD83D\uDFE2");
+                sb.append(" ").append(f.getClusterName()).append("-").append(f.getRow()).append(f.getNumber());
             } else {
                 sb.append("\uD83D\uDCA4");
             }
