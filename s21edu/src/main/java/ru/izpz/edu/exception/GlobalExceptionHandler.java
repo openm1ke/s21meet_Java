@@ -41,8 +41,8 @@ public class GlobalExceptionHandler {
         }
     }
 
-    @ExceptionHandler(ProfileNotFoundException.class)
-    public ResponseEntity<String> handleProfileNotFound(ProfileNotFoundException e) {
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<String> handleProfileNotFound(EntityNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
     }
 

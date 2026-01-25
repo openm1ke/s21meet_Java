@@ -9,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.api.CampusApi;
 import ru.izpz.dto.api.ClusterApi;
+import ru.izpz.dto.api.EventApi;
 import ru.izpz.dto.api.ParticipantApi;
 import ru.izpz.edu.service.TokenService;
 
@@ -51,5 +52,10 @@ public class ApiClientConfig {
     @ConditionalOnProperty(name = "participant.api.enabled", havingValue = "true")
     public ParticipantApi participantApi(ApiClient apiClient) {
         return new ParticipantApi(apiClient);
+    }
+
+    @Bean
+    public EventApi eventApi(ApiClient apiClient) {
+        return new EventApi(apiClient);
     }
 }

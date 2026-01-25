@@ -9,7 +9,7 @@ import ru.izpz.dto.*;
 import ru.izpz.dto.api.ParticipantApi;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.dto.CampusDto;
-import ru.izpz.edu.exception.ProfileNotFoundException;
+import ru.izpz.edu.exception.EntityNotFoundException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
 import ru.izpz.edu.model.Participant;
@@ -53,7 +53,7 @@ public class ProfileService {
     public ProfileDto getProfile(String telegramId) {
         return profileRepository.findByTelegramId(telegramId)
             .map(profileMapper::toDto)
-            .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + telegramId)
+            .orElseThrow(() -> new EntityNotFoundException("Профиль не найден для telegramId = " + telegramId)
         );
     }
 
@@ -64,7 +64,7 @@ public class ProfileService {
                 return profileRepository.save(existing);
             })
             .map(profileMapper::toDto)
-            .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
+            .orElseThrow(() -> new EntityNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
     }
 
     public ProfileDto checkAndSetLogin(String telegramId, String s21login) {
@@ -72,7 +72,7 @@ public class ProfileService {
             throw new IllegalStateException("Логин " + s21login + " уже привязан к другому профилю");
         }
         Profile profile = profileRepository.findByTelegramId(telegramId)
-                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + telegramId));
+                .orElseThrow(() -> new EntityNotFoundException("Профиль не найден для telegramId = " + telegramId));
         if (profile.getS21login() != null) {
             throw new IllegalStateException("Профиль уже привязан к логину " + profile.getS21login());
         }
@@ -107,7 +107,7 @@ public class ProfileService {
 
     public ProfileDto updateLastCommand(@Valid LastCommandRequest request) {
         Profile profile = profileRepository.findByTelegramId(request.getTelegramId())
-                .orElseThrow(() -> new ProfileNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
+                .orElseThrow(() -> new EntityNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
         profile.setLastCommand(request.getCommand());
         return profileMapper.toDto(profileRepository.save(profile));
     }
@@ -121,7 +121,7 @@ public class ProfileService {
         log.info("Получен запрос на получение кампуса для telegramId = {}", telegramId);
         var profile = profileRepository.findByTelegramId(telegramId);
         if (profile.isEmpty()) {
-            throw new ProfileNotFoundException("Не найден логин для данного телеграм айди");
+            throw new EntityNotFoundException("Не найден логин для данного телеграм айди");
         }
         var participant = checkEduLogin(profile.get().getS21login());
         return new CampusDto(participant.getCampus().getShortName(), participant.getCampus().getId().toString());

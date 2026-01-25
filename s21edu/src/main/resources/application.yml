@@ -47,6 +47,10 @@ profile:
   service.enabled: true
 participant.api.enabled: true
 graphql.api.enabled: true
+event:
+  scheduler:
+    enabled: true
+    fixed-delay: PT1M
 notify:
   service.enabled: true
   scheduler:

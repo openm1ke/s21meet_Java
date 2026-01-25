@@ -13,6 +13,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import ru.izpz.bot.dto.CallbackPayload;
+import ru.izpz.dto.EventDto;
+import ru.izpz.dto.EventsSliceDto;
 import ru.izpz.dto.FriendDto;
 import ru.izpz.dto.FriendsSliceDto;
 
@@ -103,6 +105,44 @@ public class TelegramKeyboardFactory {
             .build();
     }
 
+    public InlineKeyboardMarkup eventsListKeyboard(EventsSliceDto events, int rowSize, int page) {
+        Map<String, String> buttons = new LinkedHashMap<>();
+
+        List<EventDto> content = events.content();
+
+        for (int i = 0; i < content.size(); i++) {
+            EventDto event = content.get(i);
+            int ordinal = i + 1;
+            buttons.put(
+                    String.valueOf(ordinal),
+                    serializer.serialize(
+                            new CallbackPayload("event", Map.of("id", event.id().toString()))
+                    )
+            );
+        }
+
+        // блок навигации
+        if (page > 0) {
+            buttons.put(
+                    "◀ Назад",
+                    serializer.serialize(
+                            new CallbackPayload("events_page", Map.of("page", String.valueOf(page - 1)))
+                    )
+            );
+        }
+
+        if (events.hasNext()) { // использовать slice.hasNext()
+            buttons.put(
+                    "Вперёд ▶",
+                    serializer.serialize(
+                            new CallbackPayload("events_page", Map.of("page", String.valueOf(page + 1)))
+                    )
+            );
+        }
+
+        return createInlineKeyboardMarkup(buttons, rowSize);
+    }
+
     public InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page) {
         Map<String, String> buttons = new LinkedHashMap<>();
 
@@ -139,6 +179,29 @@ public class TelegramKeyboardFactory {
         }
 
         return createInlineKeyboardMarkup(buttons, rowSize);
+    }
+
+    public String eventsListText(EventsSliceDto events) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\uD83D\uDE38 События в кампусе \uD83D\uDE3D").append("\n\n");
+
+        List<EventDto> content = events.content();
+
+        for (int i = 0; i < content.size(); i++) {
+            EventDto event = content.get(i);
+
+            int ordinal = i + 1;
+            sb.append(ordinal)
+                    .append(". ")
+                    .append(event.name())
+                    .append("\n");
+        }
+
+        if (content.isEmpty()) {
+            sb.append("Список пуст");
+        }
+
+        return sb.toString();
     }
 
     public String friendsListText(FriendsSliceDto friends) {

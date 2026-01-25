@@ -96,6 +96,24 @@ public class MessageProcessor {
                     setLastCommand(chatId, LastCommandType.SET_NAME, Map.of("login", payload.getArgs().get("login")));
                     messageSender.sendMessage(chatId, "Указать имя", null);
                 }
+                case "event" -> {
+                    if (payload.getArgs().containsKey("id")) {
+                        var event = Long.parseLong(payload.getArgs().get("id"));
+                        log.info("Получен запрос на событие {}", event);
+                        var eventDto = profileService.getEvent(event);
+                        messageSender.sendMessage(chatId, eventDto.toString(), null);
+                    }
+                }
+                case "events_page" -> {
+                    if (payload.getArgs().containsKey("page")) {
+                        var page = Integer.parseInt(payload.getArgs().get("page"));
+                        var events = profileService.getEvents(chatId, page, PAGE_SIZE);
+                        log.info("Получен запрос на события {} страница {}", events, page);
+                        var eventsListText = telegramKeyboardFactory.eventsListText(events);
+                        var keyboard = telegramKeyboardFactory.eventsListKeyboard(events, ROW_SIZE, page);
+                        messageSender.sendMessage(chatId, "События\n\n" + eventsListText, keyboard);
+                    }
+                }
                 default -> messageSender.sendMessage(chatId, "Неизвестная команда: " + data, null);
             }
         } catch (InvalidCallbackPayloadException e) {
@@ -170,7 +188,9 @@ public class MessageProcessor {
                     ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
                     messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
                 }
-                case EVENTS -> messageSender.sendMessage(chatId, "События", null);
+                case EVENTS -> {
+                    showEvents(chatId, 0);
+                }
                 case CAMPUS -> {
                     var campusMap = showCampusMap(chatId);
                     messageSender.sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
@@ -199,6 +219,18 @@ public class MessageProcessor {
 
             setLastCommand(chatId, null, null);
         });
+    }
+
+    private void showEvents(Long chatId, int page) {
+        try {
+            var events = profileService.getEvents(chatId, page, PAGE_SIZE);
+            var keyboard = telegramKeyboardFactory.eventsListKeyboard(events, ROW_SIZE, page);
+            var eventsListText = telegramKeyboardFactory.eventsListText(events);
+            messageSender.sendMessage(chatId, "События\n\n" + eventsListText, keyboard);
+        } catch (FeignException e) {
+            messageSender.sendMessage(chatId, "Ошибка обработки событий, попробуйте позже", null);
+            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
+        }
     }
 
     private void showFriends(Long chatId, int page, Integer messageId) {

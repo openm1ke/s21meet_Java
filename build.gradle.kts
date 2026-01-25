@@ -3,7 +3,7 @@ plugins {
     id("jacoco")
     id("jacoco-report-aggregation")
     id("org.sonarqube") version "6.2.0.5505"
-    id("org.springframework.boot") version "3.5.0"
+    id("org.springframework.boot") version "3.5.7"
     id("io.spring.dependency-management") version "1.1.7"
     id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
