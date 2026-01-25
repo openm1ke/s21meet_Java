@@ -144,4 +144,11 @@ public class ProfileService {
         return profileClient.getFriends(chatId.toString(), page, pageSize);
     }
 
+    public EventDto getEvent(long eventId) {
+        return profileClient.getEvent(eventId);
+    }
+
+    public EventsSliceDto getEvents(Long chatId, int page, int pageSize) {
+        return profileClient.getEvents(chatId.toString(), page, pageSize);
+    }
 }

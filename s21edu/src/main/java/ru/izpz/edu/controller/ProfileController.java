@@ -2,6 +2,7 @@ package ru.izpz.edu.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -11,6 +12,7 @@ import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.dto.CampusDto;
 import ru.izpz.edu.service.CampusService;
+import ru.izpz.edu.service.EventService;
 import ru.izpz.edu.service.FriendService;
 import ru.izpz.edu.service.ProfileService;
 
@@ -24,6 +26,7 @@ public class ProfileController {
     private final ProfileService profileService;
     private final CampusService campusService;
     private final FriendService friendsService;
+    private final EventService eventService;
 
     @GetMapping
     public ResponseEntity<ProfileDto> getProfile(@RequestParam("telegramId") String telegramId) {
@@ -98,5 +101,17 @@ public class ProfileController {
     ResponseEntity<FriendsSliceDto> getFriends(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int size) {
         log.info("Получен запрос на вывод друзей для telegramId = {}, page = {}, size = {}", telegramId, page, size);
         return ResponseEntity.ok(friendsService.getFriends(telegramId, page, size));
+    }
+
+    @GetMapping("/event")
+    ResponseEntity<EventDto> getEvent(@NotNull @RequestParam Long id) {
+        log.info("Получен запрос на вывод события для id = {}", id);
+        return ResponseEntity.ok(eventService.getEvent(id));
+    }
+
+    @GetMapping("/events")
+    ResponseEntity<EventsSliceDto> getEvents(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int size) {
+        log.info("Получен запрос на вывод списка событий кампуса для telegramId = {}, page = {}, size = {}", telegramId, page, size);
+        return ResponseEntity.ok(eventService.getEvents(page, size));
     }
 }

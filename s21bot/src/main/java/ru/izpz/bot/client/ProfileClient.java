@@ -45,4 +45,9 @@ public interface ProfileClient {
     @GetMapping("/friends")
     FriendsSliceDto getFriends(@RequestParam String telegramId, @RequestParam int page, @RequestParam int size);
 
+    @GetMapping("/events")
+    EventsSliceDto getEvents(@RequestParam String telegramId, @RequestParam int page, @RequestParam int size);
+
+    @GetMapping("/event")
+    EventDto getEvent(@RequestParam long id);
 }
