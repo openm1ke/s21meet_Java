@@ -11,6 +11,7 @@ import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.model.ClusterV1DTO;
 import ru.izpz.dto.model.WorkplaceV1DTO;
 import ru.izpz.edu.service.GraphQLService;
+import ru.izpz.edu.dto.GraphQLStudentProject;
 
 import java.util.List;
 import java.util.UUID;
@@ -68,5 +69,11 @@ public class CampusClient {
     public List<GraphQLService.ClusterSeat> getParticipantsByClusterV2(Long clusterId) throws ApiException {
         //log.info("Получение списка занятых рабочих мест по кластерам {} через GraphQL", clusterId);
         return graphQLService.getOccupiedSeats(String.valueOf(clusterId));
+    }
+
+    @RateLimiter(name = "platform")
+    @Retry(name = "platform")
+    public List<GraphQLStudentProject> getStudentProjectsByLogin(String login) {
+        return graphQLService.getStudentProjectsByLogin(login);
     }
 }

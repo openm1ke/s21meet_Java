@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
+import java.util.List;
 
 @FeignClient(
     name = "profile",
@@ -50,4 +51,7 @@ public interface ProfileClient {
 
     @GetMapping("/event")
     EventDto getEvent(@RequestParam long id);
+
+    @GetMapping("/projects")
+    List<ProjectsDto> getProjects(@RequestParam String login);
 }

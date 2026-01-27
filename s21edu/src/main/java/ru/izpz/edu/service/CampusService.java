@@ -6,9 +6,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.CampusDto;
 import ru.izpz.dto.Clusters;
+import ru.izpz.dto.ProjectsDto;
 import ru.izpz.dto.model.ClusterV1DTO;
 import ru.izpz.dto.model.WorkplaceV1DTO;
+import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.mapper.CampusMapper;
+import ru.izpz.edu.mapper.ProjectsMapper;
 import ru.izpz.edu.model.Cluster;
 
 import java.util.List;
@@ -22,6 +25,8 @@ public class CampusService {
     private final GraphQLService graphQLService;
     private final CampusPersistenceService persistenceService;
     private final CampusMapper campusMapper;
+    private final CampusClient campusClient;
+    private final ProjectsMapper projectsMapper;
 
     public List<Clusters> getClusters(CampusDto campus) {
         return persistenceService.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
@@ -63,5 +68,12 @@ public class CampusService {
             .toList();
             persistenceService.replaceParticipants(cid, workplaces);
         }
+    }
+
+    public List<ProjectsDto> getStudentProjectsByLogin(String login) {
+        var projects = campusClient.getStudentProjectsByLogin(login);
+        return projects.stream()
+                .map(projectsMapper::toDto)
+                .toList();
     }
 }
