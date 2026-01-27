@@ -28,6 +28,7 @@ import java.util.Map;
 public class TelegramKeyboardFactory {
 
     private final CallbackPayloadSerializer serializer;
+    private final ListKeyboardFactory listKeyboardFactory;
 
     public ReplyKeyboardMarkup createReplyKeyboard(List<String> buttonTexts, int buttonsPerRow) {
         List<KeyboardRow> keyboard = new ArrayList<>();
@@ -106,138 +107,19 @@ public class TelegramKeyboardFactory {
     }
 
     public InlineKeyboardMarkup eventsListKeyboard(EventsSliceDto events, int rowSize, int page) {
-        Map<String, String> buttons = new LinkedHashMap<>();
-
-        List<EventDto> content = events.content();
-
-        for (int i = 0; i < content.size(); i++) {
-            EventDto event = content.get(i);
-            int ordinal = i + 1;
-            buttons.put(
-                    String.valueOf(ordinal),
-                    serializer.serialize(
-                            new CallbackPayload("event", Map.of("id", event.id().toString()))
-                    )
-            );
-        }
-
-        // блок навигации
-        if (page > 0) {
-            buttons.put(
-                    "◀ Назад",
-                    serializer.serialize(
-                            new CallbackPayload("events_page", Map.of("page", String.valueOf(page - 1)))
-                    )
-            );
-        }
-
-        if (events.hasNext()) { // использовать slice.hasNext()
-            buttons.put(
-                    "Вперёд ▶",
-                    serializer.serialize(
-                            new CallbackPayload("events_page", Map.of("page", String.valueOf(page + 1)))
-                    )
-            );
-        }
-
-        return createInlineKeyboardMarkup(buttons, rowSize);
+        return listKeyboardFactory.eventsListKeyboard(events, rowSize, page);
     }
 
     public InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page) {
-        Map<String, String> buttons = new LinkedHashMap<>();
-
-        List<FriendDto> content = friends.content();
-
-        for (int i = 0; i < content.size(); i++) {
-            FriendDto friend = content.get(i);
-            int ordinal = i + 1;
-            buttons.put(
-                String.valueOf(ordinal),
-                    serializer.serialize(
-                        new CallbackPayload("show_friend", Map.of("login", friend.getLogin()))
-                )
-            );
-        }
-
-        // блок навигации
-        if (page > 0) {
-            buttons.put(
-                "◀ Назад",
-                    serializer.serialize(
-                        new CallbackPayload("friends_page", Map.of("page", String.valueOf(page - 1)))
-                )
-            );
-        }
-
-        if (friends.hasNext()) { // использовать slice.hasNext()
-            buttons.put(
-                "Вперёд ▶",
-                    serializer.serialize(
-                        new CallbackPayload("friends_page", Map.of("page", String.valueOf(page + 1)))
-                )
-            );
-        }
-
-        return createInlineKeyboardMarkup(buttons, rowSize);
+        return listKeyboardFactory.friendsListKeyboard(friends, rowSize, page);
     }
 
     public String eventsListText(EventsSliceDto events) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\uD83D\uDE38 События в кампусе \uD83D\uDE3D").append("\n\n");
-
-        List<EventDto> content = events.content();
-
-        for (int i = 0; i < content.size(); i++) {
-            EventDto event = content.get(i);
-
-            int ordinal = i + 1;
-            sb.append(ordinal)
-                    .append(". ")
-                    .append(event.name())
-                    .append("\n");
-        }
-
-        if (content.isEmpty()) {
-            sb.append("Список пуст");
-        }
-
-        return sb.toString();
+        return listKeyboardFactory.eventsListText(events);
     }
 
     public String friendsListText(FriendsSliceDto friends) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\uD83D\uDE38 Мои друзья \uD83D\uDE3D").append("\n\n");
-
-        List<FriendDto> content = friends.content();
-
-        for (int i = 0; i < content.size(); i++) {
-            FriendDto f = content.get(i);
-            int ordinal = i + 1;
-            sb.append(ordinal)
-                    .append(". ")
-                    .append(f.getLogin());
-            if (f.getName() != null && !f.getName().isBlank()) {
-                sb.append(" (")
-                    .append(f.getName())
-                    .append(")");
-            }
-            if (f.getIsFavorite()) sb.append("⭐");
-            if (f.getIsSubscribe()) sb.append("\uD83D\uDD14");
-            sb.append(f.getStatus() != null ? f.getStatus().getEmoji() : "❓");
-            if (f.getIsOnline()) {
-                sb.append("\uD83D\uDFE2");
-                sb.append(" ").append(f.getClusterName()).append("-").append(f.getRow()).append(f.getNumber());
-            } else {
-                sb.append("\uD83D\uDCA4");
-            }
-            sb.append("\n");
-        }
-
-        if (content.isEmpty()) {
-            sb.append("Список пуст");
-        }
-
-        return sb.toString();
+        return listKeyboardFactory.friendsListText(friends);
     }
 
     public AnswerCallbackQuery createAnswerCallbackQuery(String callbackId, String text, boolean showAlert) {

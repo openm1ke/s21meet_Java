@@ -13,6 +13,7 @@ import ru.izpz.dto.*;
 import ru.izpz.dto.model.ErrorResponseDTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.utils.FeignErrorParser;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -150,5 +151,9 @@ public class ProfileService {
 
     public EventsSliceDto getEvents(Long chatId, int page, int pageSize) {
         return profileClient.getEvents(chatId.toString(), page, pageSize);
+    }
+
+    public List<ProjectsDto> getProjects(String login) {
+        return profileClient.getProjects(login);
     }
 }

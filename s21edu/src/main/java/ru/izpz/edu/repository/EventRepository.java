@@ -15,7 +15,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Query("""
         select e from Event e
         where e.startDateTime >= :from and e.startDateTime < :to
-        order by e.startDateTime desc
+        order by e.startDateTime asc
     """)
     Slice<Event> findAllOrderedByStartDateTime(@Param("from") OffsetDateTime from,
                                                @Param("to") OffsetDateTime to, Pageable pageable);

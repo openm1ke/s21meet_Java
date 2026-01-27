@@ -16,6 +16,8 @@ import ru.izpz.edu.service.EventService;
 import ru.izpz.edu.service.FriendService;
 import ru.izpz.edu.service.ProfileService;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -113,5 +115,11 @@ public class ProfileController {
     ResponseEntity<EventsSliceDto> getEvents(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int size) {
         log.info("Получен запрос на вывод списка событий кампуса для telegramId = {}, page = {}, size = {}", telegramId, page, size);
         return ResponseEntity.ok(eventService.getEvents(page, size));
+    }
+
+    @GetMapping("/projects")
+    ResponseEntity<List<ProjectsDto>> getProjects(@RequestParam String login) {
+        log.info("Получен запрос на вывод списка провектов для {}", login);
+        return ResponseEntity.ok(campusService.getStudentProjectsByLogin(login));
     }
 }

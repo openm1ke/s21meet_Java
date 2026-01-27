@@ -97,22 +97,13 @@ public class MessageProcessor {
                     messageSender.sendMessage(chatId, "Указать имя", null);
                 }
                 case "event" -> {
-                    if (payload.getArgs().containsKey("id")) {
-                        var event = Long.parseLong(payload.getArgs().get("id"));
-                        log.info("Получен запрос на событие {}", event);
-                        var eventDto = profileService.getEvent(event);
-                        messageSender.sendMessage(chatId, eventDto.toString(), null);
-                    }
+                    var event = Long.parseLong(payload.getArgs().get("id"));
+                    var eventDto = profileService.getEvent(event);
+                    messageSender.sendMessage(chatId, eventDto.toString(), null);
                 }
                 case "events_page" -> {
-                    if (payload.getArgs().containsKey("page")) {
-                        var page = Integer.parseInt(payload.getArgs().get("page"));
-                        var events = profileService.getEvents(chatId, page, PAGE_SIZE);
-                        log.info("Получен запрос на события {} страница {}", events, page);
-                        var eventsListText = telegramKeyboardFactory.eventsListText(events);
-                        var keyboard = telegramKeyboardFactory.eventsListKeyboard(events, ROW_SIZE, page);
-                        messageSender.sendMessage(chatId, "События\n\n" + eventsListText, keyboard);
-                    }
+                    var page = Integer.parseInt(payload.getArgs().get("page"));
+                    showEvents(chatId, page, messageId);
                 }
                 default -> messageSender.sendMessage(chatId, "Неизвестная команда: " + data, null);
             }
@@ -189,13 +180,16 @@ public class MessageProcessor {
                     messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
                 }
                 case EVENTS -> {
-                    showEvents(chatId, 0);
+                    showEvents(chatId, 0, null);
                 }
                 case CAMPUS -> {
                     var campusMap = showCampusMap(chatId);
                     messageSender.sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
                 }
-                case PROJECTS -> messageSender.sendMessage(chatId, "Проекты", null);
+                case PROJECTS -> {
+                    var projectsByLogin = getProjectsByLogin(profile.s21login());
+                    messageSender.sendMessage(chatId, projectsByLogin, null);
+                }
             }
             return;
         }
@@ -221,12 +215,16 @@ public class MessageProcessor {
         });
     }
 
-    private void showEvents(Long chatId, int page) {
+    private void showEvents(Long chatId, int page, Integer messageId) {
         try {
             var events = profileService.getEvents(chatId, page, PAGE_SIZE);
             var keyboard = telegramKeyboardFactory.eventsListKeyboard(events, ROW_SIZE, page);
             var eventsListText = telegramKeyboardFactory.eventsListText(events);
-            messageSender.sendMessage(chatId, "События\n\n" + eventsListText, keyboard);
+            if (messageId != null) {
+                messageSender.updateMessage(chatId, messageId, eventsListText, keyboard);
+            } else {
+                messageSender.sendMessage(chatId, "События\n\n" + eventsListText, keyboard);
+            }
         } catch (FeignException e) {
             messageSender.sendMessage(chatId, "Ошибка обработки событий, попробуйте позже", null);
             messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
@@ -274,6 +272,29 @@ public class MessageProcessor {
             messageSender.sendMessage(chatId, "Ошибка установки lastCommand", null);
             messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
         }
+    }
+
+    private String getProjectsByLogin(String login) {
+        var projects = profileService.getProjects(login);
+        if (projects.isEmpty()) {
+            return "У вас нет активных проектов";
+        }
+        
+        StringBuilder result = new StringBuilder("Ваши активные проекты:\n\n");
+        for (ProjectsDto project : projects) {
+            result.append(String.format("📁 %s\n", project.name()));
+            if (project.description() != null && !project.description().isEmpty()) {
+                result.append(String.format("📝 %s\n", project.description()));
+            }
+            if (project.experience() != null) {
+                result.append(String.format("⭐ Опыт: %d\n", project.experience()));
+            }
+            if (project.displayedCourseStatus() != null) {
+                result.append(String.format("📊 Статус: %s\n", project.displayedCourseStatus()));
+            }
+            result.append("\n");
+        }
+        return result.toString();
     }
 
     private CampusResponse showCampusMap(Long chatId) {
