@@ -1,10 +1,12 @@
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+
 plugins {
     java
     id("jacoco")
     id("jacoco-report-aggregation")
     id("org.sonarqube") version "6.2.0.5505"
-    id("org.springframework.boot") version "3.5.10"
-    id("io.spring.dependency-management") version "1.1.7"
+    id("org.springframework.boot") version "3.5.10" apply false
+    id("io.spring.dependency-management") version "1.1.7" apply false
     id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
 
@@ -26,6 +28,14 @@ subprojects {
     apply(plugin = "java")
     apply(plugin = "io.spring.dependency-management")
     apply(plugin = "jacoco")
+
+    val springCloudVersion: String by project
+    configure<DependencyManagementExtension> {
+        imports {
+            mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
+            mavenBom("io.github.resilience4j:resilience4j-bom:${property("resilience4jVersion")}")
+        }
+    }
 
     java {
         toolchain {
@@ -77,7 +87,7 @@ sonarqube {
         property("sonar.token", env.SONAR_TOKEN.value)
         property("sonar.coverage.jacoco.xmlReportPaths",
                 "s21auth/build/reports/jacoco/test/jacocoTestReport.xml," +
-                "s21edu/build/reports/jacoco/test/jacocoTestReport.xml" +
+                "s21edu/build/reports/jacoco/test/jacocoTestReport.xml," +
                 "s21bot/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
         property("sonar.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**")
