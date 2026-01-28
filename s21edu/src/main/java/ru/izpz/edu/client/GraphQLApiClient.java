@@ -21,8 +21,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GraphQLApiClient {
 
-    private final String GRAPHQL_URL = "https://platform.21-school.ru/services/graphql";
-    private final String SCHOOL_ID = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
+    private static final String GRAPHQL_URL = "https://platform.21-school.ru/services/graphql";
+    private static final String SCHOOL_ID = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
     private final RestTemplate restTemplate;
     private final TokenService tokenService;
     private final ObjectMapper om;
@@ -36,7 +36,7 @@ public class GraphQLApiClient {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(token);
-        headers.add("schoolid", SCHOOL_ID);
+        headers.add("schoolId", SCHOOL_ID);
 
         GraphQlRequest body = new GraphQlRequest(operationName, variables, query);
         HttpEntity<GraphQlRequest> entity = new HttpEntity<>(body, headers);
@@ -55,7 +55,7 @@ public class GraphQLApiClient {
 
         try {
             JsonNode root = om.readTree(raw);
-            if (root.has("errors") && root.get("errors").isArray() && root.get("errors").size() > 0) {
+            if (root.has("errors") && root.get("errors").isArray() && !root.get("errors").isEmpty()) {
                 return handleGraphQlErrors(root.get("errors"));
             }
             JsonNode data = root.get("data");
