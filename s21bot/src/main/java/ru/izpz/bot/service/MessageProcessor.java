@@ -148,49 +148,52 @@ public class MessageProcessor {
         }
 
         if (SlashCommandEnum.contains(text)) {
-            SlashCommandEnum command = SlashCommandEnum.fromText(text).get();
-            switch (command) {
-                case START -> {
-                    ReplyKeyboard keyboard = telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
-                    messageSender.sendMessage(chatId, "Выберите команду", keyboard);
+            SlashCommandEnum.fromText(text).ifPresent(command -> {
+                switch (command) {
+                    case START -> {
+                        ReplyKeyboard keyboard = telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
+                        messageSender.sendMessage(chatId, "Выберите команду", keyboard);
+                    }
+                    case ME -> {
+                        messageSender.sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
+                    }
+                    case HELP -> {
+                        messageSender.sendMessage(chatId, "Помощь по командам бота", null);
+                    }
+                    case DONATE ->
+                            messageSender.sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
                 }
-                case ME -> {
-                    messageSender.sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
-                }
-                case HELP -> {
-                    messageSender.sendMessage(chatId, "Помощь по командам бота", null);
-                }
-                case DONATE -> messageSender.sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
-            }
+            });
         }
 
         // если текст это команда меню
         if (MenuCommandEnum.contains(text)) {
-            MenuCommandEnum command = MenuCommandEnum.fromText(text).get();
-            switch (command) {
-                case SEARCH -> {
-                    setLastCommand(chatId, LastCommandType.SEARCH, null);
-                    messageSender.sendMessage(chatId, "Введите логин для поиска", null);
+            MenuCommandEnum.fromText(text).ifPresent(command -> {
+                switch (command) {
+                    case SEARCH -> {
+                        setLastCommand(chatId, LastCommandType.SEARCH, null);
+                        messageSender.sendMessage(chatId, "Введите логин для поиска", null);
+                    }
+                    case FRIENDS -> {
+                        showFriends(chatId, 0, null);
+                    }
+                    case PROFILE -> {
+                        ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
+                        messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
+                    }
+                    case EVENTS -> {
+                        showEvents(chatId, 0, null);
+                    }
+                    case CAMPUS -> {
+                        var campusMap = showCampusMap(chatId);
+                        messageSender.sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
+                    }
+                    case PROJECTS -> {
+                        var projectsByLogin = getProjectsByLogin(profile.s21login());
+                        messageSender.sendMessage(chatId, projectsByLogin, null);
+                    }
                 }
-                case FRIENDS -> {
-                    showFriends(chatId, 0, null);
-                }
-                case PROFILE -> {
-                    ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
-                    messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
-                }
-                case EVENTS -> {
-                    showEvents(chatId, 0, null);
-                }
-                case CAMPUS -> {
-                    var campusMap = showCampusMap(chatId);
-                    messageSender.sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
-                }
-                case PROJECTS -> {
-                    var projectsByLogin = getProjectsByLogin(profile.s21login());
-                    messageSender.sendMessage(chatId, projectsByLogin, null);
-                }
-            }
+            });
             return;
         }
 

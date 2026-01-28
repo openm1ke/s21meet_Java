@@ -38,7 +38,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
     testImplementation("org.apache.commons:commons-compress:$apacheCommonsVersion")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
