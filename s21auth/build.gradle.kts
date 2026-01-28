@@ -1,6 +1,6 @@
 plugins {
     java
-    id("org.springframework.boot") version "3.5.7"
+    id("org.springframework.boot") version "3.5.10"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -13,7 +13,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("me.paulschwarz:spring-dotenv:${springDotEnvVersion}")
+    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}")
     implementation("io.github.resilience4j:resilience4j-ratelimiter:${resilience4jVersion}")
 

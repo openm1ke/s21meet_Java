@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -19,9 +19,9 @@ spring:
         format_sql: false  # Форматировать SQL-запросы для удобства
 
 edu:
-  tokenEndpoint: http://localhost:8081/api/tokens/default
+  tokenEndpoint: ${TOKEN_ENDPOINT:http://localhost:8081/api/tokens/default}
 
-bot.service.url: http://localhost:8083
+bot.service.url: ${BOT_SERVICE_URL:http://localhost:8083}
 
 resilience4j:
   ratelimiter:
