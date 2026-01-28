@@ -1,7 +1,7 @@
 plugins {
     java
-    id("org.springframework.boot") version "3.5.10"
-    id("io.spring.dependency-management") version "1.1.7"
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
     id("org.openapi.generator") version "7.13.0"
 }
 
@@ -24,7 +24,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-logging")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.cloud:spring-cloud-starter-openfeign:$openFeignVersion") {
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign") {
         exclude(group = "org.springframework.security", module = "spring-security-crypto")
     }
     implementation("org.springframework.security:spring-security-crypto:$springSecurityCryptoVersion")
@@ -43,7 +43,6 @@ dependencies {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.apache.commons:commons-compress:$apacheCommonsVersion")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")

@@ -1,12 +1,15 @@
 plugins {
-    id("org.springframework.boot") version "3.5.10"
-    id("io.spring.dependency-management") version "1.1.7"
     java
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
 }
+
+// Apply plugins from parent project
+apply(plugin = "jacoco")
 
 val springDotEnvVersion: String by project
 
-group = "ru.izpz.rocket"
+group = "ru.izpz"
 version = "0.0.1-SNAPSHOT"
 
 repositories {
@@ -24,7 +27,7 @@ dependencies {
     implementation("org.json:json:20250517")
     implementation("org.slf4j:slf4j-api:2.0.17")
 
-    implementation("me.paulschwarz:spring-dotenv:${springDotEnvVersion}")
+    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }

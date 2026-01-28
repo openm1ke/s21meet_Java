@@ -23,5 +23,8 @@ public class TokenEntity {
     @Column(columnDefinition = "TEXT")
     private String accessToken;
 
+    @Column(columnDefinition = "TEXT")
+    private String refreshToken;
+
     private LocalDateTime expiresAt;
 }

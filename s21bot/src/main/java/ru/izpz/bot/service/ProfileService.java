@@ -55,7 +55,7 @@ public class ProfileService {
         try {
             return profileClient.updateProfileStatus(profileRequest);
         } catch (FeignException e) {
-            log.error("Ошибка обновления профиля {}", e.contentUTF8());
+            log.error("Ошибка обновления статуса профиля {}", e.contentUTF8());
             throw e;
         }
     }
@@ -101,7 +101,7 @@ public class ProfileService {
                 throw new RocketChatSendException(response);
             }
         } catch (FeignException e) {
-            log.error("Ошибка генерации кода подтверждения {}", e.contentUTF8());
+            log.error("Ошибка отправки кода подтверждения {}", e.contentUTF8());
             throw e;
         }
     }

@@ -20,10 +20,6 @@ allprojects {
     }
 }
 
-repositories {
-    mavenCentral()
-}
-
 subprojects {
     apply(plugin = "java")
     apply(plugin = "io.spring.dependency-management")
@@ -50,6 +46,8 @@ subprojects {
     dependencies {
         compileOnly("org.projectlombok:lombok")
         annotationProcessor("org.projectlombok:lombok")
+        
+        // Common logging exclusion
         configurations.all {
             exclude(group = "org.slf4j", module = "slf4j-simple")
         }

@@ -1,6 +1,5 @@
 package ru.izpz.auth.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -13,13 +12,18 @@ import java.util.Optional;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TokenService {
 
     @Value("${edu.login}")
     private String defaultLogin;
     private final TokenClient tokenClient;
     private final TokenPersistenceService tokenPersistenceService;
+
+    // Constructor for Spring
+    public TokenService(TokenClient tokenClient, TokenPersistenceService tokenPersistenceService) {
+        this.tokenClient = tokenClient;
+        this.tokenPersistenceService = tokenPersistenceService;
+    }
 
     public String getAccessToken(String login, String password) {
         TokenResponse tr = tokenClient.requestNewToken(login, password);
