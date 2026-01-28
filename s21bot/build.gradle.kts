@@ -1,11 +1,10 @@
 plugins {
     java
-    id("org.springframework.boot") version "3.5.7"
+    id("org.springframework.boot") version "3.5.10"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.openapi.generator") version "7.13.0"
 }
 
-val springBootVersion: String by project
 val testcontainersVersion: String by project
 val mockitoVersion: String by project
 val mapstructVersion: String by project
@@ -22,8 +21,8 @@ val resilience4jVersion: String by project
 dependencies {
     implementation(project(":common"))
     implementation("org.springframework.boot:spring-boot-starter")
-    implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
-    implementation("org.springframework.boot:spring-boot-starter-logging:$springBootVersion")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-logging")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign:$openFeignVersion") {
         exclude(group = "org.springframework.security", module = "spring-security-crypto")
@@ -37,10 +36,10 @@ dependencies {
     implementation("org.telegram:telegrambots-client:$telegramBotsVersion")
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
     implementation("com.squareup.okio:okio-jvm:$okioJvmVersion")
-    implementation("me.paulschwarz:spring-dotenv:$springDotEnvVersion")
+    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
 
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
-    testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
 
