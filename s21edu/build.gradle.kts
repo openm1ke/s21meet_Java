@@ -2,7 +2,6 @@ plugins {
     java
     id("org.springframework.boot")
     id("io.spring.dependency-management")
-    id("org.openapi.generator") version "7.13.0"
 }
 
 val testcontainersVersion: String by project
