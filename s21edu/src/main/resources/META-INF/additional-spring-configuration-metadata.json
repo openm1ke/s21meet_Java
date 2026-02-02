@@ -70,5 +70,11 @@
       "name": "cluster.api.enabled",
       "type": "java.lang.Boolean",
       "description": "Description for cluster.api.enabled."
+    },
+    {
+      "name": "campus.workplace.provider",
+      "type": "java.lang.String",
+      "defaultValue": "rest",
+      "description": "Provider for workplace data: 'rest' for REST API, 'graphql' for GraphQL API."
     }
   ] }

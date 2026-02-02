@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: ${DB_URL:}
+    username: ${DB_USER:}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -19,9 +19,9 @@ spring:
         format_sql: false  # Форматировать SQL-запросы для удобства
 
 edu:
-  tokenEndpoint: ${TOKEN_ENDPOINT:http://localhost:8081/api/tokens/default}
+  tokenEndpoint: ${TOKEN_ENDPOINT:}
 
-bot.service.url: ${BOT_SERVICE_URL:http://localhost:8083}
+bot.service.url: ${BOT_SERVICE_URL:}
 
 resilience4j:
   ratelimiter:
@@ -59,6 +59,8 @@ notify:
 campus:
   api.enabled: true
   service.enabled: true
+  workplace:
+    provider: ${CAMPUS_WORKPLACE_PROVIDER:}  # rest или graphql (по умолчанию graphql)
   scheduler:
     enabled: true
     fixed-delay: PT30S
