@@ -73,6 +73,18 @@ subprojects {
                 html.required.set(true)
                 csv.required.set(false)
             }
+            
+            classDirectories.setFrom(
+                files(classDirectories.files.map { directory ->
+                    fileTree(directory).apply {
+                        exclude("**/dto/**")
+                        exclude("**/model/**")
+                        exclude("**/generated/**")
+                        exclude("**/openapi/**")
+                        exclude("**/common/**")
+                    }
+                })
+            )
         }
     }
 }
