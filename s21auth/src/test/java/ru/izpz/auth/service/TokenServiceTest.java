@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -108,5 +109,31 @@ class TokenServiceTest {
         // В тестовом окружении defaultLogin будет null
         String result = tokenService.getDefaultAccessToken();
         assertNull(result, "Должен вернуть null если defaultLogin равен null");
+    }
+
+    @Test
+    void getDefaultAccessToken_shouldReturnTokenIfDefaultLoginExists() {
+        ReflectionTestUtils.setField(tokenService, "defaultLogin", TEST_LOGIN);
+        
+        TokenEntity tokenEntity = new TokenEntity();
+        tokenEntity.setLogin(TEST_LOGIN);
+        tokenEntity.setAccessToken(ACCESS_TOKEN);
+
+        when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.of(tokenEntity));
+
+        String result = tokenService.getDefaultAccessToken();
+
+        assertEquals(ACCESS_TOKEN, result, "Должен вернуть токен для пользователя по умолчанию");
+    }
+
+    @Test
+    void getDefaultAccessToken_shouldReturnNullIfTokenNotFound() {
+        ReflectionTestUtils.setField(tokenService, "defaultLogin", TEST_LOGIN);
+
+        when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.empty());
+
+        String result = tokenService.getDefaultAccessToken();
+
+        assertNull(result, "Должен вернуть null если токен не найден");
     }
 }
