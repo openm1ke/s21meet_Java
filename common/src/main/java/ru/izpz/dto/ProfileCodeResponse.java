@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.OffsetDateTime;
 
 @Data
+@AllArgsConstructor
 public class ProfileCodeResponse {
     private String s21login;
     private String secretCode;
