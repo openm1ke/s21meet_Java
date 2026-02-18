@@ -138,6 +138,21 @@ class RegistrationFlowTest {
     }
 
     @Test
+    void startRegistration_parallelNameNull_sendsError() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        participant.setParallelName(null);
+        when(profileService.checkEduLogin("abc")).thenReturn(participant);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
+        verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
+    }
+
+    @Test
     void startRegistration_nonCoreProgram_sendsError() {
         ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
 
@@ -193,6 +208,25 @@ class RegistrationFlowTest {
     }
 
     @Test
+    void startRegistration_whenCheckAndSetLoginReturnsDifferentLogin_doesNotStartValidation() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        participant.setParallelName("Core program");
+        when(profileService.checkEduLogin("abc")).thenReturn(participant);
+
+        ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "zzz", ProfileStatus.REGISTRATION, null);
+        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(profileService, never()).sendVerificationCode(anyString());
+        verify(profileService, never()).updateProfileStatus(anyLong(), any());
+        verify(messageSender, never()).sendMessage(eq(999L), anyString(), any());
+    }
+
+    @Test
     void startRegistration_sendVerificationCodeThrowsRocketChatSendException_notifiesUserAndAdmin() {
         ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
 
@@ -211,6 +245,38 @@ class RegistrationFlowTest {
         verify(messageSender).sendMessage(CHAT_ID, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
         verify(messageSender).sendMessage(eq(999L), contains("fail"), eq(null));
         verify(profileService, never()).updateProfileStatus(anyLong(), any());
+    }
+
+    @Test
+    void startRegistration_sendVerificationCodeThrowsFeignException_notifiesUserAndAdmin() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        participant.setParallelName("Core program");
+        when(profileService.checkEduLogin("abc")).thenReturn(participant);
+
+        ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.REGISTRATION, null);
+        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
+
+        FeignException ex = createFeignException(500, "boom");
+        when(profileService.sendVerificationCode("abc")).thenThrow(ex);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(messageSender).sendMessage(CHAT_ID, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
+        verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
+        verify(profileService, never()).updateProfileStatus(anyLong(), any());
+    }
+
+    @Test
+    void startRegistration_nullLoginInput_sendsInvalidLoginError() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, null);
+
+        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не соответствует требованиям", null);
+        verifyNoInteractions(profileService);
     }
 
     private FeignException createFeignException(int status, String message) {
