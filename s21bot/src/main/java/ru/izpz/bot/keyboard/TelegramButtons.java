@@ -1,8 +1,8 @@
 package ru.izpz.bot.keyboard;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import ru.izpz.bot.property.BotProperties;
 import ru.izpz.bot.dto.CallbackPayload;
 
 import java.util.Map;
@@ -11,8 +11,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TelegramButtons {
 
-    @Value("${bot.group-invite-link}")
-    private String groupInviteLink;
+    private final BotProperties botProperties;
     private final CallbackPayloadSerializer serializer;
 
     public static final String REGISTRATION_NAME = "Регистрация";
@@ -29,7 +28,7 @@ public class TelegramButtons {
     public Map<String, String> getSubscribeButton() {
         return Map.of(
             SUBSCRIBE_NAME,
-            groupInviteLink
+            botProperties.groupInviteLink()
         );
     }
 }

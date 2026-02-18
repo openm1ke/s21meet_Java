@@ -2,7 +2,6 @@ package ru.izpz.bot.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
@@ -11,6 +10,7 @@ import ru.izpz.bot.keyboard.MenuCommandEnum;
 import ru.izpz.bot.keyboard.SlashCommandEnum;
 import ru.izpz.bot.keyboard.TelegramButtons;
 import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
+import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.*;
 
 @Slf4j
@@ -18,9 +18,7 @@ import ru.izpz.dto.*;
 @RequiredArgsConstructor
 public class ConfirmedFlow {
 
-    @Value("${bot.group}")
-    private Long GROUP_ID;
-
+    private final BotProperties botProperties;
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
     private final MessageSender messageSender;
@@ -96,8 +94,9 @@ public class ConfirmedFlow {
     }
 
     private boolean isUserInGroup(Long chatId) {
-        log.info("Проверка пользователя {} в группе {}", chatId, GROUP_ID.toString());
-        GetChatMember getChatMember = new GetChatMember(GROUP_ID.toString(), chatId);
+        Long groupId = botProperties.group();
+        log.info("Проверка пользователя {} в группе {}", chatId, groupId.toString());
+        GetChatMember getChatMember = new GetChatMember(groupId.toString(), chatId);
         return messageSender.execute(getChatMember)
                 .map(ChatMember::getStatus)
                 .map(status -> !("left".equals(status) || "kicked".equals(status)))

@@ -3,9 +3,9 @@ package ru.izpz.bot.service;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
+import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.ProfileDto;
 
 
@@ -14,8 +14,7 @@ import ru.izpz.dto.ProfileDto;
 @RequiredArgsConstructor
 public class MessageProcessor {
 
-    @Value("${bot.admin}")
-    private Long ADMIN_ID;
+    private final BotProperties botProperties;
 
     private final ProfileService profileService;
     private final MessageSender messageSender;
@@ -33,7 +32,7 @@ public class MessageProcessor {
             parseMessage(chatId, profile, text);
         } catch (FeignException e) {
             messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
-            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
     }
 
