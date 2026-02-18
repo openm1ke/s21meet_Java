@@ -10,9 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.exception.EduLoginCheckException;
-import ru.izpz.bot.exception.InvalidCallbackPayloadException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.bot.keyboard.*;
 import ru.izpz.dto.*;
@@ -36,10 +34,7 @@ public class MessageProcessor {
     private final TelegramButtons telegramButtons;
     private final MessageSender messageSender;
     private final TelegramKeyboardFactory telegramKeyboardFactory;
-    private final CallbackPayloadSerializer callbackPayloadSerializer;
-
-    private static final int ROW_SIZE = 3;
-    private static final int PAGE_SIZE = 2;
+    private final CallbackHandler callbackHandler;
 
     public void handleTextMessage(Message message) {
         Long chatId = message.getChatId();
@@ -65,72 +60,16 @@ public class MessageProcessor {
     }
 
     public void handleCallbackMessage(Long chatId, String data, Integer messageId, String callbackId) {
-        try {
-            CallbackPayload payload = callbackPayloadSerializer.deserialize(data);
-
-            switch (payload.getCommand()) {
-                case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
-                case "show_friend" -> {
-                    var login = payload.getArgs().get("login");
-                    showProfile(chatId, login);
-                }
-                case "friends_page" -> {
-                    int page = Integer.parseInt(payload.getArgs().get("page"));
-                    showFriends(chatId, page, messageId);
-                }
-                case "add_friend" -> {
-                    applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
-                        FriendRequest.Action.TOGGLE_FRIEND, "Статус «друг» переключён");
-                }
-                case "favorite" -> {
-                    applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
-                        FriendRequest.Action.TOGGLE_FAVORITE, "Избранное переключено");
-                }
-                case "subscribe" -> {
-                    applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
-                        FriendRequest.Action.TOGGLE_SUBSCRIBE, "Подписка переключена");
-                }
-                case "set_name" -> {
-                    setLastCommand(chatId, LastCommandType.SET_NAME, Map.of("login", payload.getArgs().get("login")));
-                    messageSender.sendMessage(chatId, "Указать имя", null);
-                }
-                case "event" -> {
-                    var event = Long.parseLong(payload.getArgs().get("id"));
-                    var eventDto = profileService.getEvent(event);
-                    messageSender.sendMessage(chatId, eventDto.toString(), null);
-                }
-                case "events_page" -> {
-                    var page = Integer.parseInt(payload.getArgs().get("page"));
-                    showEvents(chatId, page, messageId);
-                }
-                default -> messageSender.sendMessage(chatId, "Неизвестная команда: " + data, null);
-            }
-        } catch (InvalidCallbackPayloadException e) {
-            log.error("Получены некорректные данные в callback: {}", data, e);
-            messageSender.sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
-        }
-    }
-
-    private void applyAndRefreshKeyboard(
-            long chatId, int messageId, String callbackId,
-            String login, FriendRequest.Action action, String toastText) {
-
-        FriendDto friend = profileService.applyFriend(chatId, login, action, null);
-        var kb = telegramKeyboardFactory.getFriendInlineKeyboard(login, friend);
-
-        messageSender.execute(telegramKeyboardFactory.editFriendInlineKeyboard(kb, chatId, messageId));
-        messageSender.execute(telegramKeyboardFactory.createAnswerCallbackQuery(callbackId, toastText, false));
+        callbackHandler.handleCallbackMessage(chatId, data, messageId, callbackId);
     }
 
     private boolean isUserInGroup(Long chatId) {
         log.info("Проверка пользователя {} в группе {}", chatId, GROUP_ID.toString());
         GetChatMember getChatMember = new GetChatMember(GROUP_ID.toString(), chatId);
-        ChatMember chatMember = messageSender.execute(getChatMember);
-        if (chatMember == null) {
-            return false;
-        }
-        String status = chatMember.getStatus();
-        return !("left".equals(status) || "kicked".equals(status));
+        return messageSender.execute(getChatMember)
+                .map(ChatMember::getStatus)
+                .map(status -> !("left".equals(status) || "kicked".equals(status)))
+                .orElse(false);
     }
 
     private void startConfirmed(Long chatId, ProfileDto profile, String text) {
@@ -165,18 +104,18 @@ public class MessageProcessor {
             MenuCommandEnum.fromText(text).ifPresent(command -> {
                 switch (command) {
                     case SEARCH -> {
-                        setLastCommand(chatId, LastCommandType.SEARCH, null);
+                        callbackHandler.setLastCommand(chatId, LastCommandType.SEARCH, null);
                         messageSender.sendMessage(chatId, "Введите логин для поиска", null);
                     }
                     case FRIENDS -> {
-                        showFriends(chatId, 0, null);
+                        callbackHandler.showFriends(chatId, 0, null);
                     }
                     case PROFILE -> {
                         ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
                         messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
                     }
                     case EVENTS -> {
-                        showEvents(chatId, 0, null);
+                        callbackHandler.showEvents(chatId, 0, null);
                     }
                     case CAMPUS -> {
                         var campusMap = showCampusMap(chatId);
@@ -195,7 +134,7 @@ public class MessageProcessor {
         LastCommandType.fromName(profile.lastCommand()).ifPresent(cmd -> {
             switch (cmd) {
                 case SEARCH -> {
-                    showProfile(chatId, text);
+                    callbackHandler.showProfile(chatId, text);
                 }
                 case SET_NAME -> {
                     if (text.length() > 100) {
@@ -208,67 +147,8 @@ public class MessageProcessor {
                 }
             }
 
-            setLastCommand(chatId, null, null);
+            callbackHandler.setLastCommand(chatId, null, null);
         });
-    }
-
-    private void showEvents(Long chatId, int page, Integer messageId) {
-        try {
-            var events = profileService.getEvents(chatId, page, PAGE_SIZE);
-            var keyboard = telegramKeyboardFactory.eventsListKeyboard(events, ROW_SIZE, page);
-            var eventsListText = telegramKeyboardFactory.eventsListText(events);
-            if (messageId != null) {
-                messageSender.updateMessage(chatId, messageId, eventsListText, keyboard);
-            } else {
-                messageSender.sendMessage(chatId, "События\n\n" + eventsListText, keyboard);
-            }
-        } catch (FeignException e) {
-            messageSender.sendMessage(chatId, "Ошибка обработки событий, попробуйте позже", null);
-            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
-        }
-    }
-
-    private void showFriends(Long chatId, int page, Integer messageId) {
-        try {
-            var list = profileService.getFriends(chatId, page, PAGE_SIZE);
-            var keyboard = telegramKeyboardFactory.friendsListKeyboard(list, ROW_SIZE, page);
-            String friendsListText = telegramKeyboardFactory.friendsListText(list);
-            if (messageId != null) {
-                messageSender.updateMessage(chatId, messageId, friendsListText, keyboard);
-            } else {
-                messageSender.sendMessage(chatId, friendsListText, keyboard);
-            }
-        } catch (FeignException e) {
-            messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
-            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
-        }
-    }
-
-    private void showProfile(Long chatId, String login) {
-        if (!isValidLogin(login)) {
-            messageSender.sendMessage(chatId, "Логин должен быть от 3 до 30 символов и состоять только из латинских букв", null);
-            return;
-        }
-        try {
-            profileService.checkEduLogin(login);
-            FriendDto friend = profileService.applyFriend(chatId, login, FriendRequest.Action.NONE, null);
-            InlineKeyboardMarkup keyboard = telegramKeyboardFactory.getFriendInlineKeyboard(login, friend);
-            ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
-            messageSender.sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
-        } catch (EduLoginCheckException e) {
-            messageSender.sendMessage(chatId, "Ошибка проверки логина: " + e.getError().getMessage(), null);
-            messageSender.sendMessage(ADMIN_ID, "Ошибка проверки логина: " + e.getError(), null);
-        }
-    }
-
-    private void setLastCommand(Long chatId, LastCommandType type, Map<String, Object> args) {
-        var lastCommand = new LastCommandState(type, args);
-        try {
-            profileService.setLastCommand(chatId, lastCommand);
-        }  catch (FeignException e) {
-            messageSender.sendMessage(chatId, "Ошибка установки lastCommand", null);
-            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
-        }
     }
 
     private String getProjectsByLogin(String login) {
@@ -388,12 +268,4 @@ public class MessageProcessor {
         return login != null && login.matches("^[a-zA-Z]{3,30}$");
     }
 
-    public void updateMessageAndChangeStatusRegistration(Long chatId, Integer messageId, String newText) {
-        try {
-            messageSender.updateMessage(chatId, messageId, newText, null);
-            profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
-        } catch (FeignException e) {
-            log.error("Ошибка обработки профиля", e);
-        }
-    }
 }

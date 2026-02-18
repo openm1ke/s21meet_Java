@@ -10,13 +10,13 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageTe
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.dto.StatusChange;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -24,10 +24,6 @@ import java.util.List;
 public class MessageSender {
 
     private final TelegramClientProxy telegramClient;
-
-    public void sendMessage(String chatId, String text, ReplyKeyboardMarkup replyKeyboardMarkup) {
-        this.sendMessage(Long.valueOf(chatId), text, replyKeyboardMarkup);
-    }
 
     public void sendMessage(Long chatId, String text, ReplyKeyboard replyKeyboard) {
         SendMessage msg = SendMessage.builder()
@@ -52,7 +48,11 @@ public class MessageSender {
         var status = change.newStatus() ? " is online" : " is offline";
         var login = change.login() + status;
         for (String telegramId : change.telegramIds()) {
-            sendMessage(telegramId, login, null);
+            try {
+                sendMessage(Long.parseLong(telegramId), login, null);
+            } catch (NumberFormatException e) {
+                log.warn("Некорректный telegramId для уведомления: {} (login={})", telegramId, change.login());
+            }
         }
     }
 
@@ -91,12 +91,12 @@ public class MessageSender {
         execute(method);
     }
 
-    public <T extends Serializable> T execute(BotApiMethod<T> method) {
+    public <T extends Serializable> Optional<T> execute(BotApiMethod<T> method) {
         try {
-            return telegramClient.execute(method);
+            return Optional.ofNullable(telegramClient.execute(method));
         } catch (TelegramApiException e) {
             log.error("Ошибка вызова Telegram API метода {}: {}", method.getMethod(), e.getMessage(), e);
-            return null;
+            return Optional.empty();
         }
     }
 }
