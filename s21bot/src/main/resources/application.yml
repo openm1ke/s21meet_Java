@@ -23,6 +23,9 @@ resilience4j:
       telegram:
         maxAttempts: 5
         waitDuration: 500ms
+        ignoreExceptions:
+          - org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
+          - org.telegram.telegrambots.meta.exceptions.TelegramApiValidationException
 
 logging:
   level:
