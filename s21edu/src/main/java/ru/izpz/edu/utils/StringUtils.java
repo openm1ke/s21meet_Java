@@ -15,10 +15,10 @@ public class StringUtils {
     }
 
     public static String generateCode(int length) {
-        SecureRandom random = new SecureRandom();
+        SecureRandom rng = new SecureRandom();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < length; i++) {
-            sb.append(random.nextInt(10));
+            sb.append(rng.nextInt(10));
         }
         return sb.toString();
     }

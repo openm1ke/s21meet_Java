@@ -13,7 +13,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import ru.izpz.bot.dto.CallbackPayload;
-import ru.izpz.dto.EventDto;
 import ru.izpz.dto.EventsSliceDto;
 import ru.izpz.dto.FriendDto;
 import ru.izpz.dto.FriendsSliceDto;
@@ -27,6 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TelegramKeyboardFactory {
 
+    private static final String LOGIN = "login";
     private final CallbackPayloadSerializer serializer;
     private final ListKeyboardFactory listKeyboardFactory;
 
@@ -136,11 +136,11 @@ public class TelegramKeyboardFactory {
         var isSubscribedLabel = friend.getIsSubscribe() ? "Отписаться" : "Подписаться";
         var setNameLabel = friend.getName() == null ? "Указать имя" : "Изменить имя";
 
-        data.put(isFriendLabel, serializer.serialize(new CallbackPayload("add_friend", Map.of("login", login))));
+        data.put(isFriendLabel, serializer.serialize(new CallbackPayload("add_friend", Map.of(LOGIN, login))));
         if (friend.getIsFriend()) {
-            data.put(setNameLabel, serializer.serialize(new CallbackPayload("set_name", Map.of("login", login))));
-            data.put(isSubscribedLabel, serializer.serialize(new CallbackPayload("subscribe", Map.of("login", login))));
-            data.put(isFavoriteLabel, serializer.serialize(new CallbackPayload("favorite", Map.of("login", login))));
+            data.put(setNameLabel, serializer.serialize(new CallbackPayload("set_name", Map.of(LOGIN, login))));
+            data.put(isSubscribedLabel, serializer.serialize(new CallbackPayload("subscribe", Map.of(LOGIN, login))));
+            data.put(isFavoriteLabel, serializer.serialize(new CallbackPayload("favorite", Map.of(LOGIN, login))));
         }
         return this.defaultInlineKeyboard(data);
     }
