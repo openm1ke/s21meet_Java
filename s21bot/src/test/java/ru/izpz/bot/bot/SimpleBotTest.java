@@ -2,21 +2,17 @@ package ru.izpz.bot.bot;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.chat.Chat;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.bot.service.MessageProcessor;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.*;
 
 class SimpleBotTest {
 
     private final MessageProcessor messageProcessor = mock(MessageProcessor.class);
-    private final OkHttpTelegramClient telegramClient = mock(OkHttpTelegramClient.class);
     private final SimpleBot simpleBot = new SimpleBot(messageProcessor);
 
     @Test
@@ -41,7 +37,7 @@ class SimpleBotTest {
     }
 
     @Test
-    void consume_ShouldNotSendMessage_WhenUpdateHasNoTextMessage() throws TelegramApiException {
+    void consume_ShouldNotSendMessage_WhenUpdateHasNoTextMessage() {
         Update update = mock(Update.class);
         Message message = mock(Message.class);
 
@@ -51,20 +47,43 @@ class SimpleBotTest {
 
         simpleBot.consume(update);
 
-        verify(telegramClient, never()).execute((SendMessage) any());
+        verifyNoInteractions(messageProcessor);
     }
 
     @Test
-    void consume_ShouldHandleException_WhenTelegramClientThrowsException() throws TelegramApiException {
-        Update update = new Update();
+    void consume_WhenChatNotPrivate_doesNothing() {
+        Update update = mock(Update.class);
         Message message = mock(Message.class);
-        when(message.getChatId()).thenReturn(12345L);
-        when(message.getText()).thenReturn("Ошибка");
-        update.setMessage(message);
+        Chat chat = mock(Chat.class);
 
-        doThrow(new TelegramApiException("API error"))
-                .when(telegramClient).execute((SendMessage) any());
+        when(update.hasMessage()).thenReturn(true);
+        when(update.getMessage()).thenReturn(message);
+        when(message.hasText()).thenReturn(true);
+        when(message.getChat()).thenReturn(chat);
+        when(chat.getType()).thenReturn("group");
 
-        assertDoesNotThrow(() -> simpleBot.consume(update));
+        simpleBot.consume(update);
+
+        verifyNoInteractions(messageProcessor);
+    }
+
+    @Test
+    void consume_WhenHasCallbackQuery_delegatesToMessageProcessor() {
+        Update update = mock(Update.class);
+        CallbackQuery callbackQuery = mock(CallbackQuery.class);
+        Message message = mock(Message.class);
+
+        when(update.hasMessage()).thenReturn(false);
+        when(update.hasCallbackQuery()).thenReturn(true);
+        when(update.getCallbackQuery()).thenReturn(callbackQuery);
+        when(callbackQuery.getData()).thenReturn("data");
+        when(callbackQuery.getId()).thenReturn("cb");
+        when(callbackQuery.getMessage()).thenReturn(message);
+        when(message.getChatId()).thenReturn(10L);
+        when(message.getMessageId()).thenReturn(5);
+
+        simpleBot.consume(update);
+
+        verify(messageProcessor).handleCallbackMessage(10L, "data", 5, "cb");
     }
 }

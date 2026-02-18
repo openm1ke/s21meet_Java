@@ -62,6 +62,56 @@ class MessageProcessorTest {
     }
 
     @Test
+    void parseMessage_created_delegatesToStartOnboarding() {
+        ProfileDto profile = new ProfileDto("1", null, ProfileStatus.CREATED, null);
+
+        messageProcessor.parseMessage(1L, profile, "t");
+
+        verify(registrationFlow).startOnboarding(1L);
+    }
+
+    @Test
+    void parseMessage_registration_delegatesToStartRegistration() {
+        ProfileDto profile = new ProfileDto("1", null, ProfileStatus.REGISTRATION, null);
+
+        messageProcessor.parseMessage(1L, profile, "login");
+
+        verify(registrationFlow).startRegistration(1L, profile, "login");
+    }
+
+    @Test
+    void parseMessage_validation_delegatesToStartValidation() {
+        ProfileDto profile = new ProfileDto("1", "l", ProfileStatus.VALIDATION, null);
+
+        messageProcessor.parseMessage(1L, profile, "code");
+
+        verify(registrationFlow).startValidation(1L, profile, "code");
+    }
+
+    @Test
+    void parseMessage_whenStatusNull_throwsNpe() {
+        ProfileDto profile = new ProfileDto("1", null, null, null);
+
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () ->
+                messageProcessor.parseMessage(1L, profile, "t"));
+    }
+
+    @Test
+    void handleTextMessage_whenProfileOk_delegatesToParseByStatus() {
+        Message msg = mock(Message.class);
+        when(msg.getChatId()).thenReturn(1L);
+        when(msg.getText()).thenReturn(" hi ");
+
+        ProfileDto profile = new ProfileDto("1", null, ProfileStatus.CREATED, null);
+        when(profileService.getProfile(1L)).thenReturn(profile);
+
+        messageProcessor.handleTextMessage(msg);
+
+        verify(registrationFlow).startOnboarding(1L);
+        verifyNoInteractions(confirmedFlow);
+    }
+
+    @Test
     void handleTextMessage_whenProfileServiceThrowsFeignException_sendsUserAndAdmin() {
         Message msg = mock(Message.class);
         when(msg.getChatId()).thenReturn(1L);
