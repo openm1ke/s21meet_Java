@@ -3,7 +3,6 @@ package ru.izpz.bot.service;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import ru.izpz.bot.exception.EduLoginCheckException;
@@ -11,6 +10,7 @@ import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.bot.keyboard.MenuCommandEnum;
 import ru.izpz.bot.keyboard.TelegramButtons;
 import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
+import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.RocketChatSendResponse;
@@ -22,8 +22,7 @@ import ru.izpz.dto.model.ParticipantV1DTO;
 @RequiredArgsConstructor
 public class RegistrationFlow {
 
-    @Value("${bot.admin}")
-    private Long ADMIN_ID;
+    private final BotProperties botProperties;
 
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
@@ -57,7 +56,7 @@ public class RegistrationFlow {
         } catch (EduLoginCheckException e) {
             ErrorResponseDTO error = e.getError();
             messageSender.sendMessage(chatId, "Ошибка проверки логина: " + error.getMessage(), null);
-            messageSender.sendMessage(ADMIN_ID, "Ошибка проверки логина: " + error, null);
+            messageSender.sendMessage(botProperties.admin(), "Ошибка проверки логина: " + error, null);
             return;
         }
 
@@ -78,7 +77,7 @@ public class RegistrationFlow {
             profileDto = profileService.checkAndSetLogin(chatId, text);
         } catch (FeignException e) {
             messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
-            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
             return;
         }
         // если логин совпадает значит мы его сохранили
@@ -88,16 +87,16 @@ public class RegistrationFlow {
                 rocketChatResponse = profileService.sendVerificationCode(text);
             } catch (RocketChatSendException e) {
                 messageSender.sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
-                messageSender.sendMessage(ADMIN_ID, e.getMessage(), null);
+                messageSender.sendMessage(botProperties.admin(), e.getMessage(), null);
                 return;
             } catch (FeignException e) {
                 messageSender.sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
-                messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
+                messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
                 return;
             }
 
             messageSender.sendMessage(chatId, "В рокет чат был отправлен код для подтверждения для логина " + text, null);
-            messageSender.sendMessage(ADMIN_ID, "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(), null);
+            messageSender.sendMessage(botProperties.admin(), "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(), null);
             profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
         }
 

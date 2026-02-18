@@ -3,7 +3,6 @@ package ru.izpz.bot.service;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import ru.izpz.bot.dto.CallbackPayload;
@@ -12,6 +11,7 @@ import ru.izpz.bot.exception.InvalidCallbackPayloadException;
 import ru.izpz.bot.keyboard.CallbackPayloadSerializer;
 import ru.izpz.bot.keyboard.TelegramButtons;
 import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
+import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.*;
 
 import java.util.Map;
@@ -21,8 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CallbackHandler {
 
-    @Value("${bot.admin}")
-    private Long ADMIN_ID;
+    private final BotProperties botProperties;
 
     private final ProfileService profileService;
     private final TelegramKeyboardFactory telegramKeyboardFactory;
@@ -96,7 +95,7 @@ public class CallbackHandler {
             }
         } catch (FeignException e) {
             messageSender.sendMessage(chatId, "Ошибка обработки событий, попробуйте позже", null);
-            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
     }
 
@@ -111,8 +110,8 @@ public class CallbackHandler {
                 messageSender.sendMessage(chatId, friendsListText, keyboard);
             }
         } catch (FeignException e) {
-            messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
-            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(chatId, "Ошибка обработки друзей, попробуйте позже", null);
+            messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
     }
 
@@ -127,9 +126,12 @@ public class CallbackHandler {
             InlineKeyboardMarkup keyboard = telegramKeyboardFactory.getFriendInlineKeyboard(login, friend);
             ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
             messageSender.sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
+        } catch (FeignException e) {
+            messageSender.sendMessage(chatId, "Ошибка поиска профиля, попробуйте позже", null);
+            messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         } catch (EduLoginCheckException e) {
             messageSender.sendMessage(chatId, "Ошибка проверки логина: " + e.getError().getMessage(), null);
-            messageSender.sendMessage(ADMIN_ID, "Ошибка проверки логина: " + e.getError(), null);
+            messageSender.sendMessage(botProperties.admin(), "Ошибка проверки логина: " + e.getError(), null);
         }
     }
 
@@ -139,7 +141,7 @@ public class CallbackHandler {
             profileService.setLastCommand(chatId, lastCommand);
         } catch (FeignException e) {
             messageSender.sendMessage(chatId, "Ошибка установки lastCommand", null);
-            messageSender.sendMessage(ADMIN_ID, e.contentUTF8(), null);
+            messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
     }
 

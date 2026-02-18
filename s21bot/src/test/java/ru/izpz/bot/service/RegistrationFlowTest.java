@@ -1,0 +1,226 @@
+package ru.izpz.bot.service;
+
+import feign.FeignException;
+import feign.Request;
+import feign.RequestTemplate;
+import feign.Response;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import ru.izpz.bot.exception.EduLoginCheckException;
+import ru.izpz.bot.exception.RocketChatSendException;
+import ru.izpz.bot.keyboard.TelegramButtons;
+import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
+import ru.izpz.bot.property.BotProperties;
+import ru.izpz.dto.ProfileCodeResponse;
+import ru.izpz.dto.ProfileDto;
+import ru.izpz.dto.ProfileStatus;
+import ru.izpz.dto.RocketChatSendResponse;
+import ru.izpz.dto.model.ErrorResponseDTO;
+import ru.izpz.dto.model.ParticipantV1DTO;
+
+import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class RegistrationFlowTest {
+
+    @Mock
+    private BotProperties botProperties;
+
+    @Mock
+    private ProfileService profileService;
+
+    @Mock
+    private TelegramButtons telegramButtons;
+
+    @Mock
+    private MessageSender messageSender;
+
+    @Mock
+    private TelegramKeyboardFactory telegramKeyboardFactory;
+
+    @InjectMocks
+    private RegistrationFlow registrationFlow;
+
+    private final Long CHAT_ID = 10L;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(botProperties.admin()).thenReturn(999L);
+    }
+
+    @Test
+    void startOnboarding_sendsRegistrationButton() {
+        InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
+        when(telegramButtons.getRegistrationButton()).thenReturn(java.util.Map.of("Регистрация", "data"));
+        when(telegramKeyboardFactory.createInlineKeyboardMarkup(anyMap(), eq(1))).thenReturn(kb);
+
+        registrationFlow.startOnboarding(CHAT_ID);
+
+        verify(messageSender).sendMessage(CHAT_ID, "Для регистрации нажмите кнопку ниже", kb);
+    }
+
+    @Test
+    void startValidation_correctCode_setsConfirmedAndSendsMenuKeyboard() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "login", ProfileStatus.VALIDATION, null);
+        ProfileCodeResponse code = new ProfileCodeResponse("login", "123", OffsetDateTime.now());
+        ReplyKeyboardMarkup menuKb = mock(ReplyKeyboardMarkup.class);
+
+        when(profileService.getVerificationCode("login")).thenReturn(code);
+        when(telegramKeyboardFactory.createReplyKeyboard(anyList(), eq(3))).thenReturn(menuKb);
+
+        registrationFlow.startValidation(CHAT_ID, profile, "123");
+
+        verify(profileService).updateProfileStatus(CHAT_ID, ProfileStatus.CONFIRMED);
+        verify(messageSender).sendMessage(eq(CHAT_ID), eq("Ваш аккаунт был успешно зарегистрирован"), eq(menuKb));
+    }
+
+    @Test
+    void startValidation_wrongCode_sendsRemoveKeyboard() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "login", ProfileStatus.VALIDATION, null);
+        ProfileCodeResponse code = new ProfileCodeResponse("login", "123", OffsetDateTime.now());
+        ReplyKeyboard removeKb = mock(ReplyKeyboard.class);
+
+        when(profileService.getVerificationCode("login")).thenReturn(code);
+        when(telegramKeyboardFactory.removeReplyKeyboard()).thenReturn(removeKb);
+
+        registrationFlow.startValidation(CHAT_ID, profile, "000");
+
+        verify(profileService, never()).updateProfileStatus(anyLong(), any());
+        verify(messageSender).sendMessage(CHAT_ID, "Введенный код не совпадает!", removeKb);
+    }
+
+    @Test
+    void startRegistration_invalidLogin_sendsError() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "12");
+
+        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не соответствует требованиям", null);
+        verifyNoInteractions(profileService);
+    }
+
+    @Test
+    void startRegistration_checkEduLoginThrowsEduLoginCheckException_sendsUserAndAdminMessages() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ErrorResponseDTO error = new ErrorResponseDTO().status(400).message("bad");
+        when(profileService.checkEduLogin("abc")).thenThrow(new EduLoginCheckException(error));
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(messageSender).sendMessage(CHAT_ID, "Ошибка проверки логина: bad", null);
+        verify(messageSender).sendMessage(999L, "Ошибка проверки логина: " + error, null);
+    }
+
+    @Test
+    void startRegistration_inactiveParticipant_sendsError() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        participant.setStatus(ParticipantV1DTO.StatusEnum.BLOCKED);
+        when(profileService.checkEduLogin("abc")).thenReturn(participant);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не активен", null);
+        verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
+    }
+
+    @Test
+    void startRegistration_nonCoreProgram_sendsError() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        participant.setParallelName("Piscine");
+        when(profileService.checkEduLogin("abc")).thenReturn(participant);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
+        verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
+    }
+
+    @Test
+    void startRegistration_checkAndSetLoginFeignException_sendsUserAndAdmin() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        participant.setParallelName("Core program");
+        when(profileService.checkEduLogin("abc")).thenReturn(participant);
+
+        FeignException ex = createFeignException(500, "err");
+        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenThrow(ex);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(messageSender).sendMessage(CHAT_ID, "Ошибка обработки профиля, попробуйте позже", null);
+        verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
+    }
+
+    @Test
+    void startRegistration_sendVerificationCodeSuccess_updatesStatusValidationAndNotifiesAdmin() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        participant.setParallelName("Core program");
+        when(profileService.checkEduLogin("abc")).thenReturn(participant);
+
+        ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.REGISTRATION, null);
+        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
+
+        RocketChatSendResponse rc = new RocketChatSendResponse(true, "ok");
+        when(profileService.sendVerificationCode("abc")).thenReturn(rc);
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(messageSender).sendMessage(CHAT_ID, "В рокет чат был отправлен код для подтверждения для логина abc", null);
+        verify(messageSender).sendMessage(999L, "В рокет чат было отправлено сообщение ok", null);
+        verify(profileService).updateProfileStatus(CHAT_ID, ProfileStatus.VALIDATION);
+    }
+
+    @Test
+    void startRegistration_sendVerificationCodeThrowsRocketChatSendException_notifiesUserAndAdmin() {
+        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        participant.setParallelName("Core program");
+        when(profileService.checkEduLogin("abc")).thenReturn(participant);
+
+        ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.REGISTRATION, null);
+        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
+
+        when(profileService.sendVerificationCode("abc")).thenThrow(new RocketChatSendException(new RocketChatSendResponse(false, "fail")));
+
+        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+
+        verify(messageSender).sendMessage(CHAT_ID, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
+        verify(messageSender).sendMessage(eq(999L), contains("fail"), eq(null));
+        verify(profileService, never()).updateProfileStatus(anyLong(), any());
+    }
+
+    private FeignException createFeignException(int status, String message) {
+        Request request = Request.create(Request.HttpMethod.GET, "/test",
+                java.util.Collections.emptyMap(), null, new RequestTemplate());
+        Response response = Response.builder()
+                .status(status)
+                .request(request)
+                .body(message, StandardCharsets.UTF_8)
+                .build();
+        return FeignException.errorStatus("Test", response);
+    }
+}
