@@ -10,7 +10,6 @@ import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.InvalidCallbackPayloadException;
@@ -33,7 +32,6 @@ public class MessageProcessor {
     @Value("${bot.group}")
     private Long GROUP_ID;
 
-    private final TelegramClientProxy telegramClient;
     private final ProfileService profileService;
     private final TelegramButtons telegramButtons;
     private final MessageSender messageSender;
@@ -110,33 +108,29 @@ public class MessageProcessor {
         } catch (InvalidCallbackPayloadException e) {
             log.error("Получены некорректные данные в callback: {}", data, e);
             messageSender.sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
         }
     }
 
     private void applyAndRefreshKeyboard(
             long chatId, int messageId, String callbackId,
-            String login, FriendRequest.Action action, String toastText) throws TelegramApiException {
+            String login, FriendRequest.Action action, String toastText) {
 
         FriendDto friend = profileService.applyFriend(chatId, login, action, null);
         var kb = telegramKeyboardFactory.getFriendInlineKeyboard(login, friend);
 
-        telegramClient.execute(telegramKeyboardFactory.editFriendInlineKeyboard(kb, chatId, messageId));
-        telegramClient.execute(telegramKeyboardFactory.createAnswerCallbackQuery(callbackId, toastText, false));
+        messageSender.execute(telegramKeyboardFactory.editFriendInlineKeyboard(kb, chatId, messageId));
+        messageSender.execute(telegramKeyboardFactory.createAnswerCallbackQuery(callbackId, toastText, false));
     }
 
     private boolean isUserInGroup(Long chatId) {
         log.info("Проверка пользователя {} в группе {}", chatId, GROUP_ID.toString());
         GetChatMember getChatMember = new GetChatMember(GROUP_ID.toString(), chatId);
-        try {
-            ChatMember chatMember = telegramClient.execute(getChatMember);
-            String status = chatMember.getStatus();
-            return !("left".equals(status) || "kicked".equals(status));
-        } catch (TelegramApiException e) {
-            log.error("Ошибка при проверке пользователя {} в группе {}", chatId, GROUP_ID.toString(), e);
+        ChatMember chatMember = messageSender.execute(getChatMember);
+        if (chatMember == null) {
             return false;
         }
+        String status = chatMember.getStatus();
+        return !("left".equals(status) || "kicked".equals(status));
     }
 
     private void startConfirmed(Long chatId, ProfileDto profile, String text) {
