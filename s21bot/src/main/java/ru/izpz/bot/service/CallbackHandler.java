@@ -30,6 +30,7 @@ public class CallbackHandler {
 
     private static final int ROW_SIZE = 3;
     private static final int PAGE_SIZE = 2;
+    private static final String LOGIN = "login";
 
     public void handleCallbackMessage(Long chatId, String data, Integer messageId, String callbackId) {
         try {
@@ -38,21 +39,21 @@ public class CallbackHandler {
             switch (payload.getCommand()) {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
                 case "show_friend" -> {
-                    var login = payload.getArgs().get("login");
+                    var login = payload.getArgs().get(LOGIN);
                     showProfile(chatId, login);
                 }
                 case "friends_page" -> {
                     int page = Integer.parseInt(payload.getArgs().get("page"));
                     showFriends(chatId, page, messageId);
                 }
-                case "add_friend" -> applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
+                case "add_friend" -> applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get(LOGIN),
                         FriendRequest.Action.TOGGLE_FRIEND, "Статус «друг» переключён");
-                case "favorite" -> applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
+                case "favorite" -> applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get(LOGIN),
                         FriendRequest.Action.TOGGLE_FAVORITE, "Избранное переключено");
-                case "subscribe" -> applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get("login"),
-                        FriendRequest.Action.TOGGLE_SUBSCRIBE, "Подписка переключена");
+                case "subscribe" -> applyAndRefreshKeyboard(chatId, messageId, callbackId, payload.getArgs().get(LOGIN),
+                        FriendRequest.Action.TOGGLE_SUBSCRIBE, "Статус подписки переключён");
                 case "set_name" -> {
-                    setLastCommand(chatId, LastCommandType.SET_NAME, Map.of("login", payload.getArgs().get("login")));
+                    setLastCommand(chatId, LastCommandType.SET_NAME, Map.of(LOGIN, payload.getArgs().get(LOGIN)));
                     messageSender.sendMessage(chatId, "Указать имя", null);
                 }
                 case "event" -> {
