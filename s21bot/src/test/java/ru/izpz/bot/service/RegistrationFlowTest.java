@@ -103,8 +103,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_invalidLogin_sendsError() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         registrationFlow.startRegistration(chatId, "12");
 
         verify(messageSender).sendMessage(chatId, "Введенный логин не соответствует требованиям", null);
@@ -113,8 +111,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_checkEduLoginThrowsEduLoginCheckException_sendsUserAndAdminMessages() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ErrorResponseDTO error = new ErrorResponseDTO().status(400).message("bad");
         when(profileService.checkEduLogin("abc")).thenThrow(new EduLoginCheckException(error));
 
@@ -126,8 +122,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_inactiveParticipant_sendsError() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.BLOCKED);
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
@@ -140,8 +134,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_parallelNameNull_sendsError() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName(null);
@@ -155,8 +147,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_nonCoreProgram_sendsError() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Piscine");
@@ -170,8 +160,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_checkAndSetLoginFeignException_sendsUserAndAdmin() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
@@ -188,8 +176,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_sendVerificationCodeSuccess_updatesStatusValidationAndNotifiesAdmin() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
@@ -210,8 +196,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_whenCheckAndSetLoginReturnsDifferentLogin_doesNotStartValidation() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
@@ -229,8 +213,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_sendVerificationCodeThrowsRocketChatSendException_notifiesUserAndAdmin() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
@@ -243,15 +225,13 @@ class RegistrationFlowTest {
 
         registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(eq(chatId), eq("Ошибка отправки сообщения в рокетчат, попробуйте позже"), eq(null));
+        verify(messageSender).sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
         verify(messageSender).sendMessage(eq(999L), contains("fail"), eq(null));
         verify(profileService, never()).updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
     }
 
     @Test
     void startRegistration_sendVerificationCodeThrowsFeignException_notifiesUserAndAdmin() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
@@ -272,8 +252,6 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_nullLoginInput_sendsInvalidLoginError() {
-        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
-
         registrationFlow.startRegistration(chatId, null);
 
         verify(messageSender).sendMessage(chatId, "Введенный логин не соответствует требованиям", null);

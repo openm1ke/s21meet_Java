@@ -106,9 +106,10 @@ class ApiClientRateLimiterTest {
         assertEquals(200, r2.getStatusCode());
 
         for (int i = 0; i < 3; i++) {
+            final int callNumber = i + 1;
             RequestNotPermitted ex = assertThrows(RequestNotPermitted.class, 
                 () -> apiClient.execute(mockOkCall200(), null),
-                "Должно было кинуть RequestNotPermitted на вызове #" + (i + 1));
+                "Должно было кинуть RequestNotPermitted на вызове #" + callNumber);
             thrown.add(ex);
         }
         assertEquals(3, thrown.size(), "Все три лишних вызова должны быть заблокированы");

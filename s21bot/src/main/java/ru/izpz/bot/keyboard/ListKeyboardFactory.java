@@ -177,11 +177,11 @@ public class ListKeyboardFactory {
             sb.append(" (").append(friend.getName()).append(")");
         }
         
-        if (friend.getIsFavorite() == true) sb.append("⭐");
-        if (friend.getIsSubscribe() == true) sb.append("\uD83D\uDD14");
+        if (friend.getIsFavorite()) sb.append("⭐");
+        if (friend.getIsSubscribe()) sb.append("\uD83D\uDD14");
         sb.append(friend.getStatus() != null ? friend.getStatus().getEmoji() : "❓");
         
-        if (friend.getIsOnline() == true) {
+        if (friend.getIsOnline()) {
             sb.append("\uD83D\uDFE2");
             sb.append(" ").append(friend.getClusterName()).append("-").append(friend.getRow()).append(friend.getNumber());
         } else {

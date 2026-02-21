@@ -131,13 +131,13 @@ public class TelegramKeyboardFactory {
 
     public InlineKeyboardMarkup getFriendInlineKeyboard(String login, FriendDto friend) {
         LinkedHashMap<String, String> data = new LinkedHashMap<>();
-        var isFriendLabel = friend.getIsFriend() == true ? "Удалить из друзей" : "Добавить в друзья";
-        var isFavoriteLabel = friend.getIsFavorite() == true ? "Удалить из избранного" : "Добавить в избранное";
-        var isSubscribedLabel = friend.getIsSubscribe() == true ? "Отписаться" : "Подписаться";
+        var isFriendLabel = friend.getIsFriend() ? "Удалить из друзей" : "Добавить в друзья";
+        var isFavoriteLabel = friend.getIsFavorite() ? "Удалить из избранного" : "Добавить в избранное";
+        var isSubscribedLabel = friend.getIsSubscribe() ? "Отписаться" : "Подписаться";
         var setNameLabel = friend.getName() == null ? "Указать имя" : "Изменить имя";
 
         data.put(isFriendLabel, serializer.serialize(new CallbackPayload("add_friend", Map.of(LOGIN, login))));
-        if (friend.getIsFriend() == true) {
+        if (friend.getIsFriend()) {
             data.put(setNameLabel, serializer.serialize(new CallbackPayload("set_name", Map.of(LOGIN, login))));
             data.put(isSubscribedLabel, serializer.serialize(new CallbackPayload("subscribe", Map.of(LOGIN, login))));
             data.put(isFavoriteLabel, serializer.serialize(new CallbackPayload("favorite", Map.of(LOGIN, login))));
