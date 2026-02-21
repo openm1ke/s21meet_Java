@@ -4,6 +4,8 @@ import java.security.SecureRandom;
 
 public class StringUtils {
 
+    private static final SecureRandom RNG = new SecureRandom();
+
     private StringUtils() {}
 
     public static String extractLogin(String input) {
@@ -15,10 +17,9 @@ public class StringUtils {
     }
 
     public static String generateCode(int length) {
-        SecureRandom rng = new SecureRandom();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < length; i++) {
-            sb.append(rng.nextInt(10));
+            sb.append(RNG.nextInt(10));
         }
         return sb.toString();
     }
