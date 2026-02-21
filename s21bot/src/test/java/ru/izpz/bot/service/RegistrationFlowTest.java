@@ -104,7 +104,7 @@ class RegistrationFlowTest {
     void startRegistration_invalidLogin_sendsError() {
         ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "12");
+        registrationFlow.startRegistration(CHAT_ID, "12");
 
         verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не соответствует требованиям", null);
         verifyNoInteractions(profileService);
@@ -117,7 +117,7 @@ class RegistrationFlowTest {
         ErrorResponseDTO error = new ErrorResponseDTO().status(400).message("bad");
         when(profileService.checkEduLogin("abc")).thenThrow(new EduLoginCheckException(error));
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(messageSender).sendMessage(CHAT_ID, "Ошибка проверки логина: bad", null);
         verify(messageSender).sendMessage(999L, "Ошибка проверки логина: " + error, null);
@@ -131,7 +131,7 @@ class RegistrationFlowTest {
         participant.setStatus(ParticipantV1DTO.StatusEnum.BLOCKED);
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не активен", null);
         verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
@@ -146,7 +146,7 @@ class RegistrationFlowTest {
         participant.setParallelName(null);
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
         verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
@@ -161,7 +161,7 @@ class RegistrationFlowTest {
         participant.setParallelName("Piscine");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
         verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
@@ -179,7 +179,7 @@ class RegistrationFlowTest {
         FeignException ex = createFeignException(500, "err");
         when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenThrow(ex);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(messageSender).sendMessage(CHAT_ID, "Ошибка обработки профиля, попробуйте позже", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
@@ -200,7 +200,7 @@ class RegistrationFlowTest {
         RocketChatSendResponse rc = new RocketChatSendResponse(true, "ok");
         when(profileService.sendVerificationCode("abc")).thenReturn(rc);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(messageSender).sendMessage(CHAT_ID, "В рокет чат был отправлен код для подтверждения для логина abc", null);
         verify(messageSender).sendMessage(999L, "В рокет чат было отправлено сообщение ok", null);
@@ -219,7 +219,7 @@ class RegistrationFlowTest {
         ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "zzz", ProfileStatus.REGISTRATION, null);
         when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(profileService, never()).sendVerificationCode(anyString());
         verify(profileService, never()).updateProfileStatus(anyLong(), any());
@@ -240,7 +240,7 @@ class RegistrationFlowTest {
 
         when(profileService.sendVerificationCode("abc")).thenThrow(new RocketChatSendException(new RocketChatSendResponse(false, "fail")));
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(messageSender).sendMessage(CHAT_ID, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
         verify(messageSender).sendMessage(eq(999L), contains("fail"), eq(null));
@@ -262,7 +262,7 @@ class RegistrationFlowTest {
         FeignException ex = createFeignException(500, "boom");
         when(profileService.sendVerificationCode("abc")).thenThrow(ex);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, "abc");
+        registrationFlow.startRegistration(CHAT_ID, "abc");
 
         verify(messageSender).sendMessage(CHAT_ID, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
@@ -273,7 +273,7 @@ class RegistrationFlowTest {
     void startRegistration_nullLoginInput_sendsInvalidLoginError() {
         ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
 
-        registrationFlow.startRegistration(CHAT_ID, profile, null);
+        registrationFlow.startRegistration(CHAT_ID, null);
 
         verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не соответствует требованиям", null);
         verifyNoInteractions(profileService);

@@ -76,7 +76,7 @@ class MessageProcessorTest {
 
         messageProcessor.parseMessage(1L, profile, "login");
 
-        verify(registrationFlow).startRegistration(1L, profile, "login");
+        verify(registrationFlow).startRegistration(1L, "login");
     }
 
     @Test

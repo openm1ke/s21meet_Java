@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import ru.izpz.bot.dto.CallbackPayload;
+import ru.izpz.dto.EventDto;
 import ru.izpz.dto.EventsSliceDto;
 import ru.izpz.dto.FriendsSliceDto;
 
@@ -25,7 +26,6 @@ public class ListKeyboardFactory {
             int rowSize,
             int page,
             boolean hasNext,
-            String itemType,
             Function<T, Map.Entry<String, String>> itemMapper,
             String pageCallbackType
     ) {
@@ -129,7 +129,6 @@ public class ListKeyboardFactory {
                 rowSize,
                 page,
                 events.hasNext(),
-                "event",
                 event -> Map.entry(
                         event.name(),
                         serializer.serialize(new CallbackPayload("event", Map.of("id", event.id().toString())))
@@ -145,7 +144,6 @@ public class ListKeyboardFactory {
                 rowSize,
                 page,
                 friends.hasNext(),
-                "friend",
                 friend -> Map.entry(
                         friend.getLogin(),
                         serializer.serialize(new CallbackPayload("show_friend", Map.of("login", friend.getLogin())))
@@ -159,7 +157,7 @@ public class ListKeyboardFactory {
         return createListText(
                 events.content(),
                 "\uD83D\uDE38 События в кампусе \uD83D\uDE3D",
-                event -> event.name()
+                EventDto::name
         );
     }
 

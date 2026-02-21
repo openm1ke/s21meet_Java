@@ -41,7 +41,6 @@ public class CampusScheduler {
                     try {
                         var clusters = campusClient.getClustersByCampus(id);
                         campusService.replaceClustersByCampusId(id, clusters);
-                        //log.info("Кампус {}: кластеров {}", id, clusters.size());
                     } catch (ApiException e) {
                         log.error("Ошибка получения кластеров для кампуса {}", id, e);
                     }

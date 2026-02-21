@@ -44,7 +44,7 @@ public class RegistrationFlow {
         }
     }
 
-    public void startRegistration(Long chatId, ProfileDto profile, String text) {
+    public void startRegistration(Long chatId, String text) {
         if (!isValidLogin(text)) {
             messageSender.sendMessage(chatId, "Введенный логин не соответствует требованиям", null);
             return;

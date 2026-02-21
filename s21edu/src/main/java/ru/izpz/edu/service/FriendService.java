@@ -113,8 +113,5 @@ public class FriendService {
                 .toList();
 
         return new FriendsSliceDto(items, page, size, slice.hasNext());
-
-//        List<FriendDto> items = friendsMapper.toDtos(slice.getContent());
-//        return new FriendsSliceDto(items, page, size, slice.hasNext());
     }
 }

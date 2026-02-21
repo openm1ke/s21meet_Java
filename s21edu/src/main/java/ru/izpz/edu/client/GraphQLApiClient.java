@@ -42,7 +42,6 @@ public class GraphQLApiClient {
 
         GraphQlRequest body = new GraphQlRequest(operationName, variables, query);
         HttpEntity<GraphQlRequest> entity = new HttpEntity<>(body, headers);
-        //System.out.println("GraphQL request: " + om.valueToTree(body));
         ResponseEntity<String> resp;
         try {
             resp = restTemplate.postForEntity(GRAPHQL_URL, entity, String.class);

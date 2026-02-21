@@ -110,17 +110,17 @@ public class ConfirmedFlow {
             return "У вас нет активных проектов";
         }
 
-        StringBuilder result = new StringBuilder("Ваши активные проекты:\n\n");
+        StringBuilder result = new StringBuilder("Ваши активные проекты:%n%n");
         for (ProjectsDto project : projects) {
-            result.append(String.format("\uD83D\uDCC1 %s\n", project.name()));
+            result.append(String.format("\uD83D\uDCC1 %s%n", project.name()));
             if (project.description() != null && !project.description().isEmpty()) {
-                result.append(String.format("\uD83D\uDCDD %s\n", project.description()));
+                result.append(String.format("\uD83D\uDCDD %s%n", project.description()));
             }
             if (project.experience() != null) {
-                result.append(String.format("⭐ Опыт: %d\n", project.experience()));
+                result.append(String.format("⭐ Опыт: %d%n", project.experience()));
             }
             if (project.displayedCourseStatus() != null) {
-                result.append(String.format("\uD83D\uDCCA Статус: %s\n", project.displayedCourseStatus()));
+                result.append(String.format("\uD83D\uDCCA Статус: %s%n", project.displayedCourseStatus()));
             }
             result.append("\n");
         }
