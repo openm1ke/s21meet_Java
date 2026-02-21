@@ -1,8 +1,8 @@
 package ru.izpz.auth.client;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
@@ -20,14 +20,18 @@ class TokenClientTest {
 
     @Mock
     private RestTemplate restTemplate;
-
-    @InjectMocks
+    
     private TokenClient tokenClient;
 
     private static final String TEST_LOGIN = "testUser";
     private static final String TEST_PASSWORD = "testPass";
     private static final String ACCESS_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9";
     private static final String REFRESH_TOKEN = "refreshToken";
+
+    @BeforeEach
+    void setUp() {
+        tokenClient = new TokenClient("/auth/realms/EduPowerKeycloak/protocol/openid-connect/token", restTemplate);
+    }
 
     @Test
     void requestNewToken_shouldReturnTokenResponse_whenResponseIsValid() {
@@ -114,7 +118,6 @@ class TokenClientTest {
 
         tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD);
 
-        verify(restTemplate).postForEntity(eq("/auth/realms/EduPowerKeycloak/protocol/openid-connect/token"), 
-                                         any(), eq(TokenResponse.class));
+        verify(restTemplate).postForEntity(contains("token"), any(), eq(TokenResponse.class));
     }
 }

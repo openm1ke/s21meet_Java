@@ -21,7 +21,7 @@ class CryptoKeyTest {
     @BeforeEach
     void setUp() {
         // Сброс статического поля перед каждым тестом
-        ReflectionTestUtils.setField(CryptoKey.class, "KEY", null);
+        ReflectionTestUtils.setField(CryptoKey.class, "key", null);
     }
 
     @Test
@@ -31,7 +31,7 @@ class CryptoKeyTest {
 
         assertDoesNotThrow(() -> cryptoKey.init());
 
-        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "KEY");
+        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "key");
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
         assertEquals(16, key.getEncoded().length);
@@ -44,7 +44,7 @@ class CryptoKeyTest {
 
         assertDoesNotThrow(() -> cryptoKey.init());
 
-        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "KEY");
+        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "key");
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
         assertEquals(24, key.getEncoded().length);
@@ -57,7 +57,7 @@ class CryptoKeyTest {
 
         assertDoesNotThrow(() -> cryptoKey.init());
 
-        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "KEY");
+        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "key");
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
         assertEquals(32, key.getEncoded().length);
