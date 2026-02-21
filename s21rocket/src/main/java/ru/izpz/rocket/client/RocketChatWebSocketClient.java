@@ -25,6 +25,10 @@ public class RocketChatWebSocketClient extends WebSocketClient {
 
     private static final String ENTER_COMMAND = "/enter";
     private static final String EXPECTED_QR_MSG = "The QR code will expire on";
+    private static final String MSG_FIELD = "msg";
+    private static final String METHOD_FIELD = "method";
+    private static final String PARAMS_FIELD = "params";
+    private static final String ERROR_FIELD = "error";
 
     public RocketChatWebSocketClient(String webSocketUri, String token, String targetUsername, String messageToSend, boolean isQrMode) {
         super(URI.create(webSocketUri));
@@ -63,10 +67,11 @@ public class RocketChatWebSocketClient extends WebSocketClient {
         log.debug("Received message: {}", msg);
         JSONObject json = new JSONObject(msg);
 
-        switch (json.optString("msg")) {
+        switch (json.optString(MSG_FIELD)) {
             case "ping" -> sendPong();
             case "result" -> handleResult(json);
             case "changed" -> handleChanged(json);
+            default -> log.debug("Received unknown message type: {}", json.optString(MSG_FIELD));
         }
     }
 
@@ -85,7 +90,7 @@ public class RocketChatWebSocketClient extends WebSocketClient {
 
     private void sendConnectMessage() {
         send(new JSONObject()
-                .put("msg", "connect")
+                .put(MSG_FIELD, "connect")
                 .put("version", "1")
                 .put("support", new String[]{"1", "pre2", "pre1"})
                 .toString());
@@ -93,10 +98,10 @@ public class RocketChatWebSocketClient extends WebSocketClient {
 
     private void sendLoginMessage() {
         send(new JSONObject()
-                .put("msg", "method")
-                .put("method", "login")
+                .put(MSG_FIELD, METHOD_FIELD)
+                .put(METHOD_FIELD, "login")
                 .put("id", "42")
-                .put("params", new JSONArray().put(new JSONObject().put("resume", token)))
+                .put(PARAMS_FIELD, new JSONArray().put(new JSONObject().put("resume", token)))
                 .toString());
     }
 
@@ -104,15 +109,15 @@ public class RocketChatWebSocketClient extends WebSocketClient {
         String id = json.optString("id");
 
         if ("42".equals(id)) {
-            if (json.has("error")) {
-                response = new RocketChatSendResponse(false, "Login failed: " + json.getJSONObject("error").optString("message"));
+            if (json.has(ERROR_FIELD)) {
+                response = new RocketChatSendResponse(false, "Login failed: " + json.getJSONObject(ERROR_FIELD).optString("message"));
                 close();
             } else {
                 openDirectMessage(targetUsername);
             }
         } else if ("unique_create_dm_id".equals(id)) {
-            if (json.has("error")) {
-                response = new RocketChatSendResponse(false, "Failed to create DM: " + json.getJSONObject("error").optString("message"));
+            if (json.has(ERROR_FIELD)) {
+                response = new RocketChatSendResponse(false, "Failed to create DM: " + json.getJSONObject(ERROR_FIELD).optString("message"));
                 close();
             } else {
                 String roomId = json.getJSONObject("result").optString("rid");
@@ -141,45 +146,45 @@ public class RocketChatWebSocketClient extends WebSocketClient {
     }
 
     private void sendPong() {
-        send(new JSONObject().put("msg", "pong").toString());
+        send(new JSONObject().put(MSG_FIELD, "pong").toString());
     }
 
     private void openDirectMessage(String username) {
         send(new JSONObject()
-                .put("msg", "method")
-                .put("method", "createDirectMessage")
+                .put(MSG_FIELD, METHOD_FIELD)
+                .put(METHOD_FIELD, "createDirectMessage")
                 .put("id", "unique_create_dm_id")
-                .put("params", new JSONArray().put(username))
+                .put(PARAMS_FIELD, new JSONArray().put(username))
                 .toString());
     }
 
     private void subscribeToRoom(String roomId) {
         send(new JSONObject()
-                .put("msg", "sub")
+                .put(MSG_FIELD, "sub")
                 .put("id", "unique_subscription_id")
                 .put("name", "stream-room-messages")
-                .put("params", new JSONArray().put(roomId).put(true))
+                .put(PARAMS_FIELD, new JSONArray().put(roomId).put(true))
                 .toString());
     }
 
     private void sendSlashCommand(String roomId, String command) {
         send(new JSONObject()
-                .put("msg", "method")
-                .put("method", "slashCommand")
+                .put(MSG_FIELD, METHOD_FIELD)
+                .put(METHOD_FIELD, "slashCommand")
                 .put("id", "unique_command_id")
-                .put("params", new JSONArray().put(new JSONObject()
+                .put(PARAMS_FIELD, new JSONArray().put(new JSONObject()
                         .put("cmd", command.substring(1))
-                        .put("params", "")
+                        .put(PARAMS_FIELD, "")
                         .put("msg", new JSONObject().put("rid", roomId))))
                 .toString());
     }
 
     private void sendTextMessage(String roomId, String text) {
         send(new JSONObject()
-                .put("msg", "method")
-                .put("method", "sendMessage")
+                .put(MSG_FIELD, METHOD_FIELD)
+                .put(METHOD_FIELD, "sendMessage")
                 .put("id", "unique_send_message_id")
-                .put("params", new JSONArray().put(new JSONObject()
+                .put(PARAMS_FIELD, new JSONArray().put(new JSONObject()
                         .put("rid", roomId)
                         .put("msg", text)))
                 .toString());

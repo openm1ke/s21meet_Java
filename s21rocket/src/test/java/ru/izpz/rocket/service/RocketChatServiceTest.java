@@ -3,6 +3,9 @@ package ru.izpz.rocket.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,52 +45,30 @@ class RocketChatServiceTest {
         assertDoesNotThrow(() -> rocketChatService.validateConfiguration());
     }
 
-    @Test
-    void validateConfiguration_shouldThrowException_whenWebSocketUrlMissing() {
+    @ParameterizedTest
+    @MethodSource("validateConfigurationTestCases")
+    void validateConfiguration_shouldThrowException_whenPropertiesInvalid(String propertyToModify, Object newValue, String expectedErrorMessage) {
         // Given
-        properties.setWebsocketUri("");
+        switch (propertyToModify) {
+            case "websocketUri" -> properties.setWebsocketUri((String) newValue);
+            case "botUsername" -> properties.setBotUsername((String) newValue);
+            case "token" -> properties.setToken((String) newValue);
+        }
         rocketChatService = new RocketChatService(properties);
 
         // When & Then
         IllegalStateException exception = assertThrows(IllegalStateException.class, 
             () -> rocketChatService.validateConfiguration());
-        assertEquals("Rocket.Chat WebSocket URL is not configured", exception.getMessage());
+        assertEquals(expectedErrorMessage, exception.getMessage());
     }
 
-    @Test
-    void validateConfiguration_shouldThrowException_whenBotUsernameMissing() {
-        // Given
-        properties.setBotUsername(null);
-        rocketChatService = new RocketChatService(properties);
-
-        // When & Then
-        IllegalStateException exception = assertThrows(IllegalStateException.class, 
-            () -> rocketChatService.validateConfiguration());
-        assertEquals("Rocket.Chat bot username is not configured", exception.getMessage());
-    }
-
-    @Test
-    void validateConfiguration_shouldThrowException_whenTokenMissing() {
-        // Given
-        properties.setToken("");
-        rocketChatService = new RocketChatService(properties);
-
-        // When & Then
-        IllegalStateException exception = assertThrows(IllegalStateException.class, 
-            () -> rocketChatService.validateConfiguration());
-        assertEquals("Rocket.Chat token is not configured", exception.getMessage());
-    }
-
-    @Test
-    void validateConfiguration_shouldThrowException_whenWebSocketUrlInvalid() {
-        // Given
-        properties.setWebsocketUri("http://invalid-url");
-        rocketChatService = new RocketChatService(properties);
-
-        // When & Then
-        IllegalStateException exception = assertThrows(IllegalStateException.class, 
-            () -> rocketChatService.validateConfiguration());
-        assertEquals("Rocket.Chat WebSocket URL must start with ws:// or wss://", exception.getMessage());
+    static java.util.stream.Stream<Arguments> validateConfigurationTestCases() {
+        return java.util.stream.Stream.of(
+            Arguments.of("websocketUri", "", "Rocket.Chat WebSocket URL is not configured"),
+            Arguments.of("botUsername", null, "Rocket.Chat bot username is not configured"),
+            Arguments.of("token", "", "Rocket.Chat token is not configured"),
+            Arguments.of("websocketUri", "http://invalid-url", "Rocket.Chat WebSocket URL must start with ws:// or wss://")
+        );
     }
 
     @Test

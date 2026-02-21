@@ -179,7 +179,7 @@ class ProfileServiceTest {
                 EntityNotFoundException.class,
                 () -> profileService.updateProfileStatus(request)
         );
-        assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
+        assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
         verify(profileRepository).findByTelegramId("123456");
         verify(profileRepository, never()).save(any());
     }
@@ -250,7 +250,7 @@ class ProfileServiceTest {
                 EntityNotFoundException.class,
                 () -> profileService.checkAndSetLogin("123456", "newuser")
         );
-        assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
+        assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
         verify(profileRepository).existsByS21login("newuser");
         verify(profileRepository).findByTelegramId("123456");
         verify(profileRepository, never()).save(any());
@@ -339,7 +339,7 @@ class ProfileServiceTest {
                 EntityNotFoundException.class,
                 () -> profileService.updateLastCommand(request)
         );
-        assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
+        assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
         verify(profileRepository).findByTelegramId("123456");
         verify(profileRepository, never()).save(any());
     }

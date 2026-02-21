@@ -5,7 +5,7 @@ import ru.izpz.dto.RocketChatSendResponse;
 
 @Getter
 public class RocketChatSendException extends RuntimeException {
-    private final RocketChatSendResponse response;
+    private final transient RocketChatSendResponse response;
 
     public RocketChatSendException(RocketChatSendResponse response) {
         super(response.getMessage());

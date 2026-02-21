@@ -49,6 +49,8 @@ class ProfileServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Empty setUp method - test initialization is handled by @ExtendWith(MockitoExtension.class)
+        // and field injection with @Mock and @InjectMocks annotations
     }
 
     @Test
