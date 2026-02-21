@@ -1,23 +1,29 @@
 package ru.izpz.edu.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.*;
+import ru.izpz.dto.api.ClusterApi;
+import ru.izpz.dto.model.ParticipantV1DTO;
+import ru.izpz.edu.S21EduApplication;
+import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.EventService;
 import ru.izpz.edu.service.FriendService;
+import ru.izpz.edu.service.GraphQLService;
+import ru.izpz.edu.service.NotifyService;
 import ru.izpz.edu.service.ProfileService;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -25,34 +31,47 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest(classes = S21EduApplication.class)
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@TestPropertySource(properties = {
+        "profile.api.enabled=true",
+        "spring.task.scheduling.enabled=false"
+})
 class ProfileControllerTest {
 
+    @Autowired
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    @Autowired
+    private ObjectMapper objectMapper;
 
-    @Mock
+    @MockitoBean
     private ProfileService profileService;
 
-    @Mock
+    @MockitoBean
     private CampusService campusService;
 
-    @Mock
+    @MockitoBean
     private FriendService friendsService;
 
-    @Mock
+    @MockitoBean
     private EventService eventService;
 
-    @InjectMocks
-    private ProfileController controller;
+    @MockitoBean
+    private CampusClient campusClient;
 
-    @BeforeEach
-    void setupMvc() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
-                .build();
-    }
+    @MockitoBean
+    private ApiClient apiClient;
+
+    @MockitoBean
+    private NotifyService notifyService;
+
+    @MockitoBean
+    private GraphQLService graphQLService;
+
+    @MockitoBean
+    private ClusterApi clusterApi;
 
     @Test
     void getProfile_shouldReturnOk() throws Exception {
@@ -121,6 +140,68 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.secretCode").value("1234"));
 
         verify(profileService).getVerificationCode("login");
+    }
+
+    @Test
+    void checkEduLogin_shouldReturnOk() throws Exception {
+        ParticipantV1DTO participant = new ParticipantV1DTO();
+        when(profileService.checkEduLogin("login")).thenReturn(participant);
+
+        mockMvc.perform(get("/profile/login").param("login", "login"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+
+        verify(profileService).checkEduLogin("login");
+    }
+
+    @Test
+    void getCampus_shouldReturnOk() throws Exception {
+        CampusRequest req = CampusRequest.builder().telegramId("123456").build();
+
+        CampusDto campus = new CampusDto("Campus", "uuid");
+        when(profileService.getCampus("123456")).thenReturn(campus);
+        when(campusService.getClusters(campus)).thenReturn(List.of());
+
+        mockMvc.perform(post("/profile/campus")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.campusName").value("Campus"))
+                .andExpect(jsonPath("$.clusters").isArray());
+
+        verify(profileService).getCampus("123456");
+        verify(campusService).getClusters(campus);
+    }
+
+    @Test
+    void getParticipant_shouldReturnOk() throws Exception {
+        ParticipantRequest req = ParticipantRequest.builder().telegramId("123456").eduLogin("edu").build();
+        ParticipantDto participant = ParticipantDto.builder().login("edu").build();
+        when(profileService.getParticipant("edu")).thenReturn(participant);
+
+        mockMvc.perform(post("/profile/participant")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.login").value("edu"));
+
+        verify(profileService).getParticipant("edu");
+    }
+
+    @Test
+    void setLastCommand_shouldReturnOk() throws Exception {
+        LastCommandState state = new LastCommandState(LastCommandType.SEARCH, Map.of());
+        LastCommandRequest req = LastCommandRequest.builder().telegramId("123456").command(state).build();
+        ProfileDto dto = new ProfileDto("123456", "login", ProfileStatus.CREATED, state);
+        when(profileService.updateLastCommand(any(LastCommandRequest.class))).thenReturn(dto);
+
+        mockMvc.perform(post("/profile/lastcommand")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastCommand.command").value("SEARCH"));
+
+        verify(profileService).updateLastCommand(any(LastCommandRequest.class));
     }
 
     @Test
