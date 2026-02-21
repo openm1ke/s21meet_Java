@@ -82,7 +82,7 @@ class CampusClientTest {
     }
 
     @Test
-    void getParticipantsByClusterV2_shouldDelegateToGraphqlService() throws Exception {
+    void getParticipantsByClusterV2_shouldDelegateToGraphqlService() {
         GraphQLService.ClusterSeat seat = new GraphQLService.ClusterSeat("1", "A", 1, "u", null, null, null, null);
         when(graphQLService.getOccupiedSeats("1")).thenReturn(List.of(seat));
 

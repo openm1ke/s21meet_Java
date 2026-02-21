@@ -53,6 +53,7 @@ class RocketChatServiceTest {
             case "websocketUri" -> properties.setWebsocketUri((String) newValue);
             case "botUsername" -> properties.setBotUsername((String) newValue);
             case "token" -> properties.setToken((String) newValue);
+            default -> throw new IllegalArgumentException("Unknown property: " + propertyToModify);
         }
         rocketChatService = new RocketChatService(properties);
 
@@ -60,6 +61,15 @@ class RocketChatServiceTest {
         IllegalStateException exception = assertThrows(IllegalStateException.class, 
             () -> rocketChatService.validateConfiguration());
         assertEquals(expectedErrorMessage, exception.getMessage());
+    }
+
+    static java.util.stream.Stream<Arguments> sendVerificationCodeInvalidArguments() {
+        return java.util.stream.Stream.of(
+                Arguments.of(null, "Test message", "Target username cannot be null or empty"),
+                Arguments.of("", "Test message", "Target username cannot be null or empty"),
+                Arguments.of("testuser", null, "Message cannot be null or empty"),
+                Arguments.of("testuser", "", "Message cannot be null or empty")
+        );
     }
 
     static java.util.stream.Stream<Arguments> validateConfigurationTestCases() {
@@ -82,64 +92,17 @@ class RocketChatServiceTest {
         // В реальном сценарии здесь будет проверка на успешное подключение или ошибку
     }
 
-    @Test
-    void sendVerificationCode_shouldReturnErrorResponse_whenTargetUsernameNull() {
+    @ParameterizedTest
+    @MethodSource("sendVerificationCodeInvalidArguments")
+    void sendVerificationCode_shouldReturnErrorResponse_whenArgumentsInvalid(String username, String message, String expectedErrorMessage) {
         // Given
-        String username = null;
-        String message = "Test message";
-
         // When
         RocketChatSendResponse result = rocketChatService.sendVerificationCode(username, message);
 
         // Then
         assertNotNull(result);
         assertFalse(result.isSuccess());
-        assertEquals("Target username cannot be null or empty", result.getMessage());
-    }
-
-    @Test
-    void sendVerificationCode_shouldReturnErrorResponse_whenTargetUsernameEmpty() {
-        // Given
-        String username = "";
-        String message = "Test message";
-
-        // When
-        RocketChatSendResponse result = rocketChatService.sendVerificationCode(username, message);
-
-        // Then
-        assertNotNull(result);
-        assertFalse(result.isSuccess());
-        assertEquals("Target username cannot be null or empty", result.getMessage());
-    }
-
-    @Test
-    void sendVerificationCode_shouldReturnErrorResponse_whenMessageNull() {
-        // Given
-        String username = "testuser";
-        String message = null;
-
-        // When
-        RocketChatSendResponse result = rocketChatService.sendVerificationCode(username, message);
-
-        // Then
-        assertNotNull(result);
-        assertFalse(result.isSuccess());
-        assertEquals("Message cannot be null or empty", result.getMessage());
-    }
-
-    @Test
-    void sendVerificationCode_shouldReturnErrorResponse_whenMessageEmpty() {
-        // Given
-        String username = "testuser";
-        String message = "";
-
-        // When
-        RocketChatSendResponse result = rocketChatService.sendVerificationCode(username, message);
-
-        // Then
-        assertNotNull(result);
-        assertFalse(result.isSuccess());
-        assertEquals("Message cannot be null or empty", result.getMessage());
+        assertEquals(expectedErrorMessage, result.getMessage());
     }
 
     @Test
