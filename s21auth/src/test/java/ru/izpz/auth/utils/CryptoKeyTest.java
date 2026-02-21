@@ -3,11 +3,10 @@ package ru.izpz.auth.utils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.SecretKey;
 import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,13 +14,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
 class CryptoKeyTest {
 
-    @InjectMocks
     private CryptoKey cryptoKey;
 
     @BeforeEach
     void setUp() {
-        // Сброс статического поля перед каждым тестом
-        ReflectionTestUtils.setField(CryptoKey.class, "key", null);
+        cryptoKey = new CryptoKey();
+    }
+
+    @Test
+    void constants_shouldHaveCorrectValues() {
+        assertEquals(12, CryptoKey.IV_LEN);
+        assertEquals(128, CryptoKey.TAG_BITS);
     }
 
     @Test
@@ -31,7 +34,7 @@ class CryptoKeyTest {
 
         assertDoesNotThrow(() -> cryptoKey.init());
 
-        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "key");
+        SecretKey key = cryptoKey.getKey();
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
         assertEquals(16, key.getEncoded().length);
@@ -44,7 +47,7 @@ class CryptoKeyTest {
 
         assertDoesNotThrow(() -> cryptoKey.init());
 
-        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "key");
+        SecretKey key = cryptoKey.getKey();
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
         assertEquals(24, key.getEncoded().length);
@@ -57,7 +60,7 @@ class CryptoKeyTest {
 
         assertDoesNotThrow(() -> cryptoKey.init());
 
-        SecretKeySpec key = (SecretKeySpec) ReflectionTestUtils.getField(CryptoKey.class, "key");
+        SecretKey key = cryptoKey.getKey();
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
         assertEquals(32, key.getEncoded().length);
@@ -84,11 +87,5 @@ class CryptoKeyTest {
         ReflectionTestUtils.setField(cryptoKey, "keyBase64", null);
 
         assertThrows(Exception.class, () -> cryptoKey.init());
-    }
-
-    @Test
-    void constants_shouldHaveCorrectValues() {
-        assertEquals(12, CryptoKey.IV_LEN);
-        assertEquals(128, CryptoKey.TAG_BITS);
     }
 }

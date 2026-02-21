@@ -11,6 +11,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,8 +30,6 @@ import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -123,16 +125,10 @@ class ApiClientRateLimiterTest {
 
         // Wait for rate limit window to refresh
         CountDownLatch latch = new CountDownLatch(1);
-        new Thread(() -> {
-            try {
-                Thread.sleep(1100);
-                latch.countDown();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
-        
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.schedule(latch::countDown, 1100, TimeUnit.MILLISECONDS);
         assertTrue(latch.await(3, TimeUnit.SECONDS), "Should wait for rate limit window to refresh");
+        scheduler.shutdown();
         
         ApiResponse<Void> a = apiClient.execute(mockOkCall200(), null);
         ApiResponse<Void> b = apiClient.execute(mockOkCall200(), null);

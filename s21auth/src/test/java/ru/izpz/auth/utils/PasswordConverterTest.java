@@ -2,8 +2,8 @@ package ru.izpz.auth.utils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,8 +15,19 @@ class PasswordConverterTest {
     @BeforeEach
     void setUp() {
         byte[] keyBytes = Base64.getDecoder().decode("AAAAAAAAAAAAAAAAAAAAAA=="); // 16 bytes key
-        CryptoKey.key = new SecretKeySpec(keyBytes, "AES");
+        CryptoKey cryptoKey = new CryptoKey();
+        ReflectionTestUtils.setField(cryptoKey, "keyBase64", Base64.getEncoder().encodeToString(keyBytes));
+        cryptoKey.init();
+        
         passwordConverter = new PasswordConverter();
+        // Use reflection to set cryptoKey
+        try {
+            var cryptoKeyField = PasswordConverter.class.getDeclaredField("cryptoKey");
+            cryptoKeyField.setAccessible(true);
+            cryptoKeyField.set(passwordConverter, cryptoKey);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
@@ -40,7 +51,7 @@ class PasswordConverterTest {
 
         assertNotNull(encrypted);
         assertNotEquals(password, encrypted);
-        assertTrue(encrypted.startsWith("ENC$"));
+        assertTrue(encrypted.startsWith("enc:"));
     }
 
     @Test
@@ -102,7 +113,14 @@ class PasswordConverterTest {
 
     @Test
     void convertToDatabaseColumn_shouldThrowException_onEncryptionError() {
-        CryptoKey.key = null;
+        // Set cryptoKey to null using reflection
+        try {
+            var cryptoKeyField = PasswordConverter.class.getDeclaredField("cryptoKey");
+            cryptoKeyField.setAccessible(true);
+            cryptoKeyField.set(passwordConverter, null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         
         assertThrows(IllegalStateException.class, () -> 
             passwordConverter.convertToDatabaseColumn("password")
@@ -111,7 +129,7 @@ class PasswordConverterTest {
 
     @Test
     void convertToEntityAttribute_shouldThrowException_onDecryptionError() {
-        String invalidEncrypted = "ENC$invalidBase64Data";
+        String invalidEncrypted = "enc:invalidBase64Data";
         
         assertThrows(IllegalStateException.class, () -> 
             passwordConverter.convertToEntityAttribute(invalidEncrypted)
@@ -120,7 +138,7 @@ class PasswordConverterTest {
 
     @Test
     void convertToEntityAttribute_shouldThrowException_whenDataIsCorrupted() {
-        String corruptedEncrypted = "ENC$" + Base64.getEncoder().encodeToString("corruptedData".getBytes());
+        String corruptedEncrypted = "enc:" + Base64.getEncoder().encodeToString("corruptedData".getBytes());
         
         assertThrows(IllegalStateException.class, () -> 
             passwordConverter.convertToEntityAttribute(corruptedEncrypted)

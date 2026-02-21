@@ -195,7 +195,7 @@ class CallbackHandlerTest {
 
         FriendDto friend = FriendDto.builder().login("abc").isFriend(true).build();
         when(profileService.applyFriend(chatId, "abc", FriendRequest.Action.TOGGLE_SUBSCRIBE, null)).thenReturn(friend);
-        when(telegramKeyboardFactory.getFriendInlineKeyboard(eq("abc"), eq(friend))).thenReturn(mock(InlineKeyboardMarkup.class));
+        when(telegramKeyboardFactory.getFriendInlineKeyboard("abc", friend)).thenReturn(mock(InlineKeyboardMarkup.class));
         when(telegramKeyboardFactory.editFriendInlineKeyboard(ArgumentMatchers.any(), eq(chatId), eq(7))).thenReturn(mock(EditMessageReplyMarkup.class));
         when(telegramKeyboardFactory.createAnswerCallbackQuery(eq("cb"), anyString(), eq(false)))
                 .thenReturn(mock(org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery.class));

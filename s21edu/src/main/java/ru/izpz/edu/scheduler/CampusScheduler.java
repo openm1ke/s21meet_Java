@@ -48,7 +48,15 @@ public class CampusScheduler {
                 .toList();
 
             for (var f : f1) {
-                try { f.get(); } catch (Exception e) { log.error("Ошибка получение кластеров для кампуса", e); }
+                try { 
+                    f.get(); 
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.error("Прервано получение кластеров для кампуса", e);
+                    return;
+                } catch (Exception e) { 
+                    log.error("Ошибка получение кластеров для кампуса", e); 
+                }
             }
             stopWatch.stop();
             stopWatch.start("get participants");
@@ -67,7 +75,15 @@ public class CampusScheduler {
                 .toList();
 
             for (Future<?> f : f2) {
-                try { f.get(); } catch (Exception e) { log.error("Ошибка получения занятых мест в кластере", e); }
+                try { 
+                    f.get(); 
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.error("Прервано получение занятых мест в кластере", e);
+                    return;
+                } catch (Exception e) { 
+                    log.error("Ошибка получения занятых мест в кластере", e); 
+                }
             }
         }
 

@@ -6,7 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 
 @SpringBootTest
-public class ApplicationContextTest {
+class ApplicationContextTest {
 
     @Autowired
     private ApplicationContext context;
