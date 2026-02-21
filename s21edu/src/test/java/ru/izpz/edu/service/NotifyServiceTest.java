@@ -7,7 +7,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
-import ru.izpz.edu.BaseTestContainer;
+import ru.izpz.edu.BaseTestH2;
 import ru.izpz.dto.StatusChange;
 import ru.izpz.edu.model.Online;
 import ru.izpz.edu.repository.FriendsRepository;
@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestPropertySource(properties = {
         "notify.service.enabled=true"
 })
-class NotifyServiceTest extends BaseTestContainer {
+class NotifyServiceTest extends BaseTestH2 {
 
     @Autowired
     NotifyService notifyService;

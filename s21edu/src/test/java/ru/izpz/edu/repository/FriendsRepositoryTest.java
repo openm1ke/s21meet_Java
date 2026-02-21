@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.jdbc.Sql;
-import ru.izpz.edu.BaseTestContainer;
+import ru.izpz.edu.BaseTestH2;
 
 import java.util.List;
 
@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Transactional
 @Sql(scripts = {"/friends_import.sql", "/online_import.sql"})
-class FriendsRepositoryTest extends BaseTestContainer {
+class FriendsRepositoryTest extends BaseTestH2 {
 
     @Autowired
     private FriendsRepository friendsRepository;
