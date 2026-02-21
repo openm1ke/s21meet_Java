@@ -2,6 +2,7 @@ package ru.izpz.edu.scheduler;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -12,7 +13,7 @@ import ru.izpz.edu.service.NotifyService;
 
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,10 +30,16 @@ class NotifySchedulerTest {
 
     @Test
     void poll_shouldSendNotification() {
-        when(notifyService.computeAndPersistChanges()).thenReturn(List.of(new StatusChange("login", true, List.of("123"))));
+        List<StatusChange> changes = List.of(new StatusChange("login", true, List.of("123")));
+        when(notifyService.computeAndPersistChanges()).thenReturn(changes);
 
         scheduler.poll();
 
-        verify(botClient).notify(any(NotifyRequest.class));
+        ArgumentCaptor<NotifyRequest> requestCaptor = ArgumentCaptor.forClass(NotifyRequest.class);
+        verify(notifyService).computeAndPersistChanges();
+        verify(botClient).notify(requestCaptor.capture());
+
+        NotifyRequest request = requestCaptor.getValue();
+        assertEquals(changes, request.getChanges());
     }
 }

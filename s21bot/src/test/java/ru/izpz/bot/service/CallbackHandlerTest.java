@@ -212,7 +212,7 @@ class CallbackHandlerTest {
         when(profileService.getFriends(chatId, 0, 2)).thenReturn(slice);
         InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
         when(telegramKeyboardFactory.friendsListKeyboard(eq(slice), anyInt(), eq(0))).thenReturn(kb);
-        when(telegramKeyboardFactory.friendsListText(eq(slice))).thenReturn("friends");
+        when(telegramKeyboardFactory.friendsListText(slice)).thenReturn("friends");
 
         callbackHandler.showFriends(chatId, 0, null);
 
@@ -225,7 +225,7 @@ class CallbackHandlerTest {
         when(profileService.getEvents(chatId, 0, 2)).thenReturn(slice);
         InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
         when(telegramKeyboardFactory.eventsListKeyboard(eq(slice), anyInt(), eq(0))).thenReturn(kb);
-        when(telegramKeyboardFactory.eventsListText(eq(slice))).thenReturn("events");
+        when(telegramKeyboardFactory.eventsListText(slice)).thenReturn("events");
 
         callbackHandler.showEvents(chatId, 0, null);
 

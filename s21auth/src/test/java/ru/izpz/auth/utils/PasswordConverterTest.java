@@ -19,15 +19,7 @@ class PasswordConverterTest {
         ReflectionTestUtils.setField(cryptoKey, "keyBase64", Base64.getEncoder().encodeToString(keyBytes));
         cryptoKey.init();
         
-        passwordConverter = new PasswordConverter();
-        // Use reflection to set cryptoKey
-        try {
-            var cryptoKeyField = PasswordConverter.class.getDeclaredField("cryptoKey");
-            cryptoKeyField.setAccessible(true);
-            cryptoKeyField.set(passwordConverter, cryptoKey);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        passwordConverter = new PasswordConverter(cryptoKey);
     }
 
     @Test
