@@ -52,7 +52,6 @@ class FriendServiceTest {
     private FriendService friendService;
 
     private Friends testFriend;
-    private FriendDto testFriendDto;
 
     @BeforeEach
     void setUp() {
@@ -65,15 +64,6 @@ class FriendServiceTest {
         testFriend.setIsSubscribe(false);
         testFriend.setName("");
         testFriend.setDate(LocalDateTime.now());
-
-        testFriendDto = FriendDto.builder()
-                .telegramId(testFriend.getTelegramId())
-                .login(testFriend.getLogin())
-                .isFriend(testFriend.getIsFriend())
-                .isFavorite(testFriend.getIsFavorite())
-                .isSubscribe(testFriend.getIsSubscribe())
-                .name(testFriend.getName())
-                .build();
 
         lenient().when(friendsRepository.save(any(Friends.class))).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(friendsMapper.toDto(any(Friends.class))).thenAnswer(inv -> {
