@@ -48,6 +48,10 @@ public class RocketChatWebSocketClient extends WebSocketClient {
                 return new RocketChatSendResponse(false, "Timeout waiting for Rocket.Chat response");
             }
             return response.get() != null ? response.get() : new RocketChatSendResponse(false, "Unexpected empty response");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("WebSocket execution interrupted", e);
+            return new RocketChatSendResponse(false, "Interrupted");
         } catch (Exception e) {
             log.error("WebSocket execution error", e);
             return new RocketChatSendResponse(false, "Error: " + e.getMessage());

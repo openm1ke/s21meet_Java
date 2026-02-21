@@ -276,7 +276,8 @@ class ProfileServiceTest {
         when(profileClient.getParticipant(any(ParticipantRequest.class)))
                 .thenThrow(feignException);
 
-        assertThrows(FeignException.class, () -> profileService.showParticipant(chatId.toString(), login));
+        String chatIdStr = chatId.toString();
+        assertThrows(FeignException.class, () -> profileService.showParticipant(chatIdStr, login));
         verify(profileClient).getParticipant(any(ParticipantRequest.class));
     }
 
