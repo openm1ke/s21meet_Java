@@ -24,6 +24,9 @@ public class RocketChatController {
 
     @PostMapping("/send")
     public ResponseEntity<RocketChatSendResponse> sendMessage(@RequestBody RocketChatSendRequest request) {
+        if (request == null) {
+            return ResponseEntity.ok(new RocketChatSendResponse(false, "Request body is null"));
+        }
         return ResponseEntity.ok(rocketChatService.sendVerificationCode(request.getUsername(), request.getMessage()));
     }
 }

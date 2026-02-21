@@ -9,3 +9,5 @@ rocketchat:
   websocket-uri: ${ROCKET_CHAT_URL}
   bot-username: ${ROCKET_CHAT_QR_BOT}
   token: ${ROCKET_CHAT_TOKEN}
+  qr-timeout: ${ROCKET_CHAT_QR_TIMEOUT:30}
+  message-timeout: ${ROCKET_CHAT_MESSAGE_TIMEOUT:15}
