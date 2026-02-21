@@ -16,6 +16,7 @@ security:
 token:
   scheduler:
     enabled: false
+  uri: /auth/realms/EduPowerKeycloak/protocol/openid-connect/token
 
 edu:
   login: test_login

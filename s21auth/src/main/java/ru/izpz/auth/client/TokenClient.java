@@ -2,8 +2,8 @@ package ru.izpz.auth.client;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,12 +17,15 @@ import ru.izpz.auth.exception.TokenResponseException;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TokenClient {
 
-    private static final String TOKEN_PATH = "/auth/realms/EduPowerKeycloak/protocol/openid-connect/token";
-
     private final RestTemplate restTemplate;
+    private final String tokenUri;
+
+    public TokenClient(@Value("${token.uri:/auth/realms/EduPowerKeycloak/protocol/openid-connect/token}") String tokenUri, RestTemplate restTemplate) {
+        this.tokenUri = tokenUri;
+        this.restTemplate = restTemplate;
+    }
 
     @RateLimiter(name = "auth")
     @Retry(name = "auth")
@@ -39,7 +42,7 @@ public class TokenClient {
 
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
         try {
-            ResponseEntity<TokenResponse> response = restTemplate.postForEntity(TOKEN_PATH, requestEntity, TokenResponse.class);
+            ResponseEntity<TokenResponse> response = restTemplate.postForEntity(tokenUri, requestEntity, TokenResponse.class);
             if (response.hasBody()) {
                 TokenResponse tokenResponse = response.getBody();
                 if (tokenResponse != null && tokenResponse.getAccessToken() != null) {

@@ -15,7 +15,7 @@ class PasswordConverterTest {
     @BeforeEach
     void setUp() {
         byte[] keyBytes = Base64.getDecoder().decode("AAAAAAAAAAAAAAAAAAAAAA=="); // 16 bytes key
-        CryptoKey.KEY = new SecretKeySpec(keyBytes, "AES");
+        CryptoKey.key = new SecretKeySpec(keyBytes, "AES");
         passwordConverter = new PasswordConverter();
     }
 
@@ -102,7 +102,7 @@ class PasswordConverterTest {
 
     @Test
     void convertToDatabaseColumn_shouldThrowException_onEncryptionError() {
-        CryptoKey.KEY = null;
+        CryptoKey.key = null;
         
         assertThrows(IllegalStateException.class, () -> 
             passwordConverter.convertToDatabaseColumn("password")

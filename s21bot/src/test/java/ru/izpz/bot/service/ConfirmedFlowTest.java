@@ -6,6 +6,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.ArgumentMatchers.*;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -18,7 +20,6 @@ import ru.izpz.dto.*;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,7 +46,7 @@ class ConfirmedFlowTest {
     @InjectMocks
     private ConfirmedFlow confirmedFlow;
 
-    private final Long CHAT_ID = 10L;
+    private final Long chatId = 10L;
 
     @BeforeEach
     void setUp() {
@@ -60,10 +61,10 @@ class ConfirmedFlowTest {
         ChatMember leftMember = member("left");
         when(messageSender.execute(any())).thenReturn(Optional.of(leftMember));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "/start");
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, "/start");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Подпишитесь на канал", urlKb);
+        verify(messageSender).sendMessage(chatId, "Подпишитесь на канал", urlKb);
         verifyNoMoreInteractions(callbackHandler);
     }
 
@@ -75,10 +76,10 @@ class ConfirmedFlowTest {
         ChatMember kickedMember = member("kicked");
         when(messageSender.execute(any())).thenReturn(Optional.of(kickedMember));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "/start");
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, "/start");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Подпишитесь на канал", urlKb);
+        verify(messageSender).sendMessage(chatId, "Подпишитесь на канал", urlKb);
         verifyNoInteractions(callbackHandler);
     }
 
@@ -89,10 +90,10 @@ class ConfirmedFlowTest {
         when(telegramKeyboardFactory.createUrlKeyboard(anyMap(), eq(1))).thenReturn(urlKb);
         when(messageSender.execute(any())).thenReturn(Optional.empty());
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "/start");
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, "/start");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Подпишитесь на канал", urlKb);
+        verify(messageSender).sendMessage(chatId, "Подпишитесь на канал", urlKb);
         verifyNoInteractions(callbackHandler);
     }
 
@@ -104,10 +105,10 @@ class ConfirmedFlowTest {
         ReplyKeyboardMarkup menuKb = mock(ReplyKeyboardMarkup.class);
         when(telegramKeyboardFactory.createReplyKeyboard(anyList(), eq(3))).thenReturn(menuKb);
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "/start");
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, "/start");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Выберите команду", menuKb);
+        verify(messageSender).sendMessage(chatId, "Выберите команду", menuKb);
     }
 
     @Test
@@ -115,10 +116,10 @@ class ConfirmedFlowTest {
         ChatMember member = member("member");
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "/me");
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, "/me");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Твой telegram id: " + profile.telegramId(), null);
+        verify(messageSender).sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
     }
 
     @Test
@@ -126,10 +127,10 @@ class ConfirmedFlowTest {
         ChatMember member = member("member");
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "/help");
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, "/help");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Помощь по командам бота", null);
+        verify(messageSender).sendMessage(chatId, "Помощь по командам бота", null);
     }
 
     @Test
@@ -137,10 +138,10 @@ class ConfirmedFlowTest {
         ChatMember member = member("member");
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "/donate");
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, "/donate");
 
-        verify(messageSender).sendMessage(eq(CHAT_ID), contains("На работу бота"), eq(null));
+        verify(messageSender).sendMessage(eq(chatId), contains("На работу бота"), eq(null));
     }
 
     @Test
@@ -148,10 +149,10 @@ class ConfirmedFlowTest {
         ChatMember member = member("member");
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "😸 Друзья");
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, "😸 Друзья");
 
-        verify(callbackHandler).showFriends(CHAT_ID, 0, null);
+        verify(callbackHandler).showFriends(chatId, 0, null);
     }
 
     @Test
@@ -159,11 +160,11 @@ class ConfirmedFlowTest {
         ChatMember member = member("member");
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, MenuCommandEnum.SEARCH.getCommand());
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.SEARCH.getCommand());
 
-        verify(callbackHandler).setLastCommand(CHAT_ID, LastCommandType.SEARCH, null);
-        verify(messageSender).sendMessage(CHAT_ID, "Введите логин для поиска", null);
+        verify(callbackHandler).setLastCommand(chatId, LastCommandType.SEARCH, null);
+        verify(messageSender).sendMessage(chatId, "Введите логин для поиска", null);
     }
 
     @Test
@@ -172,13 +173,13 @@ class ConfirmedFlowTest {
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
         ParticipantDto participant = mock(ParticipantDto.class);
-        when(profileService.showParticipant(CHAT_ID.toString(), "abc")).thenReturn(participant);
+        when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, MenuCommandEnum.PROFILE.getCommand());
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.PROFILE.getCommand());
 
-        verify(profileService).showParticipant(CHAT_ID.toString(), "abc");
-        verify(messageSender).sendMessage(eq(CHAT_ID), startsWith("Профиль\n"), eq(null));
+        verify(profileService).showParticipant(chatId.toString(), "abc");
+        verify(messageSender).sendMessage(eq(chatId), startsWith("Профиль\n"), eq(null));
     }
 
     @Test
@@ -186,10 +187,10 @@ class ConfirmedFlowTest {
         ChatMember member = member("member");
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, MenuCommandEnum.EVENTS.getCommand());
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.EVENTS.getCommand());
 
-        verify(callbackHandler).showEvents(CHAT_ID, 0, null);
+        verify(callbackHandler).showEvents(chatId, 0, null);
     }
 
     @Test
@@ -199,13 +200,13 @@ class ConfirmedFlowTest {
 
         CampusResponse campus = new CampusResponse();
         campus.setCampusName("X");
-        when(profileService.showCampusMap(CHAT_ID)).thenReturn(campus);
+        when(profileService.showCampusMap(chatId)).thenReturn(campus);
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, MenuCommandEnum.CAMPUS.getCommand());
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
 
-        verify(profileService).showCampusMap(CHAT_ID);
-        verify(messageSender).sendMessage(eq(CHAT_ID), contains("Кампус X"), eq(null));
+        verify(profileService).showCampusMap(chatId);
+        verify(messageSender).sendMessage(eq(chatId), contains("Кампус X"), eq(null));
     }
 
     @Test
@@ -215,10 +216,10 @@ class ConfirmedFlowTest {
 
         when(profileService.getProjects("abc")).thenReturn(java.util.Collections.emptyList());
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, MenuCommandEnum.PROJECTS.getCommand());
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.PROJECTS.getCommand());
 
-        verify(messageSender).sendMessage(CHAT_ID, "У вас нет активных проектов", null);
+        verify(messageSender).sendMessage(chatId, "У вас нет активных проектов", null);
     }
 
     @Test
@@ -292,10 +293,10 @@ class ConfirmedFlowTest {
         );
         when(profileService.getProjects("abc")).thenReturn(java.util.List.of(p1, p2, p3));
 
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, null);
-        confirmedFlow.startConfirmed(CHAT_ID, profile, MenuCommandEnum.PROJECTS.getCommand());
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.PROJECTS.getCommand());
 
-        verify(messageSender).sendMessage(eq(CHAT_ID), argThat(t ->
+        verify(messageSender).sendMessage(eq(chatId), argThat(t ->
                 t.contains("Ваши активные проекты")
                         && t.contains("Project1")
                         && t.contains("Desc")
@@ -311,12 +312,12 @@ class ConfirmedFlowTest {
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
         LastCommandState state = new LastCommandState(LastCommandType.SET_NAME, Map.of("login", "abc"));
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, state);
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, state);
 
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "x".repeat(101));
+        confirmedFlow.startConfirmed(chatId, profile, "x".repeat(101));
 
-        verify(messageSender).sendMessage(CHAT_ID, "Имя должно быть не более 100 символов", null);
-        verify(callbackHandler).setLastCommand(CHAT_ID, null, null);
+        verify(messageSender).sendMessage(chatId, "Имя должно быть не более 100 символов", null);
+        verify(callbackHandler).setLastCommand(chatId, null, null);
     }
 
     @Test
@@ -325,12 +326,12 @@ class ConfirmedFlowTest {
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
         LastCommandState state = new LastCommandState(LastCommandType.SEARCH, null);
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, state);
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, state);
 
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "xyz");
+        confirmedFlow.startConfirmed(chatId, profile, "xyz");
 
-        verify(callbackHandler).showProfile(CHAT_ID, "xyz");
-        verify(callbackHandler).setLastCommand(CHAT_ID, null, null);
+        verify(callbackHandler).showProfile(chatId, "xyz");
+        verify(callbackHandler).setLastCommand(chatId, null, null);
     }
 
     @Test
@@ -339,13 +340,13 @@ class ConfirmedFlowTest {
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
         LastCommandState state = new LastCommandState(LastCommandType.SET_NAME, Map.of("login", "abc"));
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.CONFIRMED, state);
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, state);
 
-        confirmedFlow.startConfirmed(CHAT_ID, profile, "name");
+        confirmedFlow.startConfirmed(chatId, profile, "name");
 
-        verify(profileService).applyFriend(CHAT_ID, "abc", FriendRequest.Action.SET_NAME, "name");
-        verify(messageSender).sendMessage(CHAT_ID, "Имя успешно обновлено", null);
-        verify(callbackHandler).setLastCommand(CHAT_ID, null, null);
+        verify(profileService).applyFriend(chatId, "abc", FriendRequest.Action.SET_NAME, "name");
+        verify(messageSender).sendMessage(chatId, "Имя успешно обновлено", null);
+        verify(callbackHandler).setLastCommand(chatId, null, null);
     }
 
     private ChatMember member(String status) {

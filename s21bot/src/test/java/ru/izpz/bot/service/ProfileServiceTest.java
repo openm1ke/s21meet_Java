@@ -42,10 +42,10 @@ class ProfileServiceTest {
     @InjectMocks
     private ProfileService profileService;
 
-    private final Long CHAT_ID = 12345L;
-    private final String LOGIN = "test.login";
-    private final String S21LOGIN = "s21.test.login";
-    private final String SECRET_CODE = "123456";
+    private final Long chatId = 12345L;
+    private final String login = "test.login";
+    private final String s21login = "s21.test.login";
+    private final String secretCode = "123456";
 
     @BeforeEach
     void setUp() {
@@ -56,22 +56,22 @@ class ProfileServiceTest {
     @Test
     void getProfile_Success() {
         ProfileDto expectedProfile = createTestProfile();
-        when(profileClient.getOrCreateProfile(CHAT_ID.toString())).thenReturn(expectedProfile);
+        when(profileClient.getOrCreateProfile(chatId.toString())).thenReturn(expectedProfile);
 
-        ProfileDto result = profileService.getProfile(CHAT_ID);
+        ProfileDto result = profileService.getProfile(chatId);
 
         assertNotNull(result);
         assertEquals(expectedProfile, result);
-        verify(profileClient).getOrCreateProfile(CHAT_ID.toString());
+        verify(profileClient).getOrCreateProfile(chatId.toString());
     }
 
     @Test
     void getProfile_FeignException() {
         FeignException feignException = createFeignException(500, "Internal Server Error");
-        when(profileClient.getOrCreateProfile(CHAT_ID.toString())).thenThrow(feignException);
+        when(profileClient.getOrCreateProfile(chatId.toString())).thenThrow(feignException);
 
-        assertThrows(FeignException.class, () -> profileService.getProfile(CHAT_ID));
-        verify(profileClient).getOrCreateProfile(CHAT_ID.toString());
+        assertThrows(FeignException.class, () -> profileService.getProfile(chatId));
+        verify(profileClient).getOrCreateProfile(chatId.toString());
     }
 
     @Test
@@ -80,20 +80,20 @@ class ProfileServiceTest {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO()
                 .status(400)
                 .exceptionUUID("test-uuid")
-                .code("LOGIN_NOT_FOUND")
+                .code("login_NOT_FOUND")
                 .message("Login not found");
         
-        when(profileClient.checkEduLogin(LOGIN)).thenThrow(feignException);
+        when(profileClient.checkEduLogin(login)).thenThrow(feignException);
         
         try (MockedStatic<FeignErrorParser> parserMock = mockStatic(FeignErrorParser.class)) {
             parserMock.when(() -> FeignErrorParser.parse(feignException))
                     .thenReturn(errorResponse);
 
             EduLoginCheckException exception = assertThrows(EduLoginCheckException.class,
-                    () -> profileService.checkEduLogin(LOGIN));
+                    () -> profileService.checkEduLogin(login));
 
             assertEquals(errorResponse, exception.getError());
-            verify(profileClient).checkEduLogin(LOGIN);
+            verify(profileClient).checkEduLogin(login);
         }
     }
 
@@ -105,12 +105,12 @@ class ProfileServiceTest {
         when(profileClient.updateProfileStatus(any(ProfileRequest.class)))
                 .thenReturn(expectedProfile);
 
-        ProfileDto result = profileService.updateProfileStatus(CHAT_ID, status);
+        ProfileDto result = profileService.updateProfileStatus(chatId, status);
 
         assertNotNull(result);
         assertEquals(expectedProfile, result);
         verify(profileClient).updateProfileStatus(argThat(request ->
-                request.getTelegramId().equals(CHAT_ID.toString()) &&
+                request.getTelegramId().equals(chatId.toString()) &&
                 request.getStatus() == status
         ));
     }
@@ -123,7 +123,7 @@ class ProfileServiceTest {
         when(profileClient.updateProfileStatus(any(ProfileRequest.class)))
                 .thenThrow(feignException);
 
-        assertThrows(FeignException.class, () -> profileService.updateProfileStatus(CHAT_ID, status));
+        assertThrows(FeignException.class, () -> profileService.updateProfileStatus(chatId, status));
         verify(profileClient).updateProfileStatus(any(ProfileRequest.class));
     }
 
@@ -134,13 +134,13 @@ class ProfileServiceTest {
         when(profileClient.checkAndSetLogin(any(ProfileRequest.class)))
                 .thenReturn(expectedProfile);
 
-        ProfileDto result = profileService.checkAndSetLogin(CHAT_ID, LOGIN);
+        ProfileDto result = profileService.checkAndSetLogin(chatId, login);
 
         assertNotNull(result);
         assertEquals(expectedProfile, result);
         verify(profileClient).checkAndSetLogin(argThat(request ->
-                request.getTelegramId().equals(CHAT_ID.toString()) &&
-                request.getS21login().equals(LOGIN)
+                request.getTelegramId().equals(chatId.toString()) &&
+                request.getS21login().equals(login)
         ));
     }
 
@@ -151,21 +151,21 @@ class ProfileServiceTest {
         when(profileClient.checkAndSetLogin(any(ProfileRequest.class)))
                 .thenThrow(feignException);
 
-        assertThrows(FeignException.class, () -> profileService.checkAndSetLogin(CHAT_ID, LOGIN));
+        assertThrows(FeignException.class, () -> profileService.checkAndSetLogin(chatId, login));
         verify(profileClient).checkAndSetLogin(any(ProfileRequest.class));
     }
 
     @Test
     void getVerificationCode_Success() {
-        ProfileCodeResponse response = new ProfileCodeResponse(S21LOGIN, SECRET_CODE, OffsetDateTime.now());
+        ProfileCodeResponse response = new ProfileCodeResponse(s21login, secretCode, OffsetDateTime.now());
         when(profileClient.getProfileCode(any(ProfileCodeRequest.class))).thenReturn(response);
 
-        ProfileCodeResponse result = profileService.getVerificationCode(S21LOGIN);
+        ProfileCodeResponse result = profileService.getVerificationCode(s21login);
 
         assertNotNull(result);
         assertEquals(response, result);
 
-        verify(profileClient).getProfileCode(argThat(r -> S21LOGIN.equals(r.getS21login())));
+        verify(profileClient).getProfileCode(argThat(r -> s21login.equals(r.getS21login())));
     }
 
     @Test
@@ -175,40 +175,40 @@ class ProfileServiceTest {
         when(profileClient.getProfileCode(any(ProfileCodeRequest.class)))
                 .thenThrow(feignException);
 
-        assertThrows(FeignException.class, () -> profileService.getVerificationCode(S21LOGIN));
+        assertThrows(FeignException.class, () -> profileService.getVerificationCode(s21login));
         verify(profileClient).getProfileCode(any(ProfileCodeRequest.class));
     }
 
     @Test
     void sendVerificationCode_Success() {
-        ProfileCodeResponse codeResponse = new ProfileCodeResponse(S21LOGIN, SECRET_CODE, OffsetDateTime.now());
+        ProfileCodeResponse codeResponse = new ProfileCodeResponse(s21login, secretCode, OffsetDateTime.now());
         RocketChatSendResponse rocketChatResponse = new RocketChatSendResponse(true, "ok");
 
         when(profileClient.getProfileCode(any(ProfileCodeRequest.class))).thenReturn(codeResponse);
         when(rocketChatClient.sendMessage(any(RocketChatSendRequest.class))).thenReturn(rocketChatResponse);
 
-        RocketChatSendResponse result = profileService.sendVerificationCode(S21LOGIN);
+        RocketChatSendResponse result = profileService.sendVerificationCode(s21login);
 
         assertNotNull(result);
         assertEquals(rocketChatResponse, result);
 
         verify(rocketChatClient).sendMessage(argThat(req ->
-                S21LOGIN.equals(req.getUsername()) &&
+                s21login.equals(req.getUsername()) &&
                 req.getMessage() != null &&
-                req.getMessage().contains(SECRET_CODE)
+                req.getMessage().contains(secretCode)
         ));
     }
 
     @Test
     void sendVerificationCode_FailedResponse_ThrowsRocketChatSendException() {
-        ProfileCodeResponse codeResponse = new ProfileCodeResponse(S21LOGIN, SECRET_CODE, OffsetDateTime.now());
+        ProfileCodeResponse codeResponse = new ProfileCodeResponse(s21login, secretCode, OffsetDateTime.now());
         RocketChatSendResponse rocketChatResponse = new RocketChatSendResponse(false, "fail");
 
         when(profileClient.getProfileCode(any(ProfileCodeRequest.class))).thenReturn(codeResponse);
         when(rocketChatClient.sendMessage(any(RocketChatSendRequest.class))).thenReturn(rocketChatResponse);
 
         RocketChatSendException ex = assertThrows(RocketChatSendException.class,
-                () -> profileService.sendVerificationCode(S21LOGIN));
+                () -> profileService.sendVerificationCode(s21login));
 
         assertEquals(rocketChatResponse, ex.getResponse());
     }
@@ -220,7 +220,7 @@ class ProfileServiceTest {
         when(profileClient.getProfileCode(any(ProfileCodeRequest.class)))
                 .thenThrow(feignException);
 
-        assertThrows(FeignException.class, () -> profileService.sendVerificationCode(S21LOGIN));
+        assertThrows(FeignException.class, () -> profileService.sendVerificationCode(s21login));
         verify(profileClient).getProfileCode(any(ProfileCodeRequest.class));
         verify(rocketChatClient, never()).sendMessage(any(RocketChatSendRequest.class));
     }
@@ -232,12 +232,12 @@ class ProfileServiceTest {
         when(profileClient.getCampusMap(any(CampusRequest.class)))
                 .thenReturn(expectedResponse);
 
-        CampusResponse result = profileService.showCampusMap(CHAT_ID);
+        CampusResponse result = profileService.showCampusMap(chatId);
 
         assertNotNull(result);
         assertEquals(expectedResponse, result);
         verify(profileClient).getCampusMap(argThat(request ->
-                request.getTelegramId().equals(CHAT_ID.toString())
+                request.getTelegramId().equals(chatId.toString())
         ));
     }
 
@@ -248,7 +248,7 @@ class ProfileServiceTest {
         when(profileClient.getCampusMap(any(CampusRequest.class)))
                 .thenThrow(feignException);
 
-        assertThrows(FeignException.class, () -> profileService.showCampusMap(CHAT_ID));
+        assertThrows(FeignException.class, () -> profileService.showCampusMap(chatId));
         verify(profileClient).getCampusMap(any(CampusRequest.class));
     }
 
@@ -259,13 +259,13 @@ class ProfileServiceTest {
         when(profileClient.getParticipant(any(ParticipantRequest.class)))
                 .thenReturn(expectedParticipant);
 
-        ParticipantDto result = profileService.showParticipant(CHAT_ID.toString(), LOGIN);
+        ParticipantDto result = profileService.showParticipant(chatId.toString(), login);
 
         assertNotNull(result);
         assertEquals(expectedParticipant, result);
         verify(profileClient).getParticipant(argThat(request ->
-                request.getTelegramId().equals(CHAT_ID.toString()) &&
-                request.getEduLogin().equals(LOGIN)
+                request.getTelegramId().equals(chatId.toString()) &&
+                request.getEduLogin().equals(login)
         ));
     }
 
@@ -276,7 +276,7 @@ class ProfileServiceTest {
         when(profileClient.getParticipant(any(ParticipantRequest.class)))
                 .thenThrow(feignException);
 
-        assertThrows(FeignException.class, () -> profileService.showParticipant(CHAT_ID.toString(), LOGIN));
+        assertThrows(FeignException.class, () -> profileService.showParticipant(chatId.toString(), login));
         verify(profileClient).getParticipant(any(ParticipantRequest.class));
     }
 
@@ -289,10 +289,10 @@ class ProfileServiceTest {
         when(profileClient.setLastCommand(any(LastCommandRequest.class)))
                 .thenReturn(expectedProfile);
 
-        profileService.setLastCommand(CHAT_ID, command);
+        profileService.setLastCommand(chatId, command);
 
         verify(profileClient).setLastCommand(argThat(request ->
-                request.getTelegramId().equals(CHAT_ID.toString()) &&
+                request.getTelegramId().equals(chatId.toString()) &&
                 request.getCommand().equals(command)
         ));
     }
@@ -306,13 +306,13 @@ class ProfileServiceTest {
         when(profileClient.applyFriend(any(FriendRequest.class)))
                 .thenReturn(expectedFriend);
 
-        FriendDto result = profileService.applyFriend(CHAT_ID, LOGIN, action, name);
+        FriendDto result = profileService.applyFriend(chatId, login, action, name);
 
         assertNotNull(result);
         assertEquals(expectedFriend, result);
         verify(profileClient).applyFriend(argThat(request ->
-                request.getTelegramId().equals(CHAT_ID.toString()) &&
-                request.getLogin().equals(LOGIN) &&
+                request.getTelegramId().equals(chatId.toString()) &&
+                request.getLogin().equals(login) &&
                 request.getAction() == action &&
                 request.getName().equals(name)
         ));
@@ -326,13 +326,13 @@ class ProfileServiceTest {
         when(profileClient.applyFriend(any(FriendRequest.class)))
                 .thenReturn(expectedFriend);
 
-        FriendDto result = profileService.applyFriend(CHAT_ID, LOGIN, action, null);
+        FriendDto result = profileService.applyFriend(chatId, login, action, null);
 
         assertNotNull(result);
         assertEquals(expectedFriend, result);
         verify(profileClient).applyFriend(argThat(request ->
-                request.getTelegramId().equals(CHAT_ID.toString()) &&
-                request.getLogin().equals(LOGIN) &&
+                request.getTelegramId().equals(chatId.toString()) &&
+                request.getLogin().equals(login) &&
                 request.getAction() == action &&
                 request.getName() == null
         ));
@@ -344,14 +344,14 @@ class ProfileServiceTest {
         int pageSize = 10;
         FriendsSliceDto expectedFriends = createTestFriendsSliceDto();
         
-        when(profileClient.getFriends(CHAT_ID.toString(), page, pageSize))
+        when(profileClient.getFriends(chatId.toString(), page, pageSize))
                 .thenReturn(expectedFriends);
 
-        FriendsSliceDto result = profileService.getFriends(CHAT_ID, page, pageSize);
+        FriendsSliceDto result = profileService.getFriends(chatId, page, pageSize);
 
         assertNotNull(result);
         assertEquals(expectedFriends, result);
-        verify(profileClient).getFriends(CHAT_ID.toString(), page, pageSize);
+        verify(profileClient).getFriends(chatId.toString(), page, pageSize);
     }
 
     @Test
@@ -375,36 +375,36 @@ class ProfileServiceTest {
         int pageSize = 10;
         EventsSliceDto expectedEvents = createTestEventsSliceDto();
         
-        when(profileClient.getEvents(CHAT_ID.toString(), page, pageSize))
+        when(profileClient.getEvents(chatId.toString(), page, pageSize))
                 .thenReturn(expectedEvents);
 
-        EventsSliceDto result = profileService.getEvents(CHAT_ID, page, pageSize);
+        EventsSliceDto result = profileService.getEvents(chatId, page, pageSize);
 
         assertNotNull(result);
         assertEquals(expectedEvents, result);
-        verify(profileClient).getEvents(CHAT_ID.toString(), page, pageSize);
+        verify(profileClient).getEvents(chatId.toString(), page, pageSize);
     }
 
     @Test
     void getProjects_Success() {
         List<ProjectsDto> expectedProjects = createTestProjectsList();
         
-        when(profileClient.getProjects(LOGIN))
+        when(profileClient.getProjects(login))
                 .thenReturn(expectedProjects);
 
-        List<ProjectsDto> result = profileService.getProjects(LOGIN);
+        List<ProjectsDto> result = profileService.getProjects(login);
 
         assertNotNull(result);
         assertEquals(expectedProjects, result);
-        verify(profileClient).getProjects(LOGIN);
+        verify(profileClient).getProjects(login);
     }
 
     private ProfileDto createTestProfile() {
         Map<String, Object> args = new HashMap<>();
         LastCommandState lastCommand = new LastCommandState(LastCommandType.NONE, args);
         return new ProfileDto(
-                CHAT_ID.toString(),
-                LOGIN,
+                chatId.toString(),
+                login,
                 ProfileStatus.CONFIRMED,
                 lastCommand
         );
@@ -419,7 +419,7 @@ class ProfileServiceTest {
 
     private ParticipantDto createTestParticipantDto() {
         return new ParticipantDto(
-                LOGIN,
+                login,
                 "Class A",
                 "Parallel 1",
                 100,
@@ -432,8 +432,8 @@ class ProfileServiceTest {
 
     private FriendDto createTestFriendDto() {
         return new FriendDto(
-                CHAT_ID.toString(),
-                LOGIN,
+                chatId.toString(),
+                login,
                 "Test Friend",
                 true,
                 false,

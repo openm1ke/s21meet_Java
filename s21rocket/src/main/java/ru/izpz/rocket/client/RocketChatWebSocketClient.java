@@ -10,6 +10,7 @@ import ru.izpz.dto.RocketChatSendResponse;
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 public class RocketChatWebSocketClient extends WebSocketClient {
@@ -21,7 +22,7 @@ public class RocketChatWebSocketClient extends WebSocketClient {
 
     private final CountDownLatch latch = new CountDownLatch(1);
 
-    private volatile RocketChatSendResponse response;
+    private final AtomicReference<RocketChatSendResponse> response = new AtomicReference<>();
 
     private static final String ENTER_COMMAND = "/enter";
     private static final String EXPECTED_QR_MSG = "The QR code will expire on";
@@ -46,7 +47,7 @@ public class RocketChatWebSocketClient extends WebSocketClient {
             if (!completed) {
                 return new RocketChatSendResponse(false, "Timeout waiting for Rocket.Chat response");
             }
-            return response != null ? response : new RocketChatSendResponse(false, "Unexpected empty response");
+            return response.get() != null ? response.get() : new RocketChatSendResponse(false, "Unexpected empty response");
         } catch (Exception e) {
             log.error("WebSocket execution error", e);
             return new RocketChatSendResponse(false, "Error: " + e.getMessage());
@@ -84,7 +85,7 @@ public class RocketChatWebSocketClient extends WebSocketClient {
     @Override
     public void onError(Exception e) {
         log.error("WebSocket error", e);
-        response = new RocketChatSendResponse(false, "WebSocket error: " + e.getMessage());
+        response.set(new RocketChatSendResponse(false, "WebSocket error: " + e.getMessage()));
         latch.countDown();
     }
 
@@ -110,14 +111,14 @@ public class RocketChatWebSocketClient extends WebSocketClient {
 
         if ("42".equals(id)) {
             if (json.has(ERROR_FIELD)) {
-                response = new RocketChatSendResponse(false, "Login failed: " + json.getJSONObject(ERROR_FIELD).optString("message"));
+                response.set(new RocketChatSendResponse(false, "Login failed: " + json.getJSONObject(ERROR_FIELD).optString("message")));
                 close();
             } else {
                 openDirectMessage(targetUsername);
             }
         } else if ("unique_create_dm_id".equals(id)) {
             if (json.has(ERROR_FIELD)) {
-                response = new RocketChatSendResponse(false, "Failed to create DM: " + json.getJSONObject(ERROR_FIELD).optString("message"));
+                response.set(new RocketChatSendResponse(false, "Failed to create DM: " + json.getJSONObject(ERROR_FIELD).optString("message")));
                 close();
             } else {
                 String roomId = json.getJSONObject("result").optString("rid");
@@ -139,7 +140,7 @@ public class RocketChatWebSocketClient extends WebSocketClient {
         if (args != null) {
             String received = args.optString("msg");
             if (received.contains(EXPECTED_QR_MSG)) {
-                response = new RocketChatSendResponse(true, received);
+                response.set(new RocketChatSendResponse(true, received));
                 close();
             }
         }
@@ -189,7 +190,7 @@ public class RocketChatWebSocketClient extends WebSocketClient {
                         .put("msg", text)))
                 .toString());
 
-        response = new RocketChatSendResponse(true, text);
+        response.set(new RocketChatSendResponse(true, text));
         close();
     }
 }

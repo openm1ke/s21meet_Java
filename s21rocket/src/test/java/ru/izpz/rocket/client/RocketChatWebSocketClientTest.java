@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.RocketChatSendResponse;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -90,7 +91,8 @@ class RocketChatWebSocketClientTest {
                 try {
                     var responseField = RocketChatWebSocketClient.class.getDeclaredField("response");
                     responseField.setAccessible(true);
-                    responseField.set(this, new RocketChatSendResponse(true, "Success"));
+                    AtomicReference<RocketChatSendResponse> responseRef = (AtomicReference<RocketChatSendResponse>) responseField.get(this);
+                    responseRef.set(new RocketChatSendResponse(true, "Success"));
                     
                     var latchField = RocketChatWebSocketClient.class.getDeclaredField("latch");
                     latchField.setAccessible(true);

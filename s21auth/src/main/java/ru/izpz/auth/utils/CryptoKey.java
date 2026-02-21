@@ -14,7 +14,7 @@ public class CryptoKey {
     @Value("${security.crypto.key-base64}")
     private String keyBase64;
 
-    static SecretKey KEY;
+    static SecretKey key;
     static final int IV_LEN = 12;
     static final int TAG_BITS = 128;
 
@@ -23,7 +23,7 @@ public class CryptoKey {
         byte[] k = Base64.getDecoder().decode(keyBase64);
         if (k.length != 16 && k.length != 24 && k.length != 32)
             throw new IllegalStateException("AES key must be 16/24/32 bytes");
-        KEY = new SecretKeySpec(k, "AES");
+        key = new SecretKeySpec(k, "AES");
     }
 }
 

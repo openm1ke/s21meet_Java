@@ -76,18 +76,18 @@ public class ConfirmedFlow {
 
         // в ином случае нужно проверить ласт комманд и вызвать нужный метод
         LastCommandType.fromName(profile.lastCommand()).ifPresent(cmd -> {
-            switch (cmd) {
-                case SEARCH -> callbackHandler.showProfile(chatId, text);
-                case SET_NAME -> {
-                    if (text.length() > 100) {
-                        messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);
-                    } else {
-                        var login = profile.lastCommand().args().get("login").toString();
-                        profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
-                        messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
-                    }
+            if (cmd == LastCommandType.SEARCH) {
+                callbackHandler.showProfile(chatId, text);
+            } else if (cmd == LastCommandType.SET_NAME) {
+                if (text.length() > 100) {
+                    messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);
+                } else {
+                    var login = profile.lastCommand().args().get("login").toString();
+                    profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
+                    messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
                 }
-                default -> log.warn("Unhandled LastCommandType: {}", cmd);
+            } else {
+                log.warn("Unhandled LastCommandType: {}", cmd);
             }
 
             callbackHandler.setLastCommand(chatId, null, null);

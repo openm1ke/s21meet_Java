@@ -10,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentMatchers;
+import static org.mockito.ArgumentMatchers.*;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -28,7 +30,6 @@ import ru.izpz.dto.model.ParticipantV1DTO;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +53,7 @@ class RegistrationFlowTest {
     @InjectMocks
     private RegistrationFlow registrationFlow;
 
-    private final Long CHAT_ID = 10L;
+    private final Long chatId = 10L;
 
     @BeforeEach
     void setUp() {
@@ -65,111 +66,111 @@ class RegistrationFlowTest {
         when(telegramButtons.getRegistrationButton()).thenReturn(java.util.Map.of("Регистрация", "data"));
         when(telegramKeyboardFactory.createInlineKeyboardMarkup(anyMap(), eq(1))).thenReturn(kb);
 
-        registrationFlow.startOnboarding(CHAT_ID);
+        registrationFlow.startOnboarding(chatId);
 
-        verify(messageSender).sendMessage(CHAT_ID, "Для регистрации нажмите кнопку ниже", kb);
+        verify(messageSender).sendMessage(chatId, "Для регистрации нажмите кнопку ниже", kb);
     }
 
     @Test
     void startValidation_correctCode_setsConfirmedAndSendsMenuKeyboard() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "login", ProfileStatus.VALIDATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), "login", ProfileStatus.VALIDATION, null);
         ProfileCodeResponse code = new ProfileCodeResponse("login", "123", OffsetDateTime.now());
         ReplyKeyboardMarkup menuKb = mock(ReplyKeyboardMarkup.class);
 
         when(profileService.getVerificationCode("login")).thenReturn(code);
         when(telegramKeyboardFactory.createReplyKeyboard(anyList(), eq(3))).thenReturn(menuKb);
 
-        registrationFlow.startValidation(CHAT_ID, profile, "123");
+        registrationFlow.startValidation(chatId, profile, "123");
 
-        verify(profileService).updateProfileStatus(CHAT_ID, ProfileStatus.CONFIRMED);
-        verify(messageSender).sendMessage(eq(CHAT_ID), eq("Ваш аккаунт был успешно зарегистрирован"), eq(menuKb));
+        verify(profileService).updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
+        verify(messageSender).sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", menuKb);
     }
 
     @Test
     void startValidation_wrongCode_sendsRemoveKeyboard() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), "login", ProfileStatus.VALIDATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), "login", ProfileStatus.VALIDATION, null);
         ProfileCodeResponse code = new ProfileCodeResponse("login", "123", OffsetDateTime.now());
         ReplyKeyboard removeKb = mock(ReplyKeyboard.class);
 
         when(profileService.getVerificationCode("login")).thenReturn(code);
         when(telegramKeyboardFactory.removeReplyKeyboard()).thenReturn(removeKb);
 
-        registrationFlow.startValidation(CHAT_ID, profile, "000");
+        registrationFlow.startValidation(chatId, profile, "000");
 
-        verify(profileService, never()).updateProfileStatus(anyLong(), any());
-        verify(messageSender).sendMessage(CHAT_ID, "Введенный код не совпадает!", removeKb);
+        verify(profileService, never()).updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
+        verify(messageSender).sendMessage(chatId, "Введенный код не совпадает!", removeKb);
     }
 
     @Test
     void startRegistration_invalidLogin_sendsError() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
-        registrationFlow.startRegistration(CHAT_ID, "12");
+        registrationFlow.startRegistration(chatId, "12");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не соответствует требованиям", null);
+        verify(messageSender).sendMessage(chatId, "Введенный логин не соответствует требованиям", null);
         verifyNoInteractions(profileService);
     }
 
     @Test
     void startRegistration_checkEduLoginThrowsEduLoginCheckException_sendsUserAndAdminMessages() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ErrorResponseDTO error = new ErrorResponseDTO().status(400).message("bad");
         when(profileService.checkEduLogin("abc")).thenThrow(new EduLoginCheckException(error));
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Ошибка проверки логина: bad", null);
+        verify(messageSender).sendMessage(chatId, "Ошибка проверки логина: bad", null);
         verify(messageSender).sendMessage(999L, "Ошибка проверки логина: " + error, null);
     }
 
     @Test
     void startRegistration_inactiveParticipant_sendsError() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.BLOCKED);
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не активен", null);
+        verify(messageSender).sendMessage(chatId, "Введенный логин не активен", null);
         verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
     }
 
     @Test
     void startRegistration_parallelNameNull_sendsError() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName(null);
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
+        verify(messageSender).sendMessage(chatId, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
         verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
     }
 
     @Test
     void startRegistration_nonCoreProgram_sendsError() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Piscine");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
+        verify(messageSender).sendMessage(chatId, "Введенный логин не на основе! Приходите когда пройдете бассейн", null);
         verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
     }
 
     @Test
     void startRegistration_checkAndSetLoginFeignException_sendsUserAndAdmin() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
@@ -177,105 +178,105 @@ class RegistrationFlowTest {
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
         FeignException ex = createFeignException(500, "err");
-        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenThrow(ex);
+        when(profileService.checkAndSetLogin(chatId, "abc")).thenThrow(ex);
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Ошибка обработки профиля, попробуйте позже", null);
+        verify(messageSender).sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
     }
 
     @Test
     void startRegistration_sendVerificationCodeSuccess_updatesStatusValidationAndNotifiesAdmin() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.REGISTRATION, null);
-        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
+        ProfileDto updated = new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null);
+        when(profileService.checkAndSetLogin(chatId, "abc")).thenReturn(updated);
 
         RocketChatSendResponse rc = new RocketChatSendResponse(true, "ok");
         when(profileService.sendVerificationCode("abc")).thenReturn(rc);
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(CHAT_ID, "В рокет чат был отправлен код для подтверждения для логина abc", null);
+        verify(messageSender).sendMessage(chatId, "В рокет чат был отправлен код для подтверждения для логина abc", null);
         verify(messageSender).sendMessage(999L, "В рокет чат было отправлено сообщение ok", null);
-        verify(profileService).updateProfileStatus(CHAT_ID, ProfileStatus.VALIDATION);
+        verify(profileService).updateProfileStatus(chatId, ProfileStatus.VALIDATION);
     }
 
     @Test
     void startRegistration_whenCheckAndSetLoginReturnsDifferentLogin_doesNotStartValidation() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "zzz", ProfileStatus.REGISTRATION, null);
-        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
+        ProfileDto updated = new ProfileDto(chatId.toString(), "zzz", ProfileStatus.REGISTRATION, null);
+        when(profileService.checkAndSetLogin(chatId, "abc")).thenReturn(updated);
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(profileService, never()).sendVerificationCode(anyString());
-        verify(profileService, never()).updateProfileStatus(anyLong(), any());
-        verify(messageSender, never()).sendMessage(eq(999L), anyString(), any());
+        verify(profileService, never()).sendVerificationCode(ArgumentMatchers.anyString());
+        verify(profileService, never()).updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
+        verify(messageSender, never()).sendMessage(eq(999L), ArgumentMatchers.anyString(), ArgumentMatchers.any());
     }
 
     @Test
     void startRegistration_sendVerificationCodeThrowsRocketChatSendException_notifiesUserAndAdmin() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.REGISTRATION, null);
-        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
+        ProfileDto updated = new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null);
+        when(profileService.checkAndSetLogin(chatId, "abc")).thenReturn(updated);
 
         when(profileService.sendVerificationCode("abc")).thenThrow(new RocketChatSendException(new RocketChatSendResponse(false, "fail")));
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
+        verify(messageSender).sendMessage(eq(chatId), eq("Ошибка отправки сообщения в рокетчат, попробуйте позже"), eq(null));
         verify(messageSender).sendMessage(eq(999L), contains("fail"), eq(null));
-        verify(profileService, never()).updateProfileStatus(anyLong(), any());
+        verify(profileService, never()).updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
     }
 
     @Test
     void startRegistration_sendVerificationCodeThrowsFeignException_notifiesUserAndAdmin() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
         ParticipantV1DTO participant = new ParticipantV1DTO();
         participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-        ProfileDto updated = new ProfileDto(CHAT_ID.toString(), "abc", ProfileStatus.REGISTRATION, null);
-        when(profileService.checkAndSetLogin(CHAT_ID, "abc")).thenReturn(updated);
+        ProfileDto updated = new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null);
+        when(profileService.checkAndSetLogin(chatId, "abc")).thenReturn(updated);
 
         FeignException ex = createFeignException(500, "boom");
         when(profileService.sendVerificationCode("abc")).thenThrow(ex);
 
-        registrationFlow.startRegistration(CHAT_ID, "abc");
+        registrationFlow.startRegistration(chatId, "abc");
 
-        verify(messageSender).sendMessage(CHAT_ID, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
+        verify(messageSender).sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
-        verify(profileService, never()).updateProfileStatus(anyLong(), any());
+        verify(profileService, never()).updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
     }
 
     @Test
     void startRegistration_nullLoginInput_sendsInvalidLoginError() {
-        ProfileDto profile = new ProfileDto(CHAT_ID.toString(), null, ProfileStatus.REGISTRATION, null);
+        ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
 
-        registrationFlow.startRegistration(CHAT_ID, null);
+        registrationFlow.startRegistration(chatId, null);
 
-        verify(messageSender).sendMessage(CHAT_ID, "Введенный логин не соответствует требованиям", null);
+        verify(messageSender).sendMessage(chatId, "Введенный логин не соответствует требованиям", null);
         verifyNoInteractions(profileService);
     }
 

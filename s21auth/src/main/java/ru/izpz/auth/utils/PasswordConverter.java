@@ -25,7 +25,7 @@ public class PasswordConverter implements AttributeConverter<String, String> {
             RNG.nextBytes(iv);
 
             Cipher c = Cipher.getInstance(TRANSFORM);
-            c.init(Cipher.ENCRYPT_MODE, CryptoKey.KEY, new GCMParameterSpec(CryptoKey.TAG_BITS, iv));
+            c.init(Cipher.ENCRYPT_MODE, CryptoKey.key, new GCMParameterSpec(CryptoKey.TAG_BITS, iv));
             byte[] ct = c.doFinal(attr.getBytes(StandardCharsets.UTF_8));
 
             byte[] out = new byte[iv.length + ct.length];
@@ -47,7 +47,7 @@ public class PasswordConverter implements AttributeConverter<String, String> {
             byte[] ct = Arrays.copyOfRange(all, CryptoKey.IV_LEN, all.length);
 
             Cipher c = Cipher.getInstance(TRANSFORM);
-            c.init(Cipher.DECRYPT_MODE, CryptoKey.KEY, new GCMParameterSpec(CryptoKey.TAG_BITS, iv));
+            c.init(Cipher.DECRYPT_MODE, CryptoKey.key, new GCMParameterSpec(CryptoKey.TAG_BITS, iv));
             byte[] pt = c.doFinal(ct);
             return new String(pt, StandardCharsets.UTF_8);
         } catch (Exception e) {
