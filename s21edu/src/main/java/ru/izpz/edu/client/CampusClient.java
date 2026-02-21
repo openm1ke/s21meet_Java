@@ -33,14 +33,12 @@ public class CampusClient {
     @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public List<ClusterV1DTO> getClustersByCampus(String campusId) throws ApiException {
-        //log.info("Получение списка кластеров для кампуса {}", campusId);
         var response = campusApi.getClustersByCampus(UUID.fromString(campusId));
 
         if (response == null) {
             log.warn("API вернул null для кампуса {}", campusId);
             throw new ApiException("API вернул null для кампуса " + campusId);
         }
-        //log.info("Получено {} кластеров для кампуса {}", response.getClusters().size(), campusId);
         return response.getClusters();
     }
 
@@ -52,7 +50,6 @@ public class CampusClient {
     @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public List<WorkplaceV1DTO> getParticipantsByCluster(Long clusterId) throws ApiException {
-        //log.info("Получение списка занятых рабочих мест по кластерам {}", clusterId);
         // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максимум)
         var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);
 
@@ -60,14 +57,12 @@ public class CampusClient {
            log.warn("API вернул null для кластера {}", clusterId);
            throw new ApiException("API вернул null для кластера " + clusterId);
         }
-        //log.info("Получено {} участников для кластера {} на странице", response.getClusterMap().size(), clusterId);
         return response.getClusterMap();
     }
 
     @RateLimiter(name = "platform")
     @Retry(name = "platform")
-    public List<GraphQLService.ClusterSeat> getParticipantsByClusterV2(Long clusterId) throws ApiException {
-        //log.info("Получение списка занятых рабочих мест по кластерам {} через GraphQL", clusterId);
+    public List<GraphQLService.ClusterSeat> getParticipantsByClusterV2(Long clusterId) {
         return graphQLService.getOccupiedSeats(String.valueOf(clusterId));
     }
 

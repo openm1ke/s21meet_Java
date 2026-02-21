@@ -9,6 +9,8 @@ import io.github.resilience4j.springboot3.retry.autoconfigure.RetryMetricsAutoCo
 import okhttp3.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,10 +26,12 @@ import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
-import static org.assertj.core.api.Fail.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -102,12 +106,10 @@ class ApiClientRateLimiterTest {
         assertEquals(200, r2.getStatusCode());
 
         for (int i = 0; i < 3; i++) {
-            try {
-                apiClient.execute(mockOkCall200(), null);
-                fail("Должно было кинуть RequestNotPermitted на вызове #" + (i + 1));
-            } catch (RequestNotPermitted ex) {
-                thrown.add(ex);
-            }
+            RequestNotPermitted ex = assertThrows(RequestNotPermitted.class, 
+                () -> apiClient.execute(mockOkCall200(), null),
+                "Должно было кинуть RequestNotPermitted на вызове #" + (i + 1));
+            thrown.add(ex);
         }
         assertEquals(3, thrown.size(), "Все три лишних вызова должны быть заблокированы");
     }
@@ -118,15 +120,26 @@ class ApiClientRateLimiterTest {
         apiClient.execute(mockOkCall200(), null);
         assertThrows(RequestNotPermitted.class, () -> apiClient.execute(mockOkCall200(), null));
 
-        Thread.sleep(1100);
-
+        // Wait for rate limit window to refresh
+        CountDownLatch latch = new CountDownLatch(1);
+        new Thread(() -> {
+            try {
+                Thread.sleep(1100);
+                latch.countDown();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+        
+        assertTrue(latch.await(3, TimeUnit.SECONDS), "Should wait for rate limit window to refresh");
+        
         ApiResponse<Void> a = apiClient.execute(mockOkCall200(), null);
         ApiResponse<Void> b = apiClient.execute(mockOkCall200(), null);
         assertEquals(200, a.getStatusCode());
         assertEquals(200, b.getStatusCode());
     }
 
-    private static Call mockOkCall200() throws Exception {
+    private static Call mockOkCall200() throws IOException {
         Call call = mock(Call.class);
         Response response = new Response.Builder()
                 .request(new Request.Builder().url("http://localhost/ok").build())

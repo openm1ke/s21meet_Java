@@ -28,7 +28,6 @@ public class MessageProcessor {
         try {
             ProfileDto profile = profileService.getProfile(chatId);
             log.info("Profile: {}", profile.toString());
-            //sendMessage(chatId, profile.toString());
             parseMessage(chatId, profile, text);
         } catch (FeignException e) {
             messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
@@ -39,7 +38,7 @@ public class MessageProcessor {
     public void parseMessage(Long chatId, ProfileDto profile, String text) {
         switch(profile.status()) {
             case CREATED -> registrationFlow.startOnboarding(chatId);
-            case REGISTRATION -> registrationFlow.startRegistration(chatId, profile, text);
+            case REGISTRATION -> registrationFlow.startRegistration(chatId, text);
             case VALIDATION -> registrationFlow.startValidation(chatId, profile, text);
             case CONFIRMED -> confirmedFlow.startConfirmed(chatId, profile, text);
         }

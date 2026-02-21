@@ -7,6 +7,9 @@ plugins {
 // Apply plugins from parent project
 apply(plugin = "jacoco")
 
+val javaWebSocketVersion: String by project
+val jsonVersion: String by project
+val slf4jVersion: String by project
 val springDotEnvVersion: String by project
 
 group = "ru.izpz"
@@ -23,9 +26,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-logging")
 
-    implementation("org.java-websocket:Java-WebSocket:1.6.0")
-    implementation("org.json:json:20250517")
-    implementation("org.slf4j:slf4j-api:2.0.17")
+    implementation("org.java-websocket:Java-WebSocket:${javaWebSocketVersion}")
+    implementation("org.json:json:${jsonVersion}")
+    implementation("org.slf4j:slf4j-api:${slf4jVersion}")
 
     implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
 

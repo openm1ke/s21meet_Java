@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.dto.FriendDto;
 import ru.izpz.dto.FriendsSliceDto;
@@ -15,7 +16,6 @@ import ru.izpz.dto.EventsSliceDto;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,8 +51,8 @@ class TelegramKeyboardFactoryTest {
         InlineKeyboardMarkup kb = factory.createUrlKeyboard(buttons, 1);
         assertNotNull(kb);
         assertEquals(2, kb.getKeyboard().size());
-        assertEquals("t1", kb.getKeyboard().get(0).get(0).getText());
-        assertEquals("u1", kb.getKeyboard().get(0).get(0).getUrl());
+        assertEquals("t1", kb.getKeyboard().getFirst().getFirst().getText());
+        assertEquals("u1", kb.getKeyboard().getFirst().getFirst().getUrl());
     }
 
     @Test
@@ -63,8 +63,8 @@ class TelegramKeyboardFactoryTest {
 
         InlineKeyboardMarkup kb = factory.createInlineKeyboardMarkup(buttons, 1);
         assertNotNull(kb);
-        assertEquals("d1", kb.getKeyboard().get(0).get(0).getCallbackData());
-        assertEquals("d2", kb.getKeyboard().get(1).get(0).getCallbackData());
+        assertEquals("d1", kb.getKeyboard().get(0).getFirst().getCallbackData());
+        assertEquals("d2", kb.getKeyboard().get(1).getFirst().getCallbackData());
     }
 
     @Test
@@ -107,8 +107,8 @@ class TelegramKeyboardFactoryTest {
         assertNotNull(kb);
         List<String> callbackData = kb.getKeyboard().stream()
                 .flatMap(List::stream)
-                .map(b -> b.getCallbackData())
-                .collect(Collectors.toList());
+                .map(InlineKeyboardButton::getCallbackData)
+                .toList();
 
         assertTrue(callbackData.contains("cb"));
     }
@@ -129,8 +129,8 @@ class TelegramKeyboardFactoryTest {
         assertNotNull(kb);
         List<String> callbackData = kb.getKeyboard().stream()
                 .flatMap(List::stream)
-                .map(b -> b.getCallbackData())
-                .collect(Collectors.toList());
+                .map(InlineKeyboardButton::getCallbackData)
+                .toList();
 
         assertEquals(4, callbackData.size());
         assertTrue(callbackData.stream().allMatch("cb"::equals));
