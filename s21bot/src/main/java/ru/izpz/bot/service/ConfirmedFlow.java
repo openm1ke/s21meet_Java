@@ -87,6 +87,7 @@ public class ConfirmedFlow {
                         messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
                     }
                 }
+                default -> log.warn("Unhandled LastCommandType: {}", cmd);
             }
 
             callbackHandler.setLastCommand(chatId, null, null);

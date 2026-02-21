@@ -23,6 +23,8 @@ public class GraphQLApiClient {
 
     private static final String GRAPHQL_URL = "https://platform.21-school.ru/services/graphql";
     private static final String SCHOOL_ID = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
+    private static final String ERRORS_FIELD = "errors";
+    private static final String DATA_FIELD = "data";
     private final RestTemplate restTemplate;
     private final TokenService tokenService;
     private final ObjectMapper om;
@@ -55,12 +57,12 @@ public class GraphQLApiClient {
 
         try {
             JsonNode root = om.readTree(raw);
-            if (root.has("errors") && root.get("errors").isArray() && !root.get("errors").isEmpty()) {
-                return handleGraphQlErrors(root.get("errors"));
+            if (root.has(ERRORS_FIELD) && root.get(ERRORS_FIELD).isArray() && !root.get(ERRORS_FIELD).isEmpty()) {
+                return handleGraphQlErrors(root.get(ERRORS_FIELD));
             }
-            JsonNode data = root.get("data");
+            JsonNode data = root.get(DATA_FIELD);
             if (data == null || data.isNull()) {
-                throw new GraphQlRemoteException("В ответе нет поля 'data'");
+                throw new GraphQlRemoteException("В ответе нет поля '" + DATA_FIELD + "'");
             }
             return om.convertValue(data, dataClass);
 

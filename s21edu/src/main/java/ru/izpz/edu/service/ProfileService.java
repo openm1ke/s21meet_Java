@@ -30,6 +30,8 @@ import java.time.OffsetDateTime;
 @ConditionalOnProperty(name = "profile.service.enabled", havingValue = "true")
 public class ProfileService {
 
+    private static final String PROFILE_NOT_FOUND_MESSAGE = "Профиль не найден для telegramId = ";
+
     private final ProfileMapper profileMapper;
     private final ProfileVerificationMapper profileVerificationMapper;
     private final ProfileRepository profileRepository;
@@ -53,7 +55,7 @@ public class ProfileService {
     public ProfileDto getProfile(String telegramId) {
         return profileRepository.findByTelegramId(telegramId)
             .map(profileMapper::toDto)
-            .orElseThrow(() -> new EntityNotFoundException("Профиль не найден для telegramId = " + telegramId)
+            .orElseThrow(() -> new EntityNotFoundException(PROFILE_NOT_FOUND_MESSAGE + telegramId)
         );
     }
 
@@ -64,7 +66,7 @@ public class ProfileService {
                 return profileRepository.save(existing);
             })
             .map(profileMapper::toDto)
-            .orElseThrow(() -> new EntityNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
+            .orElseThrow(() -> new EntityNotFoundException(PROFILE_NOT_FOUND_MESSAGE + request.getTelegramId()));
     }
 
     public ProfileDto checkAndSetLogin(String telegramId, String s21login) {
@@ -72,7 +74,7 @@ public class ProfileService {
             throw new IllegalStateException("Логин " + s21login + " уже привязан к другому профилю");
         }
         Profile profile = profileRepository.findByTelegramId(telegramId)
-                .orElseThrow(() -> new EntityNotFoundException("Профиль не найден для telegramId = " + telegramId));
+                .orElseThrow(() -> new EntityNotFoundException(PROFILE_NOT_FOUND_MESSAGE + telegramId));
         if (profile.getS21login() != null) {
             throw new IllegalStateException("Профиль уже привязан к логину " + profile.getS21login());
         }
@@ -107,7 +109,7 @@ public class ProfileService {
 
     public ProfileDto updateLastCommand(@Valid LastCommandRequest request) {
         Profile profile = profileRepository.findByTelegramId(request.getTelegramId())
-                .orElseThrow(() -> new EntityNotFoundException("Профиль не найден для telegramId = " + request.getTelegramId()));
+                .orElseThrow(() -> new EntityNotFoundException(PROFILE_NOT_FOUND_MESSAGE + request.getTelegramId()));
         profile.setLastCommand(request.getCommand());
         return profileMapper.toDto(profileRepository.save(profile));
     }

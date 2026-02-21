@@ -41,11 +41,11 @@ class RocketChatWebSocketClientTest {
     }
 
     @Test
-    void execute_shouldReturnTimeoutResponse_whenLatchNotCompleted() throws InterruptedException {
+    void execute_shouldReturnTimeoutResponse_whenLatchNotCompleted() {
         // Given
         RocketChatWebSocketClient timeoutClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
             @Override
-            public boolean connectBlocking() throws InterruptedException {
+            public boolean connectBlocking() {
                 // Simulate connection but don't complete latch
                 return true;
             }
@@ -61,11 +61,11 @@ class RocketChatWebSocketClientTest {
     }
 
     @Test
-    void execute_shouldReturnErrorResponse_whenExceptionThrown() throws InterruptedException {
+    void execute_shouldReturnErrorResponse_whenExceptionThrown() {
         // Given
         RocketChatWebSocketClient errorClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
             @Override
-            public boolean connectBlocking() throws InterruptedException {
+            public boolean connectBlocking() {
                 throw new RuntimeException("Connection failed");
             }
         };
@@ -81,11 +81,11 @@ class RocketChatWebSocketClientTest {
     }
 
     @Test
-    void execute_shouldReturnSuccessResponse_whenResponseExists() throws InterruptedException {
+    void execute_shouldReturnSuccessResponse_whenResponseExists() {
         // Given
         RocketChatWebSocketClient successClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
             @Override
-            public boolean connectBlocking() throws InterruptedException {
+            public boolean connectBlocking() {
                 // Simulate successful connection and set response
                 try {
                     var responseField = RocketChatWebSocketClient.class.getDeclaredField("response");
