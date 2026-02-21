@@ -2,7 +2,6 @@ package ru.izpz.auth.utils;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
@@ -20,8 +19,11 @@ public class PasswordConverter implements AttributeConverter<String, String> {
     private static final String PREFIX = "enc:";
     private static final SecureRandom RNG = new SecureRandom();
 
-    @Autowired
-    private CryptoKey cryptoKey;
+    private final CryptoKey cryptoKey;
+
+    public PasswordConverter(CryptoKey cryptoKey) {
+        this.cryptoKey = cryptoKey;
+    }
 
     @Override
     public String convertToDatabaseColumn(String attr) {
