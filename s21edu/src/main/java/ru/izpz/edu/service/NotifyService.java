@@ -49,14 +49,14 @@ public class NotifyService {
                     o.setIsOnline(true);
                     onlineRepository.save(o);
                     addChangeIfSubscribers(changes, login, true);
-                } else if (!opt.get().getIsOnline()) {
+                } else if (Boolean.FALSE.equals(opt.get().getIsOnline())) {
                     Online o = opt.get();
                     o.setIsOnline(true);
                     onlineRepository.save(o);
                     addChangeIfSubscribers(changes, login, true);
                 }
             } else {
-                if (opt.isPresent() && opt.get().getIsOnline()) {
+                if (opt.isPresent() && Boolean.TRUE.equals(opt.get().getIsOnline())) {
                     Online o = opt.get();
                     o.setIsOnline(false);
                     onlineRepository.save(o);

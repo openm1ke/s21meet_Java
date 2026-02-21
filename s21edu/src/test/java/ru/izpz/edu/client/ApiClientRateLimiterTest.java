@@ -109,8 +109,9 @@ class ApiClientRateLimiterTest {
 
         for (int i = 0; i < 3; i++) {
             final int callNumber = i + 1;
+            Call call = mockOkCall200();
             RequestNotPermitted ex = assertThrows(RequestNotPermitted.class, 
-                () -> apiClient.execute(mockOkCall200(), null),
+                () -> apiClient.execute(call, null),
                 "Должно было кинуть RequestNotPermitted на вызове #" + callNumber);
             thrown.add(ex);
         }
@@ -121,7 +122,8 @@ class ApiClientRateLimiterTest {
     void refreshes_after_window() throws Exception {
         apiClient.execute(mockOkCall200(), null);
         apiClient.execute(mockOkCall200(), null);
-        assertThrows(RequestNotPermitted.class, () -> apiClient.execute(mockOkCall200(), null));
+        Call blockedCall = mockOkCall200();
+        assertThrows(RequestNotPermitted.class, () -> apiClient.execute(blockedCall, null));
 
         // Wait for rate limit window to refresh
         CountDownLatch latch = new CountDownLatch(1);

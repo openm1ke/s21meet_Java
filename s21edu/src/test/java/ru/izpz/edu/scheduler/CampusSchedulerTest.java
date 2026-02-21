@@ -2,6 +2,7 @@ package ru.izpz.edu.scheduler;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -13,8 +14,6 @@ import ru.izpz.edu.service.CampusService;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -38,9 +37,9 @@ class CampusSchedulerTest {
 
     @Test
     void parseMskKznNsk_success_updatesClustersAndParticipants() throws Exception {
-        when(campusClient.getClustersByCampus(eq(MSK))).thenReturn(List.of());
-        when(campusClient.getClustersByCampus(eq(KZN))).thenReturn(List.of());
-        when(campusClient.getClustersByCampus(eq(NSK))).thenReturn(List.of());
+        when(campusClient.getClustersByCampus(MSK)).thenReturn(List.of());
+        when(campusClient.getClustersByCampus(KZN)).thenReturn(List.of());
+        when(campusClient.getClustersByCampus(NSK)).thenReturn(List.of());
 
         Cluster c1 = new Cluster();
         c1.setClusterId(1L);
@@ -53,23 +52,27 @@ class CampusSchedulerTest {
 
         assertDoesNotThrow(() -> scheduler.parseMskKznNsk());
 
-        verify(campusClient, timeout(1000)).getClustersByCampus(eq(MSK));
-        verify(campusClient, timeout(1000)).getClustersByCampus(eq(KZN));
-        verify(campusClient, timeout(1000)).getClustersByCampus(eq(NSK));
+        ArgumentCaptor<String> campusIdCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<List> clustersCaptor = ArgumentCaptor.forClass(List.class);
 
-        verify(campusService, timeout(1000)).replaceClustersByCampusId(eq(MSK), anyList());
-        verify(campusService, timeout(1000)).replaceClustersByCampusId(eq(KZN), anyList());
-        verify(campusService, timeout(1000)).replaceClustersByCampusId(eq(NSK), anyList());
+        verify(campusClient, timeout(1000)).getClustersByCampus(MSK);
+        verify(campusClient, timeout(1000)).getClustersByCampus(KZN);
+        verify(campusClient, timeout(1000)).getClustersByCampus(NSK);
 
-        verify(campusService, timeout(1000)).replaceParticipantsByClusterIdWithProvider(eq(1L));
-        verify(campusService, timeout(1000)).replaceParticipantsByClusterIdWithProvider(eq(2L));
+        verify(campusService, timeout(1000).times(3)).replaceClustersByCampusId(campusIdCaptor.capture(), clustersCaptor.capture());
+
+        verify(campusService, timeout(1000)).replaceParticipantsByClusterIdWithProvider(1L);
+        verify(campusService, timeout(1000)).replaceParticipantsByClusterIdWithProvider(2L);
+
+        List<String> campusIds = campusIdCaptor.getAllValues();
+        org.junit.jupiter.api.Assertions.assertTrue(campusIds.containsAll(List.of(MSK, KZN, NSK)));
     }
 
     @Test
     void parseMskKznNsk_whenApiExceptions_doesNotThrowAndContinues() throws Exception {
-        when(campusClient.getClustersByCampus(eq(MSK))).thenReturn(List.of());
-        when(campusClient.getClustersByCampus(eq(KZN))).thenThrow(new ApiException("boom"));
-        when(campusClient.getClustersByCampus(eq(NSK))).thenReturn(List.of());
+        when(campusClient.getClustersByCampus(MSK)).thenReturn(List.of());
+        when(campusClient.getClustersByCampus(KZN)).thenThrow(new ApiException("boom"));
+        when(campusClient.getClustersByCampus(NSK)).thenReturn(List.of());
 
         Cluster c1 = new Cluster();
         c1.setClusterId(1L);
@@ -79,18 +82,23 @@ class CampusSchedulerTest {
         c2.setName("c2");
 
         when(campusService.findAllByOrderByCampusIdAsc()).thenReturn(List.of(c1, c2));
-        doThrow(new ApiException("participants boom")).when(campusService).replaceParticipantsByClusterIdWithProvider(eq(2L));
+        doThrow(new ApiException("participants boom")).when(campusService).replaceParticipantsByClusterIdWithProvider(2L);
 
         assertDoesNotThrow(() -> scheduler.parseMskKznNsk());
 
-        verify(campusClient, timeout(1000)).getClustersByCampus(eq(MSK));
-        verify(campusClient, timeout(1000)).getClustersByCampus(eq(KZN));
-        verify(campusClient, timeout(1000)).getClustersByCampus(eq(NSK));
+        ArgumentCaptor<String> campusIdCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<List> clustersCaptor = ArgumentCaptor.forClass(List.class);
 
-        verify(campusService, timeout(1000)).replaceClustersByCampusId(eq(MSK), anyList());
-        verify(campusService, timeout(1000)).replaceClustersByCampusId(eq(NSK), anyList());
+        verify(campusClient, timeout(1000)).getClustersByCampus(MSK);
+        verify(campusClient, timeout(1000)).getClustersByCampus(KZN);
+        verify(campusClient, timeout(1000)).getClustersByCampus(NSK);
 
-        verify(campusService, timeout(1000)).replaceParticipantsByClusterIdWithProvider(eq(1L));
-        verify(campusService, timeout(1000)).replaceParticipantsByClusterIdWithProvider(eq(2L));
+        verify(campusService, timeout(1000).times(2)).replaceClustersByCampusId(campusIdCaptor.capture(), clustersCaptor.capture());
+
+        verify(campusService, timeout(1000)).replaceParticipantsByClusterIdWithProvider(1L);
+        verify(campusService, timeout(1000)).replaceParticipantsByClusterIdWithProvider(2L);
+
+        List<String> campusIds = campusIdCaptor.getAllValues();
+        org.junit.jupiter.api.Assertions.assertTrue(campusIds.containsAll(List.of(MSK, NSK)));
     }
 }
