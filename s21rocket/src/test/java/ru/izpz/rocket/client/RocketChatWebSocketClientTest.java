@@ -82,6 +82,31 @@ class RocketChatWebSocketClientTest {
     }
 
     @Test
+    void execute_shouldReturnInterruptedResponse_whenThreadInterrupted() {
+        // Given
+        RocketChatWebSocketClient interruptedClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+            @Override
+            public boolean connectBlocking() {
+                return true;
+            }
+        };
+
+        // When
+        Thread.currentThread().interrupt();
+        try {
+            RocketChatSendResponse result = interruptedClient.execute(5);
+
+            // Then
+            assertNotNull(result);
+            assertFalse(result.isSuccess());
+            assertEquals("Interrupted", result.getMessage());
+        } finally {
+            // очистка флага прерывания, чтобы не влиять на другие тесты
+            Thread.interrupted();
+        }
+    }
+
+    @Test
     void execute_shouldReturnSuccessResponse_whenResponseExists() {
         // Given
         RocketChatWebSocketClient successClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {

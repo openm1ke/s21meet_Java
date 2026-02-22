@@ -83,13 +83,69 @@ class RocketChatServiceTest {
 
     @Test
     void generateQrCode_shouldReturnSuccessResponse() {
-        // Given & When
-        RocketChatSendResponse result = rocketChatService.generateQrCode();
+        // Given
+        RocketChatService service = new RocketChatService(properties) {
+            @Override
+            RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+                return new RocketChatWebSocketClient(properties.getWebsocketUri(), properties.getToken(), targetUsername, messageToSend, isQrMode) {
+                    @Override
+                    public RocketChatSendResponse execute(long timeoutSeconds) {
+                        return new RocketChatSendResponse(true, "qr-ok");
+                    }
+                };
+            }
+        };
+
+        // When
+        RocketChatSendResponse result = service.generateQrCode();
 
         // Then
         assertNotNull(result);
-        assertNotNull(result.getMessage());
-        // В реальном сценарии здесь будет проверка на успешное подключение или ошибку
+        assertTrue(result.isSuccess());
+        assertEquals("qr-ok", result.getMessage());
+    }
+
+    @Test
+    void generateQrCode_shouldReturnErrorResponse_whenExceptionThrown() {
+        // Given
+        RocketChatService service = new RocketChatService(properties) {
+            @Override
+            RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+                throw new RuntimeException("boom");
+            }
+        };
+
+        // When
+        RocketChatSendResponse result = service.generateQrCode();
+
+        // Then
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertEquals("Failed to generate QR code: boom", result.getMessage());
+    }
+
+    @Test
+    void generateQrCode_shouldReturnFailureResponse_whenClientReturnsFailure() {
+        // Given
+        RocketChatService service = new RocketChatService(properties) {
+            @Override
+            RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+                return new RocketChatWebSocketClient(properties.getWebsocketUri(), properties.getToken(), targetUsername, messageToSend, isQrMode) {
+                    @Override
+                    public RocketChatSendResponse execute(long timeoutSeconds) {
+                        return new RocketChatSendResponse(false, "qr-failed");
+                    }
+                };
+            }
+        };
+
+        // When
+        RocketChatSendResponse result = service.generateQrCode();
+
+        // Then
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertEquals("qr-failed", result.getMessage());
     }
 
     @ParameterizedTest
@@ -111,13 +167,74 @@ class RocketChatServiceTest {
         String username = "testuser";
         String message = "Test verification code: 123456";
 
+        RocketChatService service = new RocketChatService(properties) {
+            @Override
+            RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+                return new RocketChatWebSocketClient(properties.getWebsocketUri(), properties.getToken(), targetUsername, messageToSend, isQrMode) {
+                    @Override
+                    public RocketChatSendResponse execute(long timeoutSeconds) {
+                        return new RocketChatSendResponse(true, messageToSend);
+                    }
+                };
+            }
+        };
+
         // When
-        RocketChatSendResponse result = rocketChatService.sendVerificationCode(username, message);
+        RocketChatSendResponse result = service.sendVerificationCode(username, message);
 
         // Then
         assertNotNull(result);
-        assertNotNull(result.getMessage());
-        // В реальном сценарии здесь будет проверка на успешное подключение или ошибку
+        assertTrue(result.isSuccess());
+        assertEquals(message, result.getMessage());
+    }
+
+    @Test
+    void sendVerificationCode_shouldReturnErrorResponse_whenExceptionThrown() {
+        // Given
+        String username = "testuser";
+        String message = "Test verification code: 123456";
+
+        RocketChatService service = new RocketChatService(properties) {
+            @Override
+            RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+                throw new RuntimeException("ws down");
+            }
+        };
+
+        // When
+        RocketChatSendResponse result = service.sendVerificationCode(username, message);
+
+        // Then
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertEquals("Failed to send verification code: ws down", result.getMessage());
+    }
+
+    @Test
+    void sendVerificationCode_shouldReturnFailureResponse_whenClientReturnsFailure() {
+        // Given
+        String username = "testuser";
+        String message = "Test verification code: 123456";
+
+        RocketChatService service = new RocketChatService(properties) {
+            @Override
+            RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+                return new RocketChatWebSocketClient(properties.getWebsocketUri(), properties.getToken(), targetUsername, messageToSend, isQrMode) {
+                    @Override
+                    public RocketChatSendResponse execute(long timeoutSeconds) {
+                        return new RocketChatSendResponse(false, "send-failed");
+                    }
+                };
+            }
+        };
+
+        // When
+        RocketChatSendResponse result = service.sendVerificationCode(username, message);
+
+        // Then
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertEquals("send-failed", result.getMessage());
     }
 
     @Test

@@ -17,6 +17,16 @@ public class RocketChatService {
 
     private final RocketChatProperties properties;
 
+    RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+        return new RocketChatWebSocketClient(
+            properties.getWebsocketUri(),
+            properties.getToken(),
+            targetUsername,
+            messageToSend,
+            isQrMode
+        );
+    }
+
     @PostConstruct
     public void validateConfiguration() {
         log.debug("Validating Rocket.Chat configuration...");
@@ -51,13 +61,7 @@ public class RocketChatService {
         
         try {
             log.debug("Creating WebSocket client for QR generation");
-            RocketChatWebSocketClient client = new RocketChatWebSocketClient(
-                properties.getWebsocketUri(), 
-                properties.getToken(), 
-                properties.getBotUsername(), 
-                null, 
-                true
-            );
+            RocketChatWebSocketClient client = createClient(properties.getBotUsername(), null, true);
             
             log.debug("Executing QR generation with timeout: {}s", properties.getQrTimeout());
             RocketChatSendResponse response = client.execute(properties.getQrTimeout());
@@ -93,13 +97,7 @@ public class RocketChatService {
         
         try {
             log.debug("Creating WebSocket client for message sending to user: {}", targetUsername);
-            RocketChatWebSocketClient client = new RocketChatWebSocketClient(
-                properties.getWebsocketUri(), 
-                properties.getToken(), 
-                targetUsername, 
-                message, 
-                false
-            );
+            RocketChatWebSocketClient client = createClient(targetUsername, message, false);
             
             log.debug("Executing message sending with timeout: {}s", properties.getMessageTimeout());
             RocketChatSendResponse response = client.execute(properties.getMessageTimeout());
