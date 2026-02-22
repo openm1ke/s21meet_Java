@@ -26,6 +26,7 @@ dependencies {
     implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
     implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
     implementation("org.springframework.retry:spring-retry:$springRetryVersion")
     implementation("com.squareup.okhttp3:okhttp:${squareupOkhttpVersion}")
     implementation("com.squareup.okhttp3:logging-interceptor:${squareupOkhttpVersion}")

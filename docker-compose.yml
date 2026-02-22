@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # База данных PostgreSQL
   postgres:
@@ -10,10 +8,138 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - s21meet-network
+
+  s21auth:
+    build:
+      context: ./s21auth
+    container_name: s21auth
+    restart: unless-stopped
+    env_file:
+      - ./s21auth/.env
+    environment:
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "8081:8081"
+    networks:
+      - s21meet-network
+
+  s21edu:
+    build:
+      context: ./s21edu
+    container_name: s21edu
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      s21auth:
+        condition: service_healthy
+    env_file:
+      - ./s21edu/.env
+    environment:
+      TZ: UTC
+      DB_URL: jdbc:postgresql://postgres:5432/postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      TOKEN_ENDPOINT: http://s21auth:8081/api/tokens/default
+      BOT_SERVICE_URL: http://s21bot:8083
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "8082:8082"
+    networks:
+      - s21meet-network
+
+  s21bot:
+    build:
+      context: ./s21bot
+    container_name: s21bot
+    restart: unless-stopped
+    depends_on:
+      s21edu:
+        condition: service_healthy
+      s21rocket:
+        condition: service_healthy
+    env_file:
+      - ./s21bot/.env
+    environment:
+      TZ: UTC
+      ROCKETCHAT_SERVICE_URL: http://s21rocket:8084
+      PROFILE_SERVICE_URL: http://s21edu:8082
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "8083:8083"
+    networks:
+      - s21meet-network
+
+  s21rocket:
+    build:
+      context: ./s21rocket
+    container_name: s21rocket
+    restart: unless-stopped
+    env_file:
+      - ./s21rocket/.env
+    environment:
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "8084:8084"
+    networks:
+      - s21meet-network
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - s21meet-network
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
     networks:
       - s21meet-network
 
@@ -24,3 +150,5 @@ networks:
 
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
