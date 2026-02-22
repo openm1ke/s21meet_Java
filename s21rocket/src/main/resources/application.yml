@@ -5,6 +5,12 @@ spring:
   application:
     name: s21rocket
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
 rocketchat:
   websocket-uri: ${ROCKET_CHAT_URL}
   bot-username: ${ROCKET_CHAT_QR_BOT}
