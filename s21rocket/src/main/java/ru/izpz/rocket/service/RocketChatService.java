@@ -10,12 +10,19 @@ import ru.izpz.rocket.property.RocketChatProperties;
 
 import jakarta.annotation.PostConstruct;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RocketChatService {
 
     private final RocketChatProperties properties;
+
+    private final AtomicReference<CompletableFuture<RocketChatSendResponse>> qrInFlight = new AtomicReference<>();
 
     RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
         return new RocketChatWebSocketClient(
@@ -58,23 +65,52 @@ public class RocketChatService {
 
     public RocketChatSendResponse generateQrCode() {
         log.info("Starting QR code generation for bot user: {}", properties.getBotUsername());
-        
+
+        CompletableFuture<RocketChatSendResponse> existing = qrInFlight.get();
+        if (existing != null) {
+            return awaitQr(existing);
+        }
+
+        CompletableFuture<RocketChatSendResponse> created = new CompletableFuture<>();
+        if (!qrInFlight.compareAndSet(null, created)) {
+            return awaitQr(qrInFlight.get());
+        }
+
         try {
             log.debug("Creating WebSocket client for QR generation");
             RocketChatWebSocketClient client = createClient(properties.getBotUsername(), null, true);
-            
+
             log.debug("Executing QR generation with timeout: {}s", properties.getQrTimeout());
             RocketChatSendResponse response = client.execute(properties.getQrTimeout());
-            
+
             if (response.isSuccess()) {
                 log.info("QR code generated successfully");
             } else {
                 log.warn("QR code generation failed: {}", response.getMessage());
             }
-            
+
+            created.complete(response);
             return response;
         } catch (Exception e) {
             log.error("Unexpected error during QR code generation", e);
+            RocketChatSendResponse failure = new RocketChatSendResponse(false, "Failed to generate QR code: " + e.getMessage());
+            created.complete(failure);
+            return failure;
+        } finally {
+            qrInFlight.compareAndSet(created, null);
+        }
+    }
+
+    private RocketChatSendResponse awaitQr(CompletableFuture<RocketChatSendResponse> future) {
+        if (future == null) {
+            return new RocketChatSendResponse(false, "Unexpected empty response");
+        }
+        try {
+            long waitSeconds = Math.max(1L, properties.getQrTimeout() + 5L);
+            return future.get(waitSeconds, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            return new RocketChatSendResponse(false, "Timeout waiting for QR code generation");
+        } catch (Exception e) {
             return new RocketChatSendResponse(false, "Failed to generate QR code: " + e.getMessage());
         }
     }

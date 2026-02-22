@@ -13,6 +13,12 @@ import ru.izpz.dto.RocketChatSendResponse;
 import ru.izpz.rocket.client.RocketChatWebSocketClient;
 import ru.izpz.rocket.property.RocketChatProperties;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,11 +38,95 @@ class RocketChatServiceTest {
         properties.setWebsocketUri("ws://localhost:3000/websocket");
         properties.setBotUsername("botuser");
         properties.setToken("test-token");
-        properties.setQrTimeout(30L);
-        properties.setMessageTimeout(15L);
+        properties.setQrTimeout(1L);
+        properties.setMessageTimeout(1L);
         
         // Создаем новый сервис с правильными пропертями
         rocketChatService = new RocketChatService(properties);
+    }
+
+    @Test
+    void generateQrCode_shouldSingleFlight_whenCalledConcurrently() throws Exception {
+        // Given
+        AtomicInteger executeCalls = new AtomicInteger();
+        CountDownLatch executeStarted = new CountDownLatch(1);
+        CountDownLatch allowExecuteFinish = new CountDownLatch(1);
+
+        RocketChatService service = new RocketChatService(properties) {
+            @Override
+            RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+                return new RocketChatWebSocketClient(properties.getWebsocketUri(), properties.getToken(), targetUsername, messageToSend, isQrMode) {
+                    @Override
+                    public RocketChatSendResponse execute(long timeoutSeconds) {
+                        executeCalls.incrementAndGet();
+                        executeStarted.countDown();
+                        try {
+                            if (!allowExecuteFinish.await(3, TimeUnit.SECONDS)) {
+                                return new RocketChatSendResponse(false, "blocked");
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return new RocketChatSendResponse(false, "interrupted");
+                        }
+                        return new RocketChatSendResponse(true, "qr-ok");
+                    }
+                };
+            }
+        };
+
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            // When
+            Future<RocketChatSendResponse> f1 = executor.submit(service::generateQrCode);
+            Future<RocketChatSendResponse> f2 = executor.submit(service::generateQrCode);
+
+            assertTrue(executeStarted.await(2, TimeUnit.SECONDS), "execute() should start");
+            allowExecuteFinish.countDown();
+
+            RocketChatSendResponse r1 = f1.get(3, TimeUnit.SECONDS);
+            RocketChatSendResponse r2 = f2.get(3, TimeUnit.SECONDS);
+
+            // Then
+            assertNotNull(r1);
+            assertNotNull(r2);
+            assertTrue(r1.isSuccess());
+            assertTrue(r2.isSuccess());
+            assertEquals("qr-ok", r1.getMessage());
+            assertEquals("qr-ok", r2.getMessage());
+            assertEquals(1, executeCalls.get());
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void generateQrCode_shouldAllowNewExecution_afterPreviousCompleted() {
+        // Given
+        AtomicInteger executeCalls = new AtomicInteger();
+
+        RocketChatService service = new RocketChatService(properties) {
+            @Override
+            RocketChatWebSocketClient createClient(String targetUsername, String messageToSend, boolean isQrMode) {
+                return new RocketChatWebSocketClient(properties.getWebsocketUri(), properties.getToken(), targetUsername, messageToSend, isQrMode) {
+                    @Override
+                    public RocketChatSendResponse execute(long timeoutSeconds) {
+                        int call = executeCalls.incrementAndGet();
+                        return new RocketChatSendResponse(true, "qr-ok-" + call);
+                    }
+                };
+            }
+        };
+
+        // When
+        RocketChatSendResponse r1 = service.generateQrCode();
+        RocketChatSendResponse r2 = service.generateQrCode();
+
+        // Then
+        assertTrue(r1.isSuccess());
+        assertTrue(r2.isSuccess());
+        assertEquals("qr-ok-1", r1.getMessage());
+        assertEquals("qr-ok-2", r2.getMessage());
+        assertEquals(2, executeCalls.get());
     }
 
     @Test
