@@ -70,3 +70,11 @@ tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar
 springBoot {
     mainClass.set("ru.izpz.bot.S21BotApplication")
 }
+
+tasks.getByName<Jar>("jar") {
+    enabled = true
+}
+
+tasks.bootJar {
+    archiveFileName.set("app.jar")
+}
