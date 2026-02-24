@@ -46,6 +46,9 @@ class CallbackHandlerTest {
     @Mock
     private MessageSender messageSender;
 
+    @Mock
+    private MetricsService metricsService;
+
     @InjectMocks
     private CallbackHandler callbackHandler;
 

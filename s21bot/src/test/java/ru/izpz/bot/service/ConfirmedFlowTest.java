@@ -43,6 +43,9 @@ class ConfirmedFlowTest {
     @Mock
     private CallbackHandler callbackHandler;
 
+    @Mock
+    private MetricsService metricsService;
+
     @InjectMocks
     private ConfirmedFlow confirmedFlow;
 
