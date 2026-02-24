@@ -39,7 +39,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
     implementation("com.squareup.okio:okio-jvm:$okioJvmVersion")
     implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
-
+    implementation("org.springframework.boot:spring-boot-starter-aop")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")

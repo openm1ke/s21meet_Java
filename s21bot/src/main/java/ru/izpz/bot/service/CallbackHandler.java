@@ -27,6 +27,7 @@ public class CallbackHandler {
     private final TelegramKeyboardFactory telegramKeyboardFactory;
     private final CallbackPayloadSerializer callbackPayloadSerializer;
     private final MessageSender messageSender;
+    private final MetricsService metricsService;
 
     private static final int ROW_SIZE = 3;
     private static final int PAGE_SIZE = 2;
@@ -35,6 +36,9 @@ public class CallbackHandler {
     public void handleCallbackMessage(Long chatId, String data, Integer messageId, String callbackId) {
         try {
             CallbackPayload payload = callbackPayloadSerializer.deserialize(data);
+            
+            // Записываем метрику для inline кнопок
+            metricsService.recordButtonPress(chatId, payload.getCommand(), "inline");
 
             switch (payload.getCommand()) {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
