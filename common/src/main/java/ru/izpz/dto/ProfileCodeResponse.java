@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class ProfileCodeResponse {
     private String s21login;
     private String secretCode;
