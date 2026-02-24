@@ -39,3 +39,7 @@ tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar
 springBoot {
     mainClass.set("ru.izpz.auth.S21AuthApplication")
 }
+
+tasks.bootJar {
+    archiveFileName.set("app.jar")
+}

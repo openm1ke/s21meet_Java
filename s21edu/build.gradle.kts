@@ -71,3 +71,7 @@ tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar
 springBoot {
     mainClass.set("ru.izpz.edu.S21EduApplication")
 }
+
+tasks.bootJar {
+    archiveFileName.set("app.jar")
+}
