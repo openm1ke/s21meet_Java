@@ -24,6 +24,7 @@ public class ConfirmedFlow {
     private final MessageSender messageSender;
     private final TelegramKeyboardFactory telegramKeyboardFactory;
     private final CallbackHandler callbackHandler;
+    private final MetricsService metricsService;
 
     public void startConfirmed(Long chatId, ProfileDto profile, String text) {
         // проверка подписан ли на канал
@@ -50,6 +51,9 @@ public class ConfirmedFlow {
         // если текст это команда меню
         if (MenuCommandEnum.contains(text)) {
             MenuCommandEnum.fromText(text).ifPresent(command -> {
+                // Записываем метрику для команд клавиатуры
+                metricsService.recordButtonPress(chatId, command.name(), "keyboard");
+                
                 switch (command) {
                     case SEARCH -> {
                         callbackHandler.setLastCommand(chatId, LastCommandType.SEARCH, null);
@@ -76,6 +80,9 @@ public class ConfirmedFlow {
 
         // в ином случае нужно проверить ласт комманд и вызвать нужный метод
         LastCommandType.fromName(profile.lastCommand()).ifPresent(cmd -> {
+            // Записываем метрику для LastCommand
+            metricsService.recordButtonPress(chatId, cmd.name(), "last_command");
+            
             switch (cmd) {
                 case SEARCH -> callbackHandler.showProfile(chatId, text);
                 case SET_NAME -> {
