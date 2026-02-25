@@ -1,3 +1,7 @@
+import org.gradle.kotlin.dsl.named
+import org.gradle.jvm.tasks.Jar
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
 plugins {
     java
     id("org.springframework.boot")
@@ -8,6 +12,7 @@ val springDotEnvVersion: String by project
 val resilience4jVersion: String by project
 
 dependencies {
+    implementation(project(":common"))
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -26,20 +31,18 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-webflux")
 }
 
-tasks.getByName<Jar>("jar") {
-    enabled = true
-}
-
-tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
-    enabled = true
-    archiveFileName.set("${project.name}.jar")
-    mainClass.set("ru.izpz.auth.S21AuthApplication")
+tasks.test {
+    useJUnitPlatform()
 }
 
 springBoot {
     mainClass.set("ru.izpz.auth.S21AuthApplication")
 }
 
-tasks.bootJar {
+tasks.named<BootJar>("bootJar") {
     archiveFileName.set("app.jar")
+}
+
+tasks.named<Jar>("jar") {
+    enabled = false
 }

@@ -1,3 +1,7 @@
+import org.gradle.kotlin.dsl.named
+import org.gradle.jvm.tasks.Jar
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
 plugins {
     java
     id("org.springframework.boot")
@@ -61,20 +65,14 @@ configurations.all {
     }
 }
 
-tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
-    enabled = true
-    archiveFileName.set("${project.name}.jar")
-    mainClass.set("ru.izpz.bot.S21BotApplication")
-}
-
 springBoot {
     mainClass.set("ru.izpz.bot.S21BotApplication")
 }
 
-tasks.getByName<Jar>("jar") {
-    enabled = true
+tasks.named<BootJar>("bootJar") {
+    archiveFileName.set("app.jar")
 }
 
-tasks.bootJar {
-    archiveFileName.set("app.jar")
+tasks.named<Jar>("jar") {
+    enabled = false
 }
