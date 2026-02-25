@@ -110,6 +110,9 @@ public class RocketChatService {
             return future.get(waitSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             return new RocketChatSendResponse(false, "Timeout waiting for QR code generation");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return new RocketChatSendResponse(false, "QR code generation was interrupted");
         } catch (Exception e) {
             return new RocketChatSendResponse(false, "Failed to generate QR code: " + e.getMessage());
         }
