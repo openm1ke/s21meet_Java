@@ -2,7 +2,7 @@ package ru.izpz.auth.service;
 
 import ru.izpz.auth.client.TokenClient;
 import ru.izpz.auth.dto.TokenResponse;
-import ru.izpz.auth.exception.TokenResponseException;
+import ru.izpz.exception.TokenResponseException;
 import ru.izpz.auth.model.TokenEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

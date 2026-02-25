@@ -1,4 +1,4 @@
-package ru.izpz.auth.exception;
+package ru.izpz.exception;
 
 public class TokenResponseException extends RuntimeException {
 

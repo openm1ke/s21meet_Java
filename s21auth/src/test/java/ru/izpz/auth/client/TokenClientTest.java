@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.auth.dto.TokenResponse;
-import ru.izpz.auth.exception.TokenResponseException;
+import ru.izpz.exception.TokenResponseException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;

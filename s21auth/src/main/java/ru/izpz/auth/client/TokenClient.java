@@ -13,7 +13,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.auth.dto.TokenResponse;
-import ru.izpz.auth.exception.TokenResponseException;
+import ru.izpz.exception.TokenResponseException;
 
 @Slf4j
 @Service

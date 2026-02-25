@@ -1,3 +1,6 @@
+import org.gradle.kotlin.dsl.named
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
 plugins {
     java
     id("org.springframework.boot")
@@ -41,10 +44,14 @@ tasks.test {
     useJUnitPlatform()
 }
 
-tasks.getByName<Jar>("jar") {
-    enabled = true
+springBoot {
+    mainClass.set("ru.izpz.rocket.S21RocketApplication")
 }
 
-tasks.bootJar {
+tasks.named<BootJar>("bootJar") {
     archiveFileName.set("app.jar")
+}
+
+tasks.named<org.gradle.jvm.tasks.Jar>("jar") {
+    enabled = false
 }

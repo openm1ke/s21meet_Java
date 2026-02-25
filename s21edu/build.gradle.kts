@@ -1,3 +1,6 @@
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+import org.gradle.jvm.tasks.Jar
+
 plugins {
     java
     id("org.springframework.boot")
@@ -14,7 +17,6 @@ val squareupOkhttpVersion: String by project
 val springDotEnvVersion: String by project
 
 dependencies {
-    implementation(project(":s21auth"))
     implementation(project(":common"))
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -58,20 +60,14 @@ tasks.test {
     useJUnitPlatform()
 }
 
-tasks.getByName<Jar>("jar") {
-    enabled = true
-}
-
-tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
-    enabled = true
-    archiveFileName.set("${project.name}.jar")
-    mainClass.set("ru.izpz.edu.S21EduApplication")
-}
-
 springBoot {
     mainClass.set("ru.izpz.edu.S21EduApplication")
 }
 
-tasks.bootJar {
+tasks.named<BootJar>("bootJar") {
     archiveFileName.set("app.jar")
+}
+
+tasks.named<Jar>("jar") {
+    enabled = false
 }
