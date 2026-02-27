@@ -49,13 +49,6 @@ dependencies {
     testImplementation("com.h2database:h2")
 }
 
-configurations.all {
-    resolutionStrategy {
-        // Фиксируем версию, чтобы не подтягивалась старая версия junit-platform-commons
-        force("org.junit.platform:junit-platform-commons:1.11.4")
-    }
-}
-
 tasks.test {
     useJUnitPlatform()
 }

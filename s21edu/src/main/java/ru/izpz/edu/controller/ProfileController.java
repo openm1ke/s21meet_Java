@@ -1,12 +1,15 @@
 package ru.izpz.edu.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.izpz.dto.*;
 import ru.izpz.dto.model.ParticipantV1DTO;
@@ -20,6 +23,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
+@Validated
 @RequiredArgsConstructor
 @RequestMapping("/profile")
 @ConditionalOnProperty(name = "profile.api.enabled", havingValue = "true")
@@ -31,7 +35,11 @@ public class ProfileController {
     private final EventService eventService;
 
     @GetMapping
-    public ResponseEntity<ProfileDto> getProfile(@RequestParam("telegramId") String telegramId) {
+    public ResponseEntity<ProfileDto> getProfile(
+            @RequestParam("telegramId")
+            @NotBlank
+            @Pattern(regexp = "^\\d{5,13}$", message = "Telegram ID должен содержать только цифры и быть длиной от 5 до 13 символов")
+            String telegramId) {
         log.info("Получен запрос на вывод профиля для telegramId = {}", telegramId);
         var profile = profileService.getOrCreateProfile(telegramId);
         return ResponseEntity.ok(profile);
@@ -45,7 +53,7 @@ public class ProfileController {
     }
 
     @GetMapping("/login")
-    ResponseEntity<ParticipantV1DTO> checkEduLogin(@RequestParam String login) throws ApiException {
+    ResponseEntity<ParticipantV1DTO> checkEduLogin(@RequestParam @NotBlank String login) throws ApiException {
         log.info("Получен запрос на проверку логина: login = {}", login);
         var participant = profileService.checkEduLogin(login);
         return ResponseEntity.ok(participant);
@@ -100,7 +108,10 @@ public class ProfileController {
     }
 
     @GetMapping("/friends")
-    ResponseEntity<FriendsSliceDto> getFriends(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int size) {
+    ResponseEntity<FriendsSliceDto> getFriends(
+            @RequestParam @NotBlank String telegramId,
+            @RequestParam @Min(0) int page,
+            @RequestParam @Min(1) int size) {
         log.info("Получен запрос на вывод друзей для telegramId = {}, page = {}, size = {}", telegramId, page, size);
         return ResponseEntity.ok(friendsService.getFriends(telegramId, page, size));
     }
@@ -112,13 +123,16 @@ public class ProfileController {
     }
 
     @GetMapping("/events")
-    ResponseEntity<EventsSliceDto> getEvents(@RequestParam @NotBlank String telegramId, @RequestParam int page, @RequestParam int size) {
+    ResponseEntity<EventsSliceDto> getEvents(
+            @RequestParam @NotBlank String telegramId,
+            @RequestParam @Min(0) int page,
+            @RequestParam @Min(1) int size) {
         log.info("Получен запрос на вывод списка событий кампуса для telegramId = {}, page = {}, size = {}", telegramId, page, size);
         return ResponseEntity.ok(eventService.getEvents(page, size));
     }
 
     @GetMapping("/projects")
-    ResponseEntity<List<ProjectsDto>> getProjects(@RequestParam String login) {
+    ResponseEntity<List<ProjectsDto>> getProjects(@RequestParam @NotBlank String login) {
         log.info("Получен запрос на вывод списка провектов для {}", login);
         return ResponseEntity.ok(campusService.getStudentProjectsByLogin(login));
     }

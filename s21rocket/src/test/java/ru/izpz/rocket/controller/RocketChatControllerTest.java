@@ -61,14 +61,14 @@ class RocketChatControllerTest {
     @Test
     void sendMessage_shouldHandleNullRequest() {
         // Given
-        RocketChatSendResponse expectedResponse = new RocketChatSendResponse(false, "Request body is null");
+        RocketChatSendResponse expectedResponse = new RocketChatSendResponse(false, "Request body is invalid");
 
         // When
         ResponseEntity<RocketChatSendResponse> response = rocketChatController.sendMessage(null);
 
         // Then
         assertNotNull(response);
-        assertTrue(response.getStatusCode().is2xxSuccessful());
+        assertTrue(response.getStatusCode().is4xxClientError());
         assertEquals(expectedResponse, response.getBody());
         verify(rocketChatService, never()).sendVerificationCode(any(), any());
     }

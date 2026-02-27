@@ -46,4 +46,13 @@ class EventClientTest {
         assertEquals(1, result.size());
         assertSame(e, result.getFirst());
     }
+
+    @Test
+    void getEvents_shouldWrapRuntimeException() throws Exception {
+        when(eventApi.getEvents(any(), any(), any(), any(), any())).thenThrow(new NullPointerException("boom"));
+
+        ApiException ex = assertThrows(ApiException.class,
+                () -> eventClient.getEvents(OffsetDateTime.now(), OffsetDateTime.now(), null, 50L, 0L));
+        assertNotNull(ex.getCause());
+    }
 }
