@@ -1,5 +1,6 @@
 package ru.izpz.rocket.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,11 +24,11 @@ public class RocketChatController {
     }
 
     @PostMapping("/send")
-    public ResponseEntity<RocketChatSendResponse> sendMessage(@RequestBody RocketChatSendRequest request) {
-        if (request == null) {
-            return ResponseEntity.ok(new RocketChatSendResponse(false, "Request body is null"));
+    public ResponseEntity<RocketChatSendResponse> sendMessage(@Valid @RequestBody RocketChatSendRequest request) {
+        if (request == null || request.getUsername() == null || request.getUsername().isBlank()
+                || request.getMessage() == null || request.getMessage().isBlank()) {
+            return ResponseEntity.badRequest().body(new RocketChatSendResponse(false, "Request body is invalid"));
         }
         return ResponseEntity.ok(rocketChatService.sendVerificationCode(request.getUsername(), request.getMessage()));
     }
 }
-

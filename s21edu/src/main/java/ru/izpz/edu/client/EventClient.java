@@ -22,11 +22,16 @@ public class EventClient {
     @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public List<EventV1DTO> getEvents(OffsetDateTime from, OffsetDateTime to, String type, Long limit, Long offset) throws ApiException {
-        var response = eventApi.getEvents(from, to, type, limit, offset);
-        if (response == null) {
-            log.warn("API вернул null для событий");
-            throw new ApiException("API вернул null для событий");
+        try {
+            var response = eventApi.getEvents(from, to, type, limit, offset);
+            if (response == null) {
+                log.warn("API вернул пустой ответ для событий");
+                throw new ApiException("API вернул пустой ответ для событий");
+            }
+            return response.getEvents();
+        } catch (RuntimeException e) {
+            log.error("Неожиданная ошибка при получении событий", e);
+            throw new ApiException("Unexpected error while fetching events", e, 500, null, null);
         }
-        return response.getEvents();
     }
 }

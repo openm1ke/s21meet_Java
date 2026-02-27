@@ -1,5 +1,7 @@
 package ru.izpz.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 @Getter
@@ -9,5 +11,10 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CampusRequest {
+    @NotBlank(message = "TelegramId не должен быть пустым")
+    @Pattern(
+        regexp = "^\\d{5,13}$",
+        message = "Telegram ID должен содержать только цифры и быть длиной от 5 до 13 символов"
+    )
     private String telegramId;
 }

@@ -12,7 +12,6 @@ plugins {
 val testcontainersVersion: String by project
 val mockitoVersion: String by project
 val mapstructVersion: String by project
-val openApiVersion: String by project
 val squareupOkhttpVersion: String by project
 val apacheCommonsVersion: String by project
 val springDotEnvVersion: String by project
@@ -36,7 +35,6 @@ dependencies {
     implementation("org.springframework.security:spring-security-crypto:$springSecurityCryptoVersion")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}")
     implementation("io.github.resilience4j:resilience4j-ratelimiter:${resilience4jVersion}")
-    implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
     implementation("org.telegram:telegrambots-meta:$telegramBotsVersion")
     implementation("org.telegram:telegrambots-longpolling:$telegramBotsVersion")
     implementation("org.telegram:telegrambots-client:$telegramBotsVersion")
@@ -56,13 +54,6 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
-}
-
-configurations.all {
-    resolutionStrategy {
-        // Фиксируем версию, чтобы не подтягивалась старая версия junit-platform-commons
-        force("org.junit.platform:junit-platform-commons:1.11.4")
-    }
 }
 
 springBoot {

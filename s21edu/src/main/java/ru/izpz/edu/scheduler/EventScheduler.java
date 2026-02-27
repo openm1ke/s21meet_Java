@@ -32,6 +32,8 @@ public class EventScheduler {
 
         } catch (ApiException e) {
             log.error("Ошибка получения событий для кампуса", e);
+        } catch (Exception e) {
+            log.error("Непредвиденная ошибка в планировщике событий", e);
         }
     }
 }

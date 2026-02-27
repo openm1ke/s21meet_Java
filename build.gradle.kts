@@ -1,4 +1,5 @@
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     java
@@ -129,9 +130,20 @@ tasks.register("runAllTestsWithCoverage") {
     })
 }
 
+val orderedSubprojectTests = subprojects
+    .map { it.tasks.named<Test>("test") }
+
+orderedSubprojectTests
+    .zipWithNext()
+    .forEach { (previous, next) ->
+        next.configure {
+            mustRunAfter(previous)
+        }
+    }
+
 tasks.register("runAllTests") {
     group = "verification"
     description = "Запускает все тесты во всех subprojects"
 
-    dependsOn(subprojects.map { it.path + ":test" })
+    dependsOn(orderedSubprojectTests)
 }

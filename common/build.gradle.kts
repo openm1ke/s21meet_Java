@@ -21,7 +21,6 @@ repositories {
 }
 
 dependencies {
-    implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonDatabind")
     implementation("org.openapitools:jackson-databind-nullable:$jacksonDatabindNullable")
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")

@@ -67,4 +67,13 @@ class EventSchedulerTest {
 
         verify(eventService, never()).saveEvents(anyList());
     }
+
+    @Test
+    void scheduleEvents_shouldNotThrow_whenUnexpectedExceptionHappens() throws Exception {
+        when(eventClient.getEvents(any(), any(), any(), anyLong(), anyLong())).thenThrow(new NullPointerException("boom"));
+
+        scheduler.scheduleEvents();
+
+        verify(eventService, never()).saveEvents(anyList());
+    }
 }
