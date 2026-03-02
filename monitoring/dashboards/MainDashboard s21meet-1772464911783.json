@@ -533,7 +533,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 5,
+        "w": 6,
         "x": 13,
         "y": 8
       },
@@ -598,8 +598,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 6,
-        "x": 18,
+        "w": 5,
+        "x": 19,
         "y": 8
       },
       "id": 21,
@@ -1285,7 +1285,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum by (button) (increase(bot_button_press_total[1m]))",
+          "expr": "sum by (button) (increase(bot_button_press_total[5m]))",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1434,7 +1434,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1450,6 +1450,7 @@
               "mode": "off"
             }
           },
+          "displayName": "${__field.labels.method} | ${__field.labels.uri}",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1493,7 +1494,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21bot\", uri!~\".*/actuator/.*\"}[1m])) \n  by (uri, method)\n)",
+          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21bot\", uri!~\".*/actuator/.*\"}[5m])) \n  by (uri, method)\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1550,6 +1551,7 @@
               "mode": "off"
             }
           },
+          "displayName": "${__field.labels.method} | ${__field.labels.uri}",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1593,7 +1595,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21auth\", uri!~\".*/actuator/.*\"}[1m])) \n  by (uri, method)\n)",
+          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21auth\", uri!~\".*/actuator/.*\"}[5m])) \n  by (uri, method)\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1647,6 +1649,7 @@
               "mode": "off"
             }
           },
+          "displayName": "${__field.labels.method} | ${__field.labels.uri}",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1690,7 +1693,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21edu\", uri!~\".*/actuator/.*\"}[1m])) \n  by (uri, method)\n)",
+          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21edu\", uri!~\".*/actuator/.*\"}[5m])) \n  by (uri, method)\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1978,6 +1981,6 @@
   "timezone": "browser",
   "title": "MainDashboard s21meet",
   "uid": "bfe1j8anhfn5sd",
-  "version": 7,
+  "version": 60,
   "weekStart": ""
 }
