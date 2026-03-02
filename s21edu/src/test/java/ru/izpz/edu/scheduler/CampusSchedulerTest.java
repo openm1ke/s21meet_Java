@@ -1,17 +1,25 @@
 package ru.izpz.edu.scheduler;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.ApiException;
 import ru.izpz.edu.client.CampusClient;
+import ru.izpz.edu.config.CampusSchedulerProperties;
 import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.service.CampusCatalog;
 import ru.izpz.edu.service.CampusService;
+import ru.izpz.edu.service.SchedulerMetricsService;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.doThrow;
@@ -32,8 +40,32 @@ class CampusSchedulerTest {
     @Mock
     private CampusService campusService;
 
-    @InjectMocks
     private CampusScheduler scheduler;
+    private MeterRegistry meterRegistry;
+    private ExecutorService executorService;
+
+    @BeforeEach
+    void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        executorService = Executors.newFixedThreadPool(4);
+        CampusCatalog campusCatalog = new CampusCatalog();
+        CampusSchedulerProperties schedulerProperties = new CampusSchedulerProperties();
+        scheduler = new CampusScheduler(
+            campusClient,
+            campusService,
+            new SchedulerMetricsService(meterRegistry, campusCatalog),
+            campusCatalog,
+            schedulerProperties,
+            executorService
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (executorService != null) {
+            executorService.shutdownNow();
+        }
+    }
 
     @Test
     void parseMskKznNsk_success_updatesClustersAndParticipants() throws Exception {

@@ -28,6 +28,7 @@ public class CampusService {
     private final CampusClient campusClient;
     private final ProjectsMapper projectsMapper;
     private final WorkplaceProvider workplaceProvider;
+    private final SchedulerMetricsService schedulerMetricsService;
 
     public List<Clusters> getClusters(CampusDto campus) {
         return persistenceService.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
@@ -46,6 +47,13 @@ public class CampusService {
                 .map(dto -> campusMapper.toClusterEntity(dto, campusId))
             .toList();
             persistenceService.replaceClusters(campusId, clusters);
+
+            clusters.forEach(cluster -> {
+                int freePlaces = toNonNegative(cluster.getAvailableCapacity());
+                int totalCapacity = toNonNegative(cluster.getCapacity());
+                int occupiedPlaces = Math.max(totalCapacity - freePlaces, 0);
+                schedulerMetricsService.recordClusterPlaces(campusId, cluster.getName(), freePlaces, occupiedPlaces);
+            });
         }
     }
 
@@ -68,5 +76,12 @@ public class CampusService {
     public void replaceParticipantsByClusterIdWithProvider(Long clusterId) throws ApiException {
         // Delegate to the configured provider which handles everything internally
         workplaceProvider.updateParticipantsByCluster(clusterId);
+    }
+
+    private int toNonNegative(Integer value) {
+        if (value == null || value < 0) {
+            return 0;
+        }
+        return value;
     }
 }

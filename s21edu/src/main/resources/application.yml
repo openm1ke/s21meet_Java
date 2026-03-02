@@ -66,7 +66,11 @@ campus:
   api.enabled: true
   service.enabled: true
   workplace:
-    provider: ${CAMPUS_WORKPLACE_PROVIDER:}  # rest или graphql (по умолчанию graphql)
+    provider: ${CAMPUS_WORKPLACE_PROVIDER:graphql}  # rest или graphql (по умолчанию graphql)
   scheduler:
     enabled: true
     fixed-delay: PT30S
+    participants-max-concurrency: 8
+    timeout:
+      clusters: PT20S
+      participants: PT40S

@@ -1,20 +1,27 @@
 package ru.izpz.edu.scheduler;
 
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 import ru.izpz.dto.ApiException;
 import ru.izpz.edu.client.CampusClient;
-import ru.izpz.edu.service.CampusService;
+import ru.izpz.edu.config.CampusSchedulerProperties;
 import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.service.CampusCatalog;
+import ru.izpz.edu.service.CampusService;
+import ru.izpz.edu.service.SchedulerMetricsService;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Service
@@ -24,104 +31,179 @@ public class CampusScheduler {
 
     private final CampusClient campusClient;
     private final CampusService campusService;
+    private final SchedulerMetricsService schedulerMetricsService;
+    private final CampusCatalog campusCatalog;
+    private final CampusSchedulerProperties schedulerProperties;
+    @Qualifier("campusSchedulerExecutor")
+    private final ExecutorService campusSchedulerExecutor;
+
+    private static final String SCHEDULER_NAME = "campus_parser";
 
     @Scheduled(fixedDelayString = "${campus.scheduler.fixed-delay:PT30S}")
     public void parseMskKznNsk() {
-        List<String> campuses = getTargetCampuses();
+        List<String> campuses = campusCatalog.targetCampusIds();
         
         log.info("Получение кластеров для Москвы, Казани и Новосибирска");
         StopWatch stopWatch = new StopWatch("campus");
+
+        Timer.Sample clustersSample = schedulerMetricsService.startPhaseTimer();
+        PhaseOutcome clustersOutcome;
+        try {
+            clustersOutcome = processClusters(campuses, stopWatch);
+            if (!clustersOutcome.completed()) {
+                log.error("Цикл парсинга прерван: превышено время фазы получения кластеров");
+                schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "failed");
+                return;
+            }
+        } finally {
+            schedulerMetricsService.stopPhaseTimer(SCHEDULER_NAME, "clusters", clustersSample);
+        }
+
+        Timer.Sample participantsSample = schedulerMetricsService.startPhaseTimer();
+        PhaseOutcome participantsOutcome;
+        try {
+            participantsOutcome = processParticipants(stopWatch);
+            if (!participantsOutcome.completed()) {
+                log.error("Цикл парсинга прерван: превышено время фазы получения участников");
+                schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "failed");
+                return;
+            }
+        } finally {
+            schedulerMetricsService.stopPhaseTimer(SCHEDULER_NAME, "participants", participantsSample);
+        }
         
-        processClusters(campuses, stopWatch);
-        processParticipants(stopWatch);
-        
+        if (clustersOutcome.hasErrors() || participantsOutcome.hasErrors()) {
+            schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "partial");
+        } else {
+            schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "success");
+            schedulerMetricsService.recordLastSuccess(SCHEDULER_NAME);
+        }
+
         log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
         log.info("Время обновления: {}", stopWatch.prettyPrint());
     }
 
-    private List<String> getTargetCampuses() {
-        return List.of(
-            "6bfe3c56-0211-4fe1-9e59-51616caac4dd", // MSK
-            "7c293c9c-f28c-4b10-be29-560e4b000a34", // KZN
-            "46e7d965-21e9-4936-bea9-f5ea0d1fddf2"  // NSK
-        );
-    }
-
-    private void processClusters(List<String> campuses, StopWatch stopWatch) {
+    private PhaseOutcome processClusters(List<String> campuses, StopWatch stopWatch) {
+        Duration clustersTimeout = schedulerProperties.getTimeout().getClusters();
         stopWatch.start("get clusters");
-        try (var vexec = Executors.newVirtualThreadPerTaskExecutor()) {
-            List<? extends Future<?>> futures = submitClusterTasks(campuses, vexec);
-            waitForClusterTasksCompletion(futures);
+        try {
+            List<CompletableFuture<TaskResult>> futures = submitClusterTasks(campuses);
+            return awaitPhaseResults("clusters", clustersTimeout, futures);
+        } finally {
+            stopWatch.stop();
         }
-        stopWatch.stop();
     }
 
-    private List<? extends Future<?>> submitClusterTasks(List<String> campuses, ExecutorService vexec) {
+    private List<CompletableFuture<TaskResult>> submitClusterTasks(List<String> campuses) {
         return campuses.stream()
-            .map(id -> vexec.submit(() -> processSingleCampus(id)))
+            .map(id -> CompletableFuture.supplyAsync(() -> processSingleCampus(id), campusSchedulerExecutor))
             .toList();
     }
 
-    private void processSingleCampus(String id) {
+    private TaskResult processSingleCampus(String id) {
         try {
             var clusters = campusClient.getClustersByCampus(id);
             campusService.replaceClustersByCampusId(id, clusters);
+            schedulerMetricsService.recordExternalApiSuccess(SCHEDULER_NAME, "campus_api", "get_clusters");
+            return TaskResult.successResult();
         } catch (ApiException e) {
-            log.error("Ошибка получения кластеров для кампуса {}", id, e);
+            schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "campus_api", "get_clusters", e);
+            log.error("Ошибка получения кластеров для кампуса {} ({})", campusCatalog.campusName(id), id, e);
+            return TaskResult.errorResult("api_exception");
+        } catch (Exception e) {
+            schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "campus_api", "get_clusters", e);
+            log.error("Непредвиденная ошибка получения кластеров для кампуса {} ({})", campusCatalog.campusName(id), id, e);
+            return TaskResult.errorResult("execution_exception");
         }
     }
 
-    private void waitForClusterTasksCompletion(List<? extends Future<?>> futures) {
-        for (var f : futures) {
-            try { 
-                f.get(); 
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.error("Прервано получение кластеров для кампуса", e);
-                return;
-            } catch (Exception e) { 
-                log.error("Ошибка получение кластеров для кампуса", e); 
-            }
-        }
-    }
-
-    private void processParticipants(StopWatch stopWatch) {
+    private PhaseOutcome processParticipants(StopWatch stopWatch) {
+        Duration participantsTimeout = schedulerProperties.getTimeout().getParticipants();
         stopWatch.start("get participants");
-        try (var vexec = Executors.newVirtualThreadPerTaskExecutor()) {
+        try {
             var clusterList = campusService.findAllByOrderByCampusIdAsc();
-            List<? extends Future<?>> futures = submitParticipantTasks(clusterList, vexec);
-            waitForParticipantTasksCompletion(futures);
+            List<CompletableFuture<TaskResult>> futures = submitParticipantTasks(clusterList);
+            return awaitPhaseResults("participants", participantsTimeout, futures);
+        } finally {
+            stopWatch.stop();
         }
-        stopWatch.stop();
     }
 
-    private List<? extends Future<?>> submitParticipantTasks(List<Cluster> clusterList, ExecutorService vexec) {
+    private List<CompletableFuture<TaskResult>> submitParticipantTasks(List<Cluster> clusterList) {
         return clusterList.stream()
-            .map(c -> vexec.submit(() -> processSingleCluster(c)))
+            .map(c -> CompletableFuture.supplyAsync(() -> processSingleCluster(c), campusSchedulerExecutor))
             .toList();
     }
 
-    private void processSingleCluster(Cluster c) {
+    private TaskResult processSingleCluster(Cluster c) {
         long cid = c.getClusterId();
         try {
             campusService.replaceParticipantsByClusterIdWithProvider(cid);
+            schedulerMetricsService.recordExternalApiSuccess(SCHEDULER_NAME, "campus_api", "get_participants");
             log.info("Updated participants for cluster {} ({})", c.getName(), cid);
+            return TaskResult.successResult();
         } catch (ApiException e) {
+            schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "campus_api", "get_participants", e);
             log.error("Ошибка получения участников для кластера {}", cid, e);
+            return TaskResult.errorResult("api_exception");
+        } catch (Exception e) {
+            schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "campus_api", "get_participants", e);
+            log.error("Непредвиденная ошибка получения участников для кластера {}", cid, e);
+            return TaskResult.errorResult("execution_exception");
         }
     }
 
-    private void waitForParticipantTasksCompletion(List<? extends Future<?>> futures) {
-        for (Future<?> f : futures) {
-            try { 
-                f.get(); 
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.error("Прервано получение занятых мест в кластере", e);
-                return;
-            } catch (Exception e) { 
-                log.error("Ошибка получения занятых мест в кластере", e); 
+    private PhaseOutcome awaitPhaseResults(String phase, Duration timeout, List<CompletableFuture<TaskResult>> futures) {
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+        try {
+            allOf.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            cancelPendingFutures(futures);
+            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, "timeout");
+            log.error("Превышено время выполнения фазы {} ({} сек)", phase, timeout.toSeconds(), e);
+            return new PhaseOutcome(false, true);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            cancelPendingFutures(futures);
+            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, "interrupted");
+            log.error("Прервано ожидание результатов фазы {}", phase, e);
+            return new PhaseOutcome(false, true);
+        } catch (Exception e) {
+            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, "execution_exception");
+            log.error("Ошибка ожидания результатов фазы {}", phase, e);
+            return new PhaseOutcome(false, true);
+        }
+
+        boolean hasErrors = false;
+        for (CompletableFuture<TaskResult> future : futures) {
+            TaskResult result = future.join();
+            schedulerMetricsService.recordPhaseRequest(SCHEDULER_NAME, phase, result.status());
+            if (!result.success()) {
+                schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, result.errorType());
+                hasErrors = true;
             }
         }
+        return new PhaseOutcome(true, hasErrors);
+    }
+
+    private void cancelPendingFutures(List<CompletableFuture<TaskResult>> futures) {
+        for (CompletableFuture<TaskResult> future : futures) {
+            if (!future.isDone()) {
+                future.cancel(true);
+            }
+        }
+    }
+
+    private record TaskResult(boolean success, String status, String errorType) {
+        private static TaskResult successResult() {
+            return new TaskResult(true, "success", "none");
+        }
+
+        private static TaskResult errorResult(String errorType) {
+            return new TaskResult(false, "error", errorType);
+        }
+    }
+
+    private record PhaseOutcome(boolean completed, boolean hasErrors) {
     }
 }

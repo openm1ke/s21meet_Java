@@ -26,6 +26,7 @@ spring:
       path: /h2-console
 
 token:
+  uri: ${TOKEN_URI:/auth/realms/EduPowerKeycloak/protocol/openid-connect/token}
   scheduler:
     enabled: true
     refresh-delay: 30000

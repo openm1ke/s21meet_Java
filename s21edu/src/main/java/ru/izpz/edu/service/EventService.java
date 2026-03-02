@@ -30,10 +30,10 @@ public class EventService {
     private final EventMapper eventMapper;
 
     @Transactional
-    public void saveEvents(List<EventV1DTO> eventsDto) {
+    public SaveEventsStats saveEvents(List<EventV1DTO> eventsDto) {
         if (eventsDto == null || eventsDto.isEmpty()) {
             log.debug("saveEvents: пустой список — ничего не сохраняем");
-            return;
+            return new SaveEventsStats(0, 0);
         }
 
         var ids = eventsDto.stream()
@@ -43,15 +43,19 @@ public class EventService {
         var existingById = eventRepository.findAllById(ids).stream()
             .collect(Collectors.toMap(Event::getId, Function.identity()));
 
+        long createdCount = 0;
+        long updatedCount = 0;
         var toSave = new ArrayList<Event>(eventsDto.size());
         for (var dto : eventsDto) {
             var current = existingById.get(dto.getId());
             if (current == null) {
                 var created = eventMapper.toEntity(dto);
                 toSave.add(created);
+                createdCount++;
             } else {
                 eventMapper.update(current, dto);
                 toSave.add(current);
+                updatedCount++;
             }
         }
 
@@ -60,10 +64,13 @@ public class EventService {
 
         log.info("saveEvents: обработано {} событий (новых: {}, обновлено: {})",
             toSave.size(),
-            toSave.stream().filter(e -> !existingById.containsKey(e.getId())).count(),
-            toSave.stream().filter(e -> existingById.containsKey(e.getId())).count()
+            createdCount,
+            updatedCount
         );
+        return new SaveEventsStats(createdCount, updatedCount);
     }
+
+    public record SaveEventsStats(long created, long updated) {}
 
     public EventDto getEvent(Long id) {
         var event = eventRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Event " + id + " not found"));
