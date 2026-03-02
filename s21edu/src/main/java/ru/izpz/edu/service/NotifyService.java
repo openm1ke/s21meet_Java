@@ -3,6 +3,7 @@ package ru.izpz.edu.service;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.StatusChange;
 import ru.izpz.edu.model.Friends;
@@ -49,24 +50,17 @@ public class NotifyService {
 
             if (inCampus) {
                 if (opt.isEmpty()) {
-                    Online o = new Online();
-                    o.setLogin(login);
-                    o.setIsOnline(true);
-                    onlineRepository.save(o);
+                    persistOnlineStatus(opt, login, true);
                     addChangeIfSubscribers(changes, login, true);
                     becameOnline++;
                 } else if (Boolean.FALSE.equals(opt.get().getIsOnline())) {
-                    Online o = opt.get();
-                    o.setIsOnline(true);
-                    onlineRepository.save(o);
+                    persistOnlineStatus(opt, login, true);
                     addChangeIfSubscribers(changes, login, true);
                     becameOnline++;
                 }
             } else {
                 if (opt.isPresent() && Boolean.TRUE.equals(opt.get().getIsOnline())) {
-                    Online o = opt.get();
-                    o.setIsOnline(false);
-                    onlineRepository.save(o);
+                    persistOnlineStatus(opt, login, false);
                     addChangeIfSubscribers(changes, login, false);
                     becameOffline++;
                 }
@@ -95,5 +89,23 @@ public class NotifyService {
                 .distinct()
                 .toList();
         if (!ids.isEmpty()) changes.add(new StatusChange(login, newStatus, ids));
+    }
+
+    private void persistOnlineStatus(Optional<Online> current, String login, boolean status) {
+        try {
+            Online entity = current.orElseGet(() -> {
+                Online created = new Online();
+                created.setLogin(login);
+                return created;
+            });
+            entity.setIsOnline(status);
+            onlineRepository.save(entity);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Race condition while saving online status for login={}: {}", login, e.getMessage());
+            onlineRepository.findByLogin(login).ifPresent(existing -> {
+                existing.setIsOnline(status);
+                onlineRepository.save(existing);
+            });
+        }
     }
 }

@@ -1,4 +1,6 @@
 spring:
+  liquibase:
+    enabled: false
   main:
     allow-bean-definition-overriding: true
   datasource:
