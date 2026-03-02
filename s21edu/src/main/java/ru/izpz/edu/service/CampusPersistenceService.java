@@ -9,6 +9,9 @@ import ru.izpz.edu.repository.ClusterRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 
 import java.util.List;
+import java.util.Set;
+
+import static java.util.stream.Collectors.toSet;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +22,12 @@ public class CampusPersistenceService {
 
     @Transactional
     public void replaceClusters(String campusId, List<Cluster> clusters) {
+        Set<Long> existingClusterIds = clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId).stream()
+            .map(Cluster::getClusterId)
+            .collect(toSet());
+        if (!existingClusterIds.isEmpty()) {
+            workplaceRepository.deleteByIdClusterIdIn(existingClusterIds);
+        }
         clusterRepository.deleteAllByCampusId(campusId);
         if (!clusters.isEmpty()) clusterRepository.saveAll(clusters);
     }

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.*;
 import ru.izpz.dto.api.ParticipantApi;
@@ -47,8 +48,15 @@ public class ProfileService {
                 Profile profile = new Profile();
                 profile.setTelegramId(telegramId);
                 profile.setStatus(ProfileStatus.CREATED);
-                Profile saved = profileRepository.save(profile);
-                return profileMapper.toDto(saved);
+                try {
+                    Profile saved = profileRepository.save(profile);
+                    return profileMapper.toDto(saved);
+                } catch (DataIntegrityViolationException e) {
+                    log.warn("Race condition in getOrCreateProfile for telegramId={}: {}", telegramId, e.getMessage());
+                    return profileRepository.findByTelegramId(telegramId)
+                        .map(profileMapper::toDto)
+                        .orElseGet(() -> profileMapper.toDto(profile));
+                }
             });
     }
 
@@ -79,7 +87,15 @@ public class ProfileService {
             throw new IllegalStateException("Профиль уже привязан к логину " + profile.getS21login());
         }
         profile.setS21login(s21login);
-        return profileMapper.toDto(profileRepository.save(profile));
+        try {
+            return profileMapper.toDto(profileRepository.save(profile));
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Race condition in checkAndSetLogin for telegramId={}, s21login={}: {}",
+                telegramId, s21login, e.getMessage());
+            return profileRepository.findByTelegramId(telegramId)
+                .map(profileMapper::toDto)
+                .orElseGet(() -> profileMapper.toDto(profile));
+        }
     }
 
     public ProfileCodeResponse getVerificationCode(String s21login) {
@@ -88,7 +104,13 @@ public class ProfileService {
             profileValidation.setS21login(s21login);
             profileValidation.setSecretCode(StringUtils.generateCode(4));
             profileValidation.setExpiresAt(OffsetDateTime.now());
-            return profileValidationRepository.save(profileValidation);
+            try {
+                return profileValidationRepository.save(profileValidation);
+            } catch (DataIntegrityViolationException e) {
+                log.warn("Race condition while creating verification code for s21login={}: {}", s21login, e.getMessage());
+                return profileValidationRepository.findByS21login(s21login)
+                    .orElse(profileValidation);
+            }
         });
 
         return profileVerificationMapper.toProfileCodeResponse(validation);

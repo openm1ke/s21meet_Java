@@ -3,6 +3,7 @@ package ru.izpz.edu.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -113,6 +114,22 @@ class ProfileServiceTest {
     }
 
     @Test
+    void getOrCreateProfile_shouldFallbackToRead_whenSaveRaceConditionHappens() {
+        when(profileRepository.findByTelegramId("123456"))
+                .thenReturn(Optional.empty(), Optional.of(testProfile));
+        when(profileRepository.save(any(Profile.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+        when(profileMapper.toDto(testProfile)).thenReturn(testProfileDto);
+
+        ProfileDto result = profileService.getOrCreateProfile("123456");
+
+        assertNotNull(result);
+        assertEquals(testProfileDto, result);
+        verify(profileRepository, times(2)).findByTelegramId("123456");
+        verify(profileRepository).save(any(Profile.class));
+    }
+
+    @Test
     void getProfile_shouldReturnProfile_whenFound() {
         // Given
         when(profileRepository.findByTelegramId("123456"))
@@ -202,6 +219,31 @@ class ProfileServiceTest {
         verify(profileRepository).existsByS21login("newuser");
         verify(profileRepository).findByTelegramId("123456");
         verify(profileRepository).save(testProfile);
+    }
+
+    @Test
+    void checkAndSetLogin_shouldFallbackToRead_whenSaveRaceConditionHappens() {
+        testProfile.setS21login(null);
+        Profile savedByAnotherTx = new Profile();
+        savedByAnotherTx.setTelegramId("123456");
+        savedByAnotherTx.setS21login("newuser");
+        savedByAnotherTx.setStatus(ProfileStatus.CREATED);
+
+        ProfileDto expected = new ProfileDto("123456", "newuser", ProfileStatus.CREATED, null);
+
+        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
+        when(profileRepository.findByTelegramId("123456"))
+                .thenReturn(Optional.of(testProfile), Optional.of(savedByAnotherTx));
+        when(profileRepository.save(testProfile))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+        when(profileMapper.toDto(savedByAnotherTx)).thenReturn(expected);
+
+        ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
+
+        assertNotNull(result);
+        assertEquals("newuser", result.s21login());
+        verify(profileRepository).save(testProfile);
+        verify(profileRepository, times(2)).findByTelegramId("123456");
     }
 
     @Test
@@ -306,6 +348,30 @@ class ProfileServiceTest {
         assertEquals("5678", result.getSecretCode());
         verify(profileValidationRepository).findByS21login("testuser");
         verify(profileValidationRepository).save(any(ProfileValidation.class));
+    }
+
+    @Test
+    void getVerificationCode_shouldFallbackToRead_whenSaveRaceConditionHappens() {
+        ProfileValidation existing = new ProfileValidation();
+        existing.setS21login("testuser");
+        existing.setSecretCode("7777");
+        existing.setExpiresAt(OffsetDateTime.now());
+
+        ProfileCodeResponse expected = new ProfileCodeResponse("testuser", "7777", existing.getExpiresAt());
+
+        when(profileValidationRepository.findByS21login("testuser"))
+                .thenReturn(Optional.empty(), Optional.of(existing));
+        when(profileValidationRepository.save(any(ProfileValidation.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+        when(profileVerificationMapper.toProfileCodeResponse(existing))
+                .thenReturn(expected);
+
+        ProfileCodeResponse result = profileService.getVerificationCode("testuser");
+
+        assertNotNull(result);
+        assertEquals("7777", result.getSecretCode());
+        verify(profileValidationRepository).save(any(ProfileValidation.class));
+        verify(profileValidationRepository, times(2)).findByS21login("testuser");
     }
 
     @Test

@@ -9,10 +9,12 @@ import ru.izpz.edu.model.WorkplaceId;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceId> {
     void deleteByIdClusterId(Long clusterId);
+    void deleteByIdClusterIdIn(Set<Long> clusterIds);
 
     boolean existsByLogin(String login);
 
