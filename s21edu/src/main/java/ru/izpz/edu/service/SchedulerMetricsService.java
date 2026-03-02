@@ -18,6 +18,9 @@ public class SchedulerMetricsService {
     private final MeterRegistry meterRegistry;
     private final CampusCatalog campusCatalog;
     private final Map<String, AtomicInteger> clusterPlacesGauges = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> participantByCampusGauges = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> participantByCampusStageGroupGauges = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> participantByCampusStageNameGauges = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> lastPhaseDurationNanos = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> lastSuccessTimestampSeconds = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> lastEventsSavedCounts = new ConcurrentHashMap<>();
@@ -41,6 +44,26 @@ public class SchedulerMetricsService {
         String normalizedName = (clusterName == null || clusterName.isBlank()) ? "unknown" : clusterName;
         getClusterPlacesGauge(campusId, normalizedName, "free").set(Math.max(freePlaces, 0));
         getClusterPlacesGauge(campusId, normalizedName, "occupied").set(Math.max(occupiedPlaces, 0));
+    }
+
+    public void resetParticipantMetrics() {
+        participantByCampusGauges.values().forEach(holder -> holder.set(0L));
+        participantByCampusStageGroupGauges.values().forEach(holder -> holder.set(0L));
+        participantByCampusStageNameGauges.values().forEach(holder -> holder.set(0L));
+    }
+
+    public void recordParticipantsByCampus(String campusId, long count) {
+        getParticipantByCampusGauge(campusId).set(Math.max(count, 0L));
+    }
+
+    public void recordParticipantsByCampusAndStageGroup(String campusId, String stageGroupName, long count) {
+        String normalizedGroup = normalizeStageLabel(stageGroupName);
+        getParticipantByCampusStageGroupGauge(campusId, normalizedGroup).set(Math.max(count, 0L));
+    }
+
+    public void recordParticipantsByCampusAndStageName(String campusId, String stageName, long count) {
+        String normalizedStage = normalizeStageLabel(stageName);
+        getParticipantByCampusStageNameGauge(campusId, normalizedStage).set(Math.max(count, 0L));
     }
 
     public void recordPhaseIssue(String schedulerName, String phase, String issueType) {
@@ -182,6 +205,56 @@ public class SchedulerMetricsService {
                 .register(meterRegistry);
             return holder;
         });
+    }
+
+    private AtomicLong getParticipantByCampusGauge(String campusId) {
+        return participantByCampusGauges.computeIfAbsent(campusId, ignored -> {
+            AtomicLong holder = new AtomicLong(0L);
+            io.micrometer.core.instrument.Gauge.builder("edu_participants_by_campus", holder, AtomicLong::get)
+                .description("Participants count by campus")
+                .tags(
+                    "campus_id", campusId,
+                    "campus_name", campusCatalog.campusName(campusId)
+                )
+                .register(meterRegistry);
+            return holder;
+        });
+    }
+
+    private AtomicLong getParticipantByCampusStageGroupGauge(String campusId, String stageGroupName) {
+        String key = campusId + "|" + stageGroupName;
+        return participantByCampusStageGroupGauges.computeIfAbsent(key, ignored -> {
+            AtomicLong holder = new AtomicLong(0L);
+            io.micrometer.core.instrument.Gauge.builder("edu_participants_by_campus_stage_group", holder, AtomicLong::get)
+                .description("Participants count by campus and stage group")
+                .tags(
+                    "campus_id", campusId,
+                    "campus_name", campusCatalog.campusName(campusId),
+                    "stage_group_name", stageGroupName
+                )
+                .register(meterRegistry);
+            return holder;
+        });
+    }
+
+    private AtomicLong getParticipantByCampusStageNameGauge(String campusId, String stageName) {
+        String key = campusId + "|" + stageName;
+        return participantByCampusStageNameGauges.computeIfAbsent(key, ignored -> {
+            AtomicLong holder = new AtomicLong(0L);
+            io.micrometer.core.instrument.Gauge.builder("edu_participants_by_campus_stage_name", holder, AtomicLong::get)
+                .description("Participants count by campus and stage name")
+                .tags(
+                    "campus_id", campusId,
+                    "campus_name", campusCatalog.campusName(campusId),
+                    "stage_name", stageName
+                )
+                .register(meterRegistry);
+            return holder;
+        });
+    }
+
+    private String normalizeStageLabel(String value) {
+        return (value == null || value.isBlank()) ? "unknown" : value;
     }
 
     private AtomicLong getLastPhaseDurationGauge(String schedulerName, String phase) {

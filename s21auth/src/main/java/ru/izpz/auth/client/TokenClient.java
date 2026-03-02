@@ -22,7 +22,7 @@ public class TokenClient {
     private final RestTemplate restTemplate;
     private final String tokenUri;
 
-    public TokenClient(@Value("${token.uri:/auth/realms/EduPowerKeycloak/protocol/openid-connect/token}") String tokenUri, RestTemplate restTemplate) {
+    public TokenClient(@Value("${token.uri}") String tokenUri, RestTemplate restTemplate) {
         this.tokenUri = tokenUri;
         this.restTemplate = restTemplate;
     }

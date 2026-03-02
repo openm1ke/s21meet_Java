@@ -22,4 +22,45 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
     Optional<Workplace> findByLogin(String telegramId);
 
     List<Workplace> findAllByLoginIn(Collection<String> logins);
+
+    @Query("""
+        select c.campusId as campusId, count(w) as count
+        from Workplace w
+        join Cluster c on c.clusterId = w.id.clusterId
+        group by c.campusId
+        """)
+    List<CampusCountView> countParticipantsByCampus();
+
+    @Query("""
+        select c.campusId as campusId, w.stageGroupName as stageGroupName, count(w) as count
+        from Workplace w
+        join Cluster c on c.clusterId = w.id.clusterId
+        group by c.campusId, w.stageGroupName
+        """)
+    List<CampusStageGroupCountView> countParticipantsByCampusAndStageGroup();
+
+    @Query("""
+        select c.campusId as campusId, w.stageName as stageName, count(w) as count
+        from Workplace w
+        join Cluster c on c.clusterId = w.id.clusterId
+        group by c.campusId, w.stageName
+        """)
+    List<CampusStageNameCountView> countParticipantsByCampusAndStageName();
+
+    interface CampusCountView {
+        String getCampusId();
+        long getCount();
+    }
+
+    interface CampusStageGroupCountView {
+        String getCampusId();
+        String getStageGroupName();
+        long getCount();
+    }
+
+    interface CampusStageNameCountView {
+        String getCampusId();
+        String getStageName();
+        long getCount();
+    }
 }

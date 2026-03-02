@@ -13,6 +13,7 @@ import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.mapper.CampusMapper;
 import ru.izpz.edu.mapper.ProjectsMapper;
 import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.service.provider.WorkplaceProvider;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class CampusService {
     private final ProjectsMapper projectsMapper;
     private final WorkplaceProvider workplaceProvider;
     private final SchedulerMetricsService schedulerMetricsService;
+    private final WorkplaceRepository workplaceRepository;
 
     public List<Clusters> getClusters(CampusDto campus) {
         return persistenceService.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
@@ -76,6 +78,30 @@ public class CampusService {
     public void replaceParticipantsByClusterIdWithProvider(Long clusterId) throws ApiException {
         // Delegate to the configured provider which handles everything internally
         workplaceProvider.updateParticipantsByCluster(clusterId);
+    }
+
+    public void refreshParticipantMetrics() {
+        schedulerMetricsService.resetParticipantMetrics();
+
+        workplaceRepository.countParticipantsByCampus().forEach(row ->
+            schedulerMetricsService.recordParticipantsByCampus(row.getCampusId(), row.getCount())
+        );
+
+        workplaceRepository.countParticipantsByCampusAndStageGroup().forEach(row ->
+            schedulerMetricsService.recordParticipantsByCampusAndStageGroup(
+                row.getCampusId(),
+                row.getStageGroupName(),
+                row.getCount()
+            )
+        );
+
+        workplaceRepository.countParticipantsByCampusAndStageName().forEach(row ->
+            schedulerMetricsService.recordParticipantsByCampusAndStageName(
+                row.getCampusId(),
+                row.getStageName(),
+                row.getCount()
+            )
+        );
     }
 
     private int toNonNegative(Integer value) {

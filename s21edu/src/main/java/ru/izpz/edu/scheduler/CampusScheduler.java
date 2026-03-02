@@ -68,6 +68,7 @@ public class CampusScheduler {
                 schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "failed");
                 return;
             }
+            campusService.refreshParticipantMetrics();
         } finally {
             schedulerMetricsService.stopPhaseTimer(SCHEDULER_NAME, "participants", participantsSample);
         }

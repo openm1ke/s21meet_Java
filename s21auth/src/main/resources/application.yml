@@ -26,7 +26,7 @@ spring:
       path: /h2-console
 
 token:
-  uri: ${TOKEN_URI:/auth/realms/EduPowerKeycloak/protocol/openid-connect/token}
+  uri: ${TOKEN_URI}
   scheduler:
     enabled: true
     refresh-delay: 30000
@@ -41,7 +41,7 @@ resilience4j:
       auth:
         limitForPeriod: 5
         limitRefreshPeriod: 1s
-        timeoutDuration: 0
+        timeoutDuration: 0s
   retry:
     instances:
       auth:
