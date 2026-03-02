@@ -12,6 +12,9 @@ import ru.izpz.dto.ApiException;
 import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.config.CampusSchedulerProperties;
 import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.scheduler.metrics.SchedulerErrorReason;
+import ru.izpz.edu.scheduler.metrics.SchedulerPhaseRequestStatus;
+import ru.izpz.edu.scheduler.metrics.SchedulerRunStatus;
 import ru.izpz.edu.service.CampusCatalog;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.SchedulerMetricsService;
@@ -52,7 +55,7 @@ public class CampusScheduler {
             clustersOutcome = processClusters(campuses, stopWatch);
             if (!clustersOutcome.completed()) {
                 log.error("Цикл парсинга прерван: превышено время фазы получения кластеров");
-                schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "failed");
+                schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, SchedulerRunStatus.FAILED);
                 return;
             }
         } finally {
@@ -65,7 +68,7 @@ public class CampusScheduler {
             participantsOutcome = processParticipants(stopWatch);
             if (!participantsOutcome.completed()) {
                 log.error("Цикл парсинга прерван: превышено время фазы получения участников");
-                schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "failed");
+                schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, SchedulerRunStatus.FAILED);
                 return;
             }
             campusService.refreshParticipantMetrics();
@@ -74,9 +77,9 @@ public class CampusScheduler {
         }
         
         if (clustersOutcome.hasErrors() || participantsOutcome.hasErrors()) {
-            schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "partial");
+            schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, SchedulerRunStatus.PARTIAL);
         } else {
-            schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, "success");
+            schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, SchedulerRunStatus.SUCCESS);
             schedulerMetricsService.recordLastSuccess(SCHEDULER_NAME);
         }
 
@@ -110,11 +113,11 @@ public class CampusScheduler {
         } catch (ApiException e) {
             schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "campus_api", "get_clusters", e);
             log.error("Ошибка получения кластеров для кампуса {} ({})", campusCatalog.campusName(id), id, e);
-            return TaskResult.errorResult("api_exception");
+            return TaskResult.errorResult(SchedulerErrorReason.API_EXCEPTION);
         } catch (Exception e) {
             schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "campus_api", "get_clusters", e);
             log.error("Непредвиденная ошибка получения кластеров для кампуса {} ({})", campusCatalog.campusName(id), id, e);
-            return TaskResult.errorResult("execution_exception");
+            return TaskResult.errorResult(SchedulerErrorReason.EXECUTION_EXCEPTION);
         }
     }
 
@@ -146,11 +149,11 @@ public class CampusScheduler {
         } catch (ApiException e) {
             schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "campus_api", "get_participants", e);
             log.error("Ошибка получения участников для кластера {}", cid, e);
-            return TaskResult.errorResult("api_exception");
+            return TaskResult.errorResult(SchedulerErrorReason.API_EXCEPTION);
         } catch (Exception e) {
             schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "campus_api", "get_participants", e);
             log.error("Непредвиденная ошибка получения участников для кластера {}", cid, e);
-            return TaskResult.errorResult("execution_exception");
+            return TaskResult.errorResult(SchedulerErrorReason.EXECUTION_EXCEPTION);
         }
     }
 
@@ -160,17 +163,17 @@ public class CampusScheduler {
             allOf.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             cancelPendingFutures(futures);
-            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, "timeout");
+            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, SchedulerErrorReason.TIMEOUT);
             log.error("Превышено время выполнения фазы {} ({} сек)", phase, timeout.toSeconds(), e);
             return new PhaseOutcome(false, true);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             cancelPendingFutures(futures);
-            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, "interrupted");
+            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, SchedulerErrorReason.INTERRUPTED);
             log.error("Прервано ожидание результатов фазы {}", phase, e);
             return new PhaseOutcome(false, true);
         } catch (Exception e) {
-            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, "execution_exception");
+            schedulerMetricsService.recordPhaseIssue(SCHEDULER_NAME, phase, SchedulerErrorReason.EXECUTION_EXCEPTION);
             log.error("Ошибка ожидания результатов фазы {}", phase, e);
             return new PhaseOutcome(false, true);
         }
@@ -195,13 +198,13 @@ public class CampusScheduler {
         }
     }
 
-    private record TaskResult(boolean success, String status, String errorType) {
+    private record TaskResult(boolean success, SchedulerPhaseRequestStatus status, SchedulerErrorReason errorType) {
         private static TaskResult successResult() {
-            return new TaskResult(true, "success", "none");
+            return new TaskResult(true, SchedulerPhaseRequestStatus.SUCCESS, SchedulerErrorReason.NONE);
         }
 
-        private static TaskResult errorResult(String errorType) {
-            return new TaskResult(false, "error", errorType);
+        private static TaskResult errorResult(SchedulerErrorReason errorType) {
+            return new TaskResult(false, SchedulerPhaseRequestStatus.FAILED, errorType);
         }
     }
 

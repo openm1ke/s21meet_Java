@@ -13,6 +13,7 @@ import ru.izpz.dto.ApiException;
 import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.config.CampusSchedulerProperties;
 import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.scheduler.metrics.SchedulerErrorClassifier;
 import ru.izpz.edu.service.CampusCatalog;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.SchedulerMetricsService;
@@ -53,7 +54,7 @@ class CampusSchedulerTest {
         scheduler = new CampusScheduler(
             campusClient,
             campusService,
-            new SchedulerMetricsService(meterRegistry, campusCatalog),
+            new SchedulerMetricsService(meterRegistry, campusCatalog, new SchedulerErrorClassifier()),
             campusCatalog,
             schedulerProperties,
             executorService

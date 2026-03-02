@@ -6,7 +6,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
-import ru.izpz.dto.ApiException;
 import ru.izpz.edu.service.SchedulerMetricsService;
 
 @Aspect
@@ -15,6 +14,7 @@ import ru.izpz.edu.service.SchedulerMetricsService;
 public class SchedulerMetricsAspect {
 
     private final SchedulerMetricsService schedulerMetricsService;
+    private final SchedulerErrorClassifier schedulerErrorClassifier;
 
     @Around("@annotation(trackSchedulerMetrics)")
     public Object recordSchedulerMetrics(ProceedingJoinPoint pjp, TrackSchedulerMetrics trackSchedulerMetrics) throws Throwable {
@@ -24,31 +24,17 @@ public class SchedulerMetricsAspect {
 
         try {
             Object result = pjp.proceed();
-            schedulerMetricsService.recordPhaseRequest(scheduler, phase, "success");
-            schedulerMetricsService.recordRunStatus(scheduler, "success");
+            schedulerMetricsService.recordPhaseRequest(scheduler, phase, SchedulerPhaseRequestStatus.SUCCESS);
+            schedulerMetricsService.recordRunStatus(scheduler, SchedulerRunStatus.SUCCESS);
             schedulerMetricsService.recordLastSuccess(scheduler);
             return result;
         } catch (Throwable throwable) {
-            schedulerMetricsService.recordPhaseRequest(scheduler, phase, "error");
-            schedulerMetricsService.recordPhaseIssue(scheduler, phase, classifyPhaseIssue(throwable));
-            schedulerMetricsService.recordRunStatus(scheduler, "failed");
+            schedulerMetricsService.recordPhaseRequest(scheduler, phase, SchedulerPhaseRequestStatus.FAILED);
+            schedulerMetricsService.recordPhaseIssue(scheduler, phase, schedulerErrorClassifier.classify(throwable));
+            schedulerMetricsService.recordRunStatus(scheduler, SchedulerRunStatus.FAILED);
             throw throwable;
         } finally {
             schedulerMetricsService.stopPhaseTimer(scheduler, phase, sample);
         }
-    }
-
-    private String classifyPhaseIssue(Throwable throwable) {
-        if (throwable instanceof ApiException) {
-            return "api_exception";
-        }
-        String className = throwable.getClass().getSimpleName().toLowerCase();
-        if (className.contains("timeout")) {
-            return "timeout";
-        }
-        if (className.contains("interrupted")) {
-            return "interrupted";
-        }
-        return "execution_exception";
     }
 }
