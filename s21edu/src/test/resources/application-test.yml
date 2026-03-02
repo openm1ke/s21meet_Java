@@ -27,7 +27,6 @@ profile.service.enabled: false
 profile.api.enabled: false
 graphql.api.enabled: false
 notify.service.enabled: false
-token.service.enabled: false
 cluster.api.enabled: false
 api.client.enabled: false
 campus:

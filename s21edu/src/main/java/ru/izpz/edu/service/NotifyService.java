@@ -34,9 +34,14 @@ public class NotifyService {
     @Transactional
     public List<StatusChange> computeAndPersistChanges() {
         List<String> logins = friendsRepository.findDistinctLogins();
-        if (logins.isEmpty()) return List.of();
+        if (logins.isEmpty()) {
+            log.debug("computeAndPersistChanges: no tracked logins");
+            return List.of();
+        }
 
         List<StatusChange> changes = new ArrayList<>();
+        int becameOnline = 0;
+        int becameOffline = 0;
 
         for (String login : logins) {
             boolean inCampus = workplaceRepository.existsByLogin(login);
@@ -49,11 +54,13 @@ public class NotifyService {
                     o.setIsOnline(true);
                     onlineRepository.save(o);
                     addChangeIfSubscribers(changes, login, true);
+                    becameOnline++;
                 } else if (Boolean.FALSE.equals(opt.get().getIsOnline())) {
                     Online o = opt.get();
                     o.setIsOnline(true);
                     onlineRepository.save(o);
                     addChangeIfSubscribers(changes, login, true);
+                    becameOnline++;
                 }
             } else {
                 if (opt.isPresent() && Boolean.TRUE.equals(opt.get().getIsOnline())) {
@@ -61,9 +68,23 @@ public class NotifyService {
                     o.setIsOnline(false);
                     onlineRepository.save(o);
                     addChangeIfSubscribers(changes, login, false);
+                    becameOffline++;
                 }
             }
         }
+        long recipients = changes.stream()
+            .map(StatusChange::telegramIds)
+            .filter(Objects::nonNull)
+            .mapToLong(List::size)
+            .sum();
+        log.info(
+            "computeAndPersistChanges: processedLogins={}, becameOnline={}, becameOffline={}, emittedChanges={}, recipients={}",
+            logins.size(),
+            becameOnline,
+            becameOffline,
+            changes.size(),
+            recipients
+        );
         return changes;
     }
 

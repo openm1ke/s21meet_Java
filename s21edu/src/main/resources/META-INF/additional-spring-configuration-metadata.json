@@ -26,11 +26,6 @@
       "description": "Description for campus.api.enabled."
     },
     {
-      "name": "token.service.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Description for token.service.enabled."
-    },
-    {
       "name": "campus.service.enabled",
       "type": "java.lang.Boolean",
       "description": "Description for campus.service.enabled."
@@ -39,6 +34,30 @@
       "name": "campus.scheduler.enabled",
       "type": "java.lang.Boolean",
       "description": "Description for campus.scheduler.enabled."
+    },
+    {
+      "name": "campus.scheduler.fixed-delay",
+      "type": "java.lang.String",
+      "defaultValue": "PT30S",
+      "description": "Fixed delay for campus scheduler polling, expressed as ISO-8601 duration (e.g. PT30S)."
+    },
+    {
+      "name": "campus.scheduler.participants-max-concurrency",
+      "type": "java.lang.Integer",
+      "defaultValue": 8,
+      "description": "Maximum number of concurrent participant tasks for campus scheduler."
+    },
+    {
+      "name": "campus.scheduler.timeout.clusters",
+      "type": "java.lang.String",
+      "defaultValue": "PT20S",
+      "description": "Timeout for campus cluster phase, expressed as ISO-8601 duration."
+    },
+    {
+      "name": "campus.scheduler.timeout.participants",
+      "type": "java.lang.String",
+      "defaultValue": "PT40S",
+      "description": "Timeout for campus participant phase, expressed as ISO-8601 duration."
     },
     {
       "name": "event.scheduler.enabled",
@@ -61,7 +80,7 @@
       "description": "Description for notify.scheduler.enabled."
     },
     {
-      "name": "notify.poll.fixed-delay",
+      "name": "notify.scheduler.fixed-delay",
       "type": "java.lang.String",
       "defaultValue": "PT30S",
       "description": "Fixed delay for notify scheduler polling, expressed as ISO-8601 duration (e.g. PT30S)."

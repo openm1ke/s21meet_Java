@@ -42,6 +42,9 @@ class CampusServiceTest {
     @Mock
     private WorkplaceProvider workplaceProvider;
 
+    @Mock
+    private SchedulerMetricsService schedulerMetricsService;
+
     private static final UUID CAMPUS_ID = UUID.fromString("6bfe3c56-0211-4fe1-9e59-51616caac4dd");
     private static final Long CLUSTER_ID = 123L;
 
@@ -62,6 +65,9 @@ class CampusServiceTest {
         // Arrange
         List<ClusterV1DTO> clustersDto = List.of(new ClusterV1DTO());
         Cluster expectedCluster = new Cluster();
+        expectedCluster.setName("cluster-1");
+        expectedCluster.setCapacity(20);
+        expectedCluster.setAvailableCapacity(7);
         when(campusMapper.toClusterEntity(any(ClusterV1DTO.class), anyString())).thenReturn(expectedCluster);
 
         // Act
@@ -70,6 +76,7 @@ class CampusServiceTest {
         // Assert
         verify(persistenceService).replaceClusters(eq(CAMPUS_ID.toString()), argThat(list -> list.size() == 1));
         verify(campusMapper).toClusterEntity(any(ClusterV1DTO.class), eq(CAMPUS_ID.toString()));
+        verify(schedulerMetricsService).recordClusterPlaces(CAMPUS_ID.toString(), "cluster-1", 7, 13);
     }
 
     @Test
@@ -83,6 +90,7 @@ class CampusServiceTest {
         // Assert
         verify(persistenceService, never()).replaceClusters(anyString(), anyList());
         verify(campusMapper, never()).toClusterEntity(any(ClusterV1DTO.class), anyString());
+        verifyNoInteractions(schedulerMetricsService);
     }
 
     @Test
