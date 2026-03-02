@@ -3,10 +3,12 @@ package ru.izpz.edu.service;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Service;
-import ru.izpz.dto.ApiException;
+import ru.izpz.edu.scheduler.metrics.SchedulerErrorClassifier;
+import ru.izpz.edu.scheduler.metrics.SchedulerErrorReason;
+import ru.izpz.edu.scheduler.metrics.SchedulerPhaseRequestStatus;
+import ru.izpz.edu.scheduler.metrics.SchedulerRunStatus;
 
 import java.time.Instant;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,6 +19,7 @@ public class SchedulerMetricsService {
 
     private final MeterRegistry meterRegistry;
     private final CampusCatalog campusCatalog;
+    private final SchedulerErrorClassifier schedulerErrorClassifier;
     private final Map<String, AtomicInteger> clusterPlacesGauges = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> participantByCampusGauges = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> participantByCampusStageGroupGauges = new ConcurrentHashMap<>();
@@ -26,9 +29,14 @@ public class SchedulerMetricsService {
     private final Map<String, AtomicLong> lastEventsSavedCounts = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> lastNotifyRecipientCounts = new ConcurrentHashMap<>();
 
-    public SchedulerMetricsService(MeterRegistry meterRegistry, CampusCatalog campusCatalog) {
+    public SchedulerMetricsService(
+        MeterRegistry meterRegistry,
+        CampusCatalog campusCatalog,
+        SchedulerErrorClassifier schedulerErrorClassifier
+    ) {
         this.meterRegistry = meterRegistry;
         this.campusCatalog = campusCatalog;
+        this.schedulerErrorClassifier = schedulerErrorClassifier;
     }
 
     public Timer.Sample startPhaseTimer() {
@@ -66,38 +74,44 @@ public class SchedulerMetricsService {
         getParticipantByCampusStageNameGauge(campusId, normalizedStage).set(Math.max(count, 0L));
     }
 
-    public void recordPhaseIssue(String schedulerName, String phase, String issueType) {
+    public void recordPhaseIssue(String schedulerName, String phase, SchedulerErrorReason issueType) {
         incrementCounter(
             "edu_scheduler_phase_issues_total",
             "scheduler", schedulerName,
             "phase", phase,
-            "issue_type", issueType
+            "issue_type", issueType.tag()
         );
     }
 
-    public void recordPhaseRequest(String schedulerName, String phase, String status) {
+    public void recordPhaseRequest(String schedulerName, String phase, SchedulerPhaseRequestStatus status) {
         incrementCounter(
             "edu_scheduler_phase_requests_total",
             "scheduler", schedulerName,
             "phase", phase,
-            "status", status
+            "status", status.tag()
         );
     }
 
-    public void recordRunStatus(String schedulerName, String status) {
+    public void recordRunStatus(String schedulerName, SchedulerRunStatus status) {
         incrementCounter(
             "edu_scheduler_run_total",
             "scheduler", schedulerName,
-            "status", status
+            "status", status.tag()
         );
     }
 
     public void recordExternalApiSuccess(String schedulerName, String client, String operation) {
-        recordExternalApiCall(schedulerName, client, operation, "success", "none");
+        recordExternalApiCall(schedulerName, client, operation, "success", SchedulerErrorReason.NONE);
     }
 
     public void recordExternalApiError(String schedulerName, String client, String operation, Throwable error) {
-        recordExternalApiCall(schedulerName, client, operation, "error", classifyExternalApiError(error));
+        recordExternalApiCall(
+            schedulerName,
+            client,
+            operation,
+            "error",
+            schedulerErrorClassifier.classify(error)
+        );
     }
 
     public void recordLastSuccess(String schedulerName) {
@@ -158,7 +172,7 @@ public class SchedulerMetricsService {
         String client,
         String operation,
         String outcome,
-        String reason
+        SchedulerErrorReason reason
     ) {
         incrementCounter(
             "edu_external_api_calls_total",
@@ -166,28 +180,8 @@ public class SchedulerMetricsService {
             "client", client,
             "operation", operation,
             "outcome", outcome,
-            "reason", reason
+            "reason", reason.tag()
         );
-    }
-
-    private String classifyExternalApiError(Throwable error) {
-        if (error == null) {
-            return "unknown";
-        }
-        if (error instanceof ApiException) {
-            return "api_exception";
-        }
-        String className = error.getClass().getSimpleName().toLowerCase(Locale.ROOT);
-        if (className.contains("timeout")) {
-            return "timeout";
-        }
-        if (className.contains("connect")) {
-            return "network";
-        }
-        if (className.contains("rate") || className.contains("throttle")) {
-            return "rate_limit";
-        }
-        return "unknown";
     }
 
     private AtomicInteger getClusterPlacesGauge(String campusId, String clusterName, String placeType) {

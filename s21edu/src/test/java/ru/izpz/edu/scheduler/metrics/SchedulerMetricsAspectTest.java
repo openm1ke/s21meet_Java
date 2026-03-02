@@ -37,8 +37,8 @@ class SchedulerMetricsAspectTest {
         testScheduler.success();
 
         verify(schedulerMetricsService).startPhaseTimer();
-        verify(schedulerMetricsService).recordPhaseRequest("test_scheduler", "test_phase", "success");
-        verify(schedulerMetricsService).recordRunStatus("test_scheduler", "success");
+        verify(schedulerMetricsService).recordPhaseRequest("test_scheduler", "test_phase", SchedulerPhaseRequestStatus.SUCCESS);
+        verify(schedulerMetricsService).recordRunStatus("test_scheduler", SchedulerRunStatus.SUCCESS);
         verify(schedulerMetricsService).recordLastSuccess("test_scheduler");
         verify(schedulerMetricsService, never()).recordPhaseIssue(eq("test_scheduler"), eq("test_phase"), any());
     }
@@ -48,9 +48,9 @@ class SchedulerMetricsAspectTest {
         assertThrows(RuntimeException.class, () -> testScheduler.failRuntime());
 
         verify(schedulerMetricsService).startPhaseTimer();
-        verify(schedulerMetricsService).recordPhaseRequest("test_scheduler", "test_phase", "error");
-        verify(schedulerMetricsService).recordPhaseIssue("test_scheduler", "test_phase", "execution_exception");
-        verify(schedulerMetricsService).recordRunStatus("test_scheduler", "failed");
+        verify(schedulerMetricsService).recordPhaseRequest("test_scheduler", "test_phase", SchedulerPhaseRequestStatus.FAILED);
+        verify(schedulerMetricsService).recordPhaseIssue("test_scheduler", "test_phase", SchedulerErrorReason.EXECUTION_EXCEPTION);
+        verify(schedulerMetricsService).recordRunStatus("test_scheduler", SchedulerRunStatus.FAILED);
         verify(schedulerMetricsService, never()).recordLastSuccess(any());
     }
 
@@ -63,8 +63,16 @@ class SchedulerMetricsAspectTest {
         }
 
         @Bean
-        SchedulerMetricsAspect schedulerMetricsAspect(SchedulerMetricsService schedulerMetricsService) {
-            return new SchedulerMetricsAspect(schedulerMetricsService);
+        SchedulerErrorClassifier schedulerErrorClassifier() {
+            return new SchedulerErrorClassifier();
+        }
+
+        @Bean
+        SchedulerMetricsAspect schedulerMetricsAspect(
+            SchedulerMetricsService schedulerMetricsService,
+            SchedulerErrorClassifier schedulerErrorClassifier
+        ) {
+            return new SchedulerMetricsAspect(schedulerMetricsService, schedulerErrorClassifier);
         }
 
         @Bean
