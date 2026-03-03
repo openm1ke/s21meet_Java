@@ -38,7 +38,7 @@ public class CallbackHandler {
             CallbackPayload payload = callbackPayloadSerializer.deserialize(data);
             
             // Записываем метрику для inline кнопок
-            metricsService.recordButtonPress(chatId, payload.getCommand(), "inline");
+            metricsService.recordButtonPress(chatId, payload.getCommand(), ButtonMetricType.INLINE);
 
             switch (payload.getCommand()) {
                 case TelegramButtons.REGISTRATION_CODE -> updateMessageAndChangeStatusRegistration(chatId, messageId, "Введите логин на платформе");
