@@ -11,7 +11,6 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageRe
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.izpz.dto.StatusChange;
 
 import java.util.List;
@@ -25,15 +24,18 @@ import static org.mockito.Mockito.*;
 class MessageSenderTest {
 
     @Mock
-    private TelegramClientProxy telegramClientProxy;
+    private TelegramExecutorService telegramExecutorService;
+
+    @Mock
+    private MetricsService metricsService;
 
     @InjectMocks
     private MessageSender messageSender;
 
     @Test
-    void execute_success_returnsOptionalWithValue() throws TelegramApiException {
+    void execute_success_returnsOptionalWithValue() {
         Message msg = mock(Message.class);
-        when(telegramClientProxy.execute(any())).thenReturn(msg);
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.of(msg));
 
         Optional<Message> result = messageSender.execute(SendMessage.builder().chatId("1").text("t").build());
 
@@ -42,8 +44,8 @@ class MessageSenderTest {
     }
 
     @Test
-    void execute_telegramException_returnsEmptyOptional() throws TelegramApiException {
-        when(telegramClientProxy.execute(any())).thenThrow(new TelegramApiException("err"));
+    void execute_telegramException_returnsEmptyOptional() {
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.empty());
 
         Optional<Message> result = messageSender.execute(SendMessage.builder().chatId("1").text("t").build());
 
@@ -51,70 +53,75 @@ class MessageSenderTest {
     }
 
     @Test
-    void sendMessage_buildsSendMessageAndDelegatesToExecute() throws TelegramApiException {
-        when(telegramClientProxy.execute(any())).thenReturn(null);
+    void sendMessage_buildsSendMessageAndDelegatesToExecute() {
+        Message msg = mock(Message.class);
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.of(msg));
 
         ReplyKeyboard kb = mock(ReplyKeyboard.class);
         messageSender.sendMessage(1L, "txt", kb);
 
-        verify(telegramClientProxy).execute(any(SendMessage.class));
+        verify(telegramExecutorService).execute(any(SendMessage.class));
     }
 
     @Test
-    void sendStatusChanges_sendsOnlyForValidTelegramIds() throws TelegramApiException {
-        when(telegramClientProxy.execute(any())).thenReturn(null);
+    void sendStatusChanges_sendsOnlyForValidTelegramIds() {
+        Message msg = mock(Message.class);
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.of(msg));
 
         StatusChange c = new StatusChange("login", true, List.of("10", "bad"));
 
         messageSender.sendStatusChanges(List.of(c));
 
-        verify(telegramClientProxy, times(1)).execute(any(SendMessage.class));
+        verify(telegramExecutorService, times(1)).execute(any(SendMessage.class));
+        verify(metricsService).recordNotifyDelivery("success");
     }
 
     @Test
-    void sendStatusChanges_offlineStatus_buildsMessage() throws TelegramApiException {
-        when(telegramClientProxy.execute(any())).thenReturn(null);
+    void sendStatusChanges_offlineStatus_buildsMessage() {
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.empty());
 
         StatusChange c = new StatusChange("login", false, List.of("10"));
 
         messageSender.sendStatusChanges(List.of(c));
 
-        verify(telegramClientProxy, times(1)).execute(any(SendMessage.class));
+        verify(telegramExecutorService, times(1)).execute(any(SendMessage.class));
+        verify(metricsService).recordNotifyDelivery("error");
     }
 
     @Test
-    void updateMessage_buildsEditMessageTextAndDelegates() throws TelegramApiException {
-        when(telegramClientProxy.execute(any())).thenReturn(null);
+    void updateMessage_buildsEditMessageTextAndDelegates() {
+        Message msg = mock(Message.class);
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.of(msg));
 
         messageSender.updateMessage(1L, 2, "t", mock(org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup.class));
 
-        verify(telegramClientProxy).execute(any(EditMessageText.class));
+        verify(telegramExecutorService).execute(any(EditMessageText.class));
     }
 
     @Test
-    void removeInlineKeyboard_buildsEditMessageReplyMarkupAndDelegates() throws TelegramApiException {
-        when(telegramClientProxy.execute(any())).thenReturn(null);
+    void removeInlineKeyboard_buildsEditMessageReplyMarkupAndDelegates() {
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.empty());
 
         messageSender.removeInlineKeyboard(1L, 2);
 
-        verify(telegramClientProxy).execute(any(EditMessageReplyMarkup.class));
+        verify(telegramExecutorService).execute(any(EditMessageReplyMarkup.class));
     }
 
     @Test
-    void removeReplyKeyboard_buildsSendMessageAndDelegates() throws TelegramApiException {
-        when(telegramClientProxy.execute(any())).thenReturn(null);
+    void removeReplyKeyboard_buildsSendMessageAndDelegates() {
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.empty());
 
         messageSender.removeReplyKeyboard(1L, "m");
 
-        verify(telegramClientProxy).execute(any(SendMessage.class));
+        verify(telegramExecutorService).execute(any(SendMessage.class));
     }
 
     @Test
-    void answerCallbackQuery_buildsMethodAndDelegates() throws TelegramApiException {
-        when(telegramClientProxy.execute(any())).thenReturn(null);
+    void answerCallbackQuery_buildsMethodAndDelegates() {
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.empty());
 
         messageSender.answerCallbackQuery("cb", "txt", true);
 
-        verify(telegramClientProxy).execute(any(AnswerCallbackQuery.class));
+        verify(telegramExecutorService).execute(any(AnswerCallbackQuery.class));
     }
 }
