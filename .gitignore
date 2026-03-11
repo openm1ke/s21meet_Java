@@ -37,3 +37,6 @@ out/
 .vscode/
 /qodana.yaml
 .env
+env/*/*.env
+!env/*/*.env.example
+!env/*/compose.env.example

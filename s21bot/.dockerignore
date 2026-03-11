@@ -1,0 +1,7 @@
+**
+!Dockerfile
+
+# Разрешаем только app.jar и папки-предки (иначе файл не "разигнорится")
+!build/
+!build/libs/
+!build/libs/app.jar

@@ -1,6 +1,12 @@
 server:
   port: 8081
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
 spring:
   datasource:
     url: jdbc:h2:mem:db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
@@ -18,6 +24,29 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+token:
+  uri: ${TOKEN_URI}
+  scheduler:
+    enabled: true
+    refresh-delay: 30000
+
+security:
+  crypto:
+    key-base64: ${CRYPTO_KEY_BASE64}
+
+resilience4j:
+  ratelimiter:
+    instances:
+      auth:
+        limitForPeriod: 5
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0s
+  retry:
+    instances:
+      auth:
+        maxAttempts: 3
+        waitDuration: 500ms
 
 logging:
   level:

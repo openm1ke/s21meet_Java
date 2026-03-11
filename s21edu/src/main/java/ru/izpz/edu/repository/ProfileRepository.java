@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface ProfileRepository extends JpaRepository<Profile, UUID> {
 
     Optional<Profile> findByTelegramId(String telegramId);
+    boolean existsByS21login(String s21login);
 }

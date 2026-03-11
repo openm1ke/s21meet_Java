@@ -12,9 +12,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(FeignException.class)
-    public void handleFeignException(FeignException ex) {
-        // Логирование с полным stack trace
-        log.error("Unhandled exception", ex);
+    public ResponseEntity<String> handleFeignException(FeignException ex) {
+        log.error("Feign exception", ex);
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body("Ошибка при обращении к внешнему сервису");
     }
 
     @ExceptionHandler(Exception.class)

@@ -1,0 +1,3 @@
+### Достать qr код для входа
+POST http://localhost:8084/api/rocketchat/qr
+Content-Type: application/json

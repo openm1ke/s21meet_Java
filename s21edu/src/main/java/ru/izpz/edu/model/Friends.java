@@ -1,12 +1,13 @@
 package ru.izpz.edu.model;
 
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -14,6 +15,8 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
+@NoArgsConstructor
+@ToString
 public class Friends {
     @Id
     @GeneratedValue(generator = "UUID")
@@ -21,7 +24,9 @@ public class Friends {
     UUID id;
     String telegramId;
     String login;
-    Boolean isFriend;
-    Boolean isSubscribe;
+    String name = "";
+    Boolean isFriend = false;
+    Boolean isSubscribe = false;
+    Boolean isFavorite = false;
     LocalDateTime date;
 }

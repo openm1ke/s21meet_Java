@@ -5,7 +5,7 @@ import ru.izpz.dto.model.ErrorResponseDTO;
 
 @Getter
 public class EduLoginCheckException extends RuntimeException {
-    private final ErrorResponseDTO error;
+    private final transient ErrorResponseDTO error;
 
     public EduLoginCheckException(ErrorResponseDTO error) {
         super(error.getMessage());

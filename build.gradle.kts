@@ -1,10 +1,13 @@
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     java
     id("jacoco")
     id("jacoco-report-aggregation")
     id("org.sonarqube") version "6.2.0.5505"
-    id("org.springframework.boot") version "3.5.0"
-    id("io.spring.dependency-management") version "1.1.7"
+    id("org.springframework.boot") version "3.5.10" apply false
+    id("io.spring.dependency-management") version "1.1.7" apply false
     id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
 
@@ -18,14 +21,18 @@ allprojects {
     }
 }
 
-repositories {
-    mavenCentral()
-}
-
 subprojects {
     apply(plugin = "java")
     apply(plugin = "io.spring.dependency-management")
     apply(plugin = "jacoco")
+
+    val springCloudVersion: String by project
+    configure<DependencyManagementExtension> {
+        imports {
+            mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
+            mavenBom("io.github.resilience4j:resilience4j-bom:${property("resilience4jVersion")}")
+        }
+    }
 
     java {
         toolchain {
@@ -40,6 +47,8 @@ subprojects {
     dependencies {
         compileOnly("org.projectlombok:lombok")
         annotationProcessor("org.projectlombok:lombok")
+        
+        // Common logging exclusion
         configurations.all {
             exclude(group = "org.slf4j", module = "slf4j-simple")
         }
@@ -65,6 +74,19 @@ subprojects {
                 html.required.set(true)
                 csv.required.set(false)
             }
+            
+            classDirectories.setFrom(
+                files(classDirectories.files.map { directory ->
+                    fileTree(directory).apply {
+                        exclude("**/dto/**")
+                        exclude("**/model/**")
+                        exclude("**/entity/**")
+                        exclude("**/generated/**")
+                        exclude("**/openapi/**")
+                        exclude("**/common/**")
+                    }
+                })
+            )
         }
     }
 }
@@ -77,11 +99,11 @@ sonarqube {
         property("sonar.token", env.SONAR_TOKEN.value)
         property("sonar.coverage.jacoco.xmlReportPaths",
                 "s21auth/build/reports/jacoco/test/jacocoTestReport.xml," +
-                "s21edu/build/reports/jacoco/test/jacocoTestReport.xml" +
+                "s21edu/build/reports/jacoco/test/jacocoTestReport.xml," +
                 "s21bot/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
-        property("sonar.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**")
-        property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**")
+        property("sonar.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**")
+        property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**")
     }
 }
 
@@ -108,9 +130,20 @@ tasks.register("runAllTestsWithCoverage") {
     })
 }
 
+val orderedSubprojectTests = subprojects
+    .map { it.tasks.named<Test>("test") }
+
+orderedSubprojectTests
+    .zipWithNext()
+    .forEach { (previous, next) ->
+        next.configure {
+            mustRunAfter(previous)
+        }
+    }
+
 tasks.register("runAllTests") {
     group = "verification"
     description = "Запускает все тесты во всех subprojects"
 
-    dependsOn(subprojects.map { it.path + ":test" })
+    dependsOn(orderedSubprojectTests)
 }

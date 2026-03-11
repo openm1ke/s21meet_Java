@@ -1,0 +1,9 @@
+### Отправка сообщения пользователю в rocketchat
+POST http://localhost:8084/api/rocketchat/send
+Content-Type: application/json
+
+{
+  "username": "quarkron",
+  "message": "Привет! Это тестовая отправка через новый сервис."
+}
+

@@ -2,52 +2,98 @@
   "properties": [
     {
       "name": "profile.api.enabled",
-      "type": "java.lang.String",
+      "type": "java.lang.Boolean",
       "description": "Description for profile.api.enabled."
     },
     {
       "name": "profile.service.enabled",
-      "type": "java.lang.String",
+      "type": "java.lang.Boolean",
       "description": "Description for profile.service.enabled."
     },
     {
       "name": "participant.api.enabled",
-      "type": "java.lang.String",
+      "type": "java.lang.Boolean",
       "description": "Description for participant.api.enabled."
     },
     {
       "name": "api.client.enabled",
-      "type": "java.lang.String",
+      "type": "java.lang.Boolean",
       "description": "Description for api.client.enabled."
     },
     {
       "name": "campus.api.enabled",
-      "type": "java.lang.String",
+      "type": "java.lang.Boolean",
       "description": "Description for campus.api.enabled."
     },
     {
-      "name": "token.service.enabled",
-      "type": "java.lang.String",
-      "description": "Description for token.service.enabled."
-    },
-    {
-      "name": "message.service.enabled",
-      "type": "java.lang.String",
-      "description": "Description for message.service.enabled."
-    },
-    {
       "name": "campus.service.enabled",
-      "type": "java.lang.String",
+      "type": "java.lang.Boolean",
       "description": "Description for campus.service.enabled."
     },
     {
-      "name": "notify.service.enabled",
+      "name": "campus.scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Description for campus.scheduler.enabled."
+    },
+    {
+      "name": "campus.scheduler.fixed-delay",
       "type": "java.lang.String",
+      "defaultValue": "PT30S",
+      "description": "Fixed delay for campus scheduler polling, expressed as ISO-8601 duration (e.g. PT30S)."
+    },
+    {
+      "name": "campus.scheduler.participants-max-concurrency",
+      "type": "java.lang.Integer",
+      "defaultValue": 8,
+      "description": "Maximum number of concurrent participant tasks for campus scheduler."
+    },
+    {
+      "name": "campus.scheduler.timeout.clusters",
+      "type": "java.lang.String",
+      "defaultValue": "PT20S",
+      "description": "Timeout for campus cluster phase, expressed as ISO-8601 duration."
+    },
+    {
+      "name": "campus.scheduler.timeout.participants",
+      "type": "java.lang.String",
+      "defaultValue": "PT40S",
+      "description": "Timeout for campus participant phase, expressed as ISO-8601 duration."
+    },
+    {
+      "name": "event.scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Description for event.scheduler.enabled."
+    },
+    {
+      "name": "notify.service.enabled",
+      "type": "java.lang.Boolean",
       "description": "Description for notify.service.enabled."
     },
     {
-      "name": "cluster.api.enabled",
+      "name": "graphql.api.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Description for notify.scheduler.enabled."
+    },
+    {
+      "name": "notify.scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Description for notify.scheduler.enabled."
+    },
+    {
+      "name": "notify.scheduler.fixed-delay",
       "type": "java.lang.String",
+      "defaultValue": "PT30S",
+      "description": "Fixed delay for notify scheduler polling, expressed as ISO-8601 duration (e.g. PT30S)."
+    },
+    {
+      "name": "cluster.api.enabled",
+      "type": "java.lang.Boolean",
       "description": "Description for cluster.api.enabled."
+    },
+    {
+      "name": "campus.workplace.provider",
+      "type": "java.lang.String",
+      "defaultValue": "rest",
+      "description": "Provider for workplace data: 'rest' for REST API, 'graphql' for GraphQL API."
     }
   ] }

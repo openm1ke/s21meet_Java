@@ -1,44 +1,79 @@
 server:
   port: 8082
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
 spring:
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: postgres
+    url: ${DB_URL:}
+    username: ${DB_USER:}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create  # Автоматически обновлять схему БД на основе сущностей
+      ddl-auto: ${DDL_AUTO:validate}  # Автоматически обновлять схему БД на основе сущностей
     show-sql: false  # Логирование SQL-запросов
     properties:
       hibernate:
+        jdbc:
+          time_zone: UTC
         format_sql: false  # Форматировать SQL-запросы для удобства
 
 edu:
-  tokenEndpoint: http://localhost:8081/api/tokens/default
+  tokenEndpoint: ${TOKEN_ENDPOINT:}
+
+bot.service.url: ${BOT_SERVICE_URL:}
 
 resilience4j:
   ratelimiter:
     instances:
-      campusApi:
-        limitForPeriod: 10
+      platform:
+        limitForPeriod: 30
         limitRefreshPeriod: 100ms
         timeoutDuration: 1s
+  retry:
+    instances:
+      platform:
+        maxAttempts: 3
+        waitDuration: 200ms
 
 logging:
   level:
     io.github.resilience4j: INFO
 
-participant.api.enabled: true
-profile.service.enabled: true
-profile.api.enabled: true
-notify.service.enabled: true
-message.service.enabled: true
-token.service.enabled: true
-cluster.api.enabled: true
 api.client.enabled: true
+cluster.api.enabled: true
+profile:
+  api.enabled: true
+  service.enabled: true
+participant.api.enabled: true
+graphql.api.enabled: true
+event:
+  scheduler:
+    enabled: true
+    fixed-delay: PT1M
+notify:
+  service.enabled: true
+  scheduler:
+    enabled: true
+    fixed-delay: PT30S
 campus:
   api.enabled: true
   service.enabled: true
+  workplace:
+    provider: ${CAMPUS_WORKPLACE_PROVIDER:graphql}  # rest или graphql (по умолчанию graphql)
+  scheduler:
+    enabled: true
+    fixed-delay: PT30S
+    participants-max-concurrency: 8
+    timeout:
+      clusters: PT20S
+      participants: PT40S

@@ -1,0 +1,109 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-index-cluster-campus
+      author: openmike
+      changes:
+        - createIndex:
+            tableName: cluster
+            indexName: idx_cluster_campus_id
+            columns:
+              - column:
+                  name: campus_id
+
+  - changeSet:
+      id: 011-index-participant-campus
+      author: openmike
+      changes:
+        - createIndex:
+            tableName: participant
+            indexName: idx_participant_campus_id
+            columns:
+              - column:
+                  name: campus_id
+
+  - changeSet:
+      id: 012-index-workplace
+      author: openmike
+      changes:
+        - createIndex:
+            tableName: workplace
+            indexName: idx_workplace_cluster_id
+            columns:
+              - column:
+                  name: cluster_id
+        - createIndex:
+            tableName: workplace
+            indexName: idx_workplace_login
+            columns:
+              - column:
+                  name: login
+
+  - changeSet:
+      id: 013-index-event-start
+      author: openmike
+      changes:
+        - createIndex:
+            tableName: event
+            indexName: idx_event_start_date_time
+            columns:
+              - column:
+                  name: start_date_time
+
+  - changeSet:
+      id: 014-index-friends
+      author: openmike
+      changes:
+        - createIndex:
+            tableName: friends
+            indexName: idx_friends_login
+            columns:
+              - column:
+                  name: login
+        - createIndex:
+            tableName: friends
+            indexName: idx_friends_telegram_id
+            columns:
+              - column:
+                  name: telegram_id
+        - createIndex:
+            tableName: friends
+            indexName: idx_friends_login_subscribe
+            columns:
+              - column:
+                  name: login
+              - column:
+                  name: is_subscribe
+        - createIndex:
+            tableName: friends
+            indexName: idx_friends_tg_friend_fav_date
+            columns:
+              - column:
+                  name: telegram_id
+              - column:
+                  name: is_friend
+              - column:
+                  name: is_favorite
+              - column:
+                  name: date
+
+  - changeSet:
+      id: 015-online-login-unique
+      author: openmike
+      changes:
+        - addUniqueConstraint:
+            tableName: online
+            columnNames: login
+            constraintName: uk_online_login
+
+  - changeSet:
+      id: 016-profile-unique
+      author: openmike
+      changes:
+        - addUniqueConstraint:
+            tableName: profile
+            columnNames: telegram_id
+            constraintName: uk_profile_telegram_id
+        - addUniqueConstraint:
+            tableName: profile
+            columnNames: s21login
+            constraintName: uk_profile_s21login
