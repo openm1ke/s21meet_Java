@@ -74,7 +74,13 @@ jobs:
           if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
 
-          ssh -p "$PORT" "$REMOTE" "mkdir -p \"$APP_DIR/scripts\" \"$APP_DIR/env/test\" \"$APP_DIR/monitoring/prometheus\" \"$APP_DIR/monitoring/grafana\""
+          ssh -p "$PORT" "$REMOTE" "\
+            set -euo pipefail; \
+            mkdir -p \"$APP_DIR/scripts\" \"$APP_DIR/env/test\" \"$APP_DIR/monitoring/prometheus\" \"$APP_DIR/monitoring/grafana\"; \
+            if [[ -d \"$APP_DIR/monitoring/prometheus/prometheus.yml\" ]]; then \
+              rm -rf \"$APP_DIR/monitoring/prometheus/prometheus.yml\"; \
+            fi; \
+            touch \"$APP_DIR/monitoring/prometheus/prometheus.yml\""
           scp -P "$PORT" docker-compose.yml "$REMOTE:$APP_DIR/docker-compose.yml"
           scp -P "$PORT" scripts/deploy-compose.sh "$REMOTE:$APP_DIR/scripts/deploy-compose.sh"
           scp -P "$PORT" monitoring/prometheus/prometheus.yml "$REMOTE:$APP_DIR/monitoring/prometheus/prometheus.yml"
