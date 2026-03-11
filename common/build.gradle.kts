@@ -1,6 +1,6 @@
 plugins {
     id("java-library")
-    id("org.openapi.generator") version "7.13.0"
+    id("org.openapi.generator") version "7.14.0"
 }
 
 val openApiVersion: String by project
@@ -11,7 +11,7 @@ val gsonVersion: String by project
 val gsonfireVersion: String by project
 val jacksonDatabindNullable: String by project
 val springSecurityCryptoVersion: String by project
-val openFeignVersion: String by project
+val springDotEnvVersion: String by project
 
 group = "ru.izpz"
 version = "0.0.1-SNAPSHOT"
@@ -21,7 +21,6 @@ repositories {
 }
 
 dependencies {
-    implementation("org.openapitools:openapi-generator-gradle-plugin:$openApiVersion")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonDatabind")
     implementation("org.openapitools:jackson-databind-nullable:$jacksonDatabindNullable")
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
@@ -29,10 +28,11 @@ dependencies {
     implementation("com.squareup.okio:okio-jvm:$okioJvmVersion")
     implementation("io.gsonfire:gson-fire:$gsonfireVersion")
     implementation("com.google.code.gson:gson:$gsonVersion")
+    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
     // https://mvnrepository.com/artifact/jakarta.annotation/jakarta.annotation-api
     implementation("jakarta.annotation:jakarta.annotation-api:3.0.0")
 
-    implementation("org.springframework.cloud:spring-cloud-starter-openfeign:$openFeignVersion") {
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign") {
         exclude(group = "org.springframework.security", module = "spring-security-crypto")
     }
     implementation("org.springframework.security:spring-security-crypto:$springSecurityCryptoVersion")

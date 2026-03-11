@@ -1,0 +1,98 @@
+name: Deploy Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (example: sha-abc123456789 or main-latest)"
+        required: true
+        type: string
+      image_repo:
+        description: "Optional image repo prefix"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: deploy-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Resolve image repo
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.image_repo }}" ]]; then
+            echo "image_repo=${{ inputs.image_repo }}" >> "$GITHUB_OUTPUT"
+          else
+            OWNER_LC="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+            echo "image_repo=ghcr.io/${OWNER_LC}/s21meet" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOY_HOST="${{ vars.DEPLOY_HOST }}"
+          DEPLOY_USER="${{ vars.DEPLOY_USER }}"
+          PORT="${{ vars.DEPLOY_PORT }}"
+
+          if [[ -z "$DEPLOY_HOST" ]]; then echo "DEPLOY_HOST var is required"; exit 1; fi
+          if [[ -z "$DEPLOY_USER" ]]; then echo "DEPLOY_USER var is required"; exit 1; fi
+          if [[ -z "$PORT" ]]; then PORT="22"; fi
+
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          if [[ -n "${{ vars.DEPLOY_KNOWN_HOSTS }}" ]]; then
+            echo "${{ vars.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          fi
+
+      - name: Copy deploy files to test host
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOY_HOST="${{ vars.DEPLOY_HOST }}"
+          DEPLOY_USER="${{ vars.DEPLOY_USER }}"
+          PORT="${{ vars.DEPLOY_PORT }}"
+          if [[ -z "$PORT" ]]; then PORT="22"; fi
+          APP_DIR="${{ vars.DEPLOY_APP_DIR }}"
+          if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
+          REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
+
+          ssh -p "$PORT" "$REMOTE" "mkdir -p \"$APP_DIR/scripts\" \"$APP_DIR/env/test\""
+          scp -P "$PORT" docker-compose.yml "$REMOTE:$APP_DIR/docker-compose.yml"
+          scp -P "$PORT" scripts/deploy-compose.sh "$REMOTE:$APP_DIR/scripts/deploy-compose.sh"
+
+      - name: Run test deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOY_HOST="${{ vars.DEPLOY_HOST }}"
+          DEPLOY_USER="${{ vars.DEPLOY_USER }}"
+          PORT="${{ vars.DEPLOY_PORT }}"
+          if [[ -z "$PORT" ]]; then PORT="22"; fi
+          APP_DIR="${{ vars.DEPLOY_APP_DIR }}"
+          if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
+          REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
+
+          ssh -p "$PORT" "$REMOTE" "\
+            set -euo pipefail; \
+            cd \"$APP_DIR\"; \
+            chmod +x scripts/deploy-compose.sh; \
+            IMAGE_REPO='${{ steps.vars.outputs.image_repo }}' IMAGE_TAG='${{ inputs.image_tag }}' \
+            scripts/deploy-compose.sh 'env/test/compose.env' 'infra' 'recreate-all'"

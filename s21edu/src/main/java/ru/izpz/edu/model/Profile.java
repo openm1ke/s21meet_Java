@@ -1,8 +1,10 @@
 package ru.izpz.edu.model;
 
 import lombok.*;
+import ru.izpz.dto.LastCommandState;
 import ru.izpz.dto.ProfileStatus;
 import jakarta.persistence.*;
+import ru.izpz.edu.utils.LastCommandAttributeConverter;
 
 import java.util.UUID;
 
@@ -21,5 +23,7 @@ public class Profile {
     String s21login;
     @Enumerated(EnumType.STRING)
     ProfileStatus status;
-    String lastCommand;
+    @Column(name = "last_command", columnDefinition = "TEXT")
+    @Convert(converter = LastCommandAttributeConverter.class)
+    LastCommandState lastCommand;
 }

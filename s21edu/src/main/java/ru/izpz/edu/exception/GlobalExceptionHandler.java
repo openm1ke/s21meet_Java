@@ -1,6 +1,7 @@
 package ru.izpz.edu.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +16,10 @@ import java.util.Map;
 
 @Slf4j
 @ControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Object> handleApiException(ApiException ex) {
@@ -39,8 +41,8 @@ public class GlobalExceptionHandler {
         }
     }
 
-    @ExceptionHandler(ProfileNotFoundException.class)
-    public ResponseEntity<String> handleProfileNotFound(ProfileNotFoundException e) {
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<String> handleProfileNotFound(EntityNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
     }
 
@@ -61,6 +63,12 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<String> handleIllegalStateException(IllegalStateException e) {
+        log.warn("IllegalStateException: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

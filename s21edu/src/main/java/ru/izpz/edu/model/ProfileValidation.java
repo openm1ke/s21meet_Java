@@ -12,7 +12,7 @@ import java.time.OffsetDateTime;
 @Entity
 public class ProfileValidation {
     @Id
-    String telegramId;
+    String s21login;
     String secretCode;
     OffsetDateTime expiresAt;
 }

@@ -3,15 +3,17 @@ package ru.izpz.bot.service;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import ru.izpz.bot.client.ProfileClient;
+import ru.izpz.bot.client.RocketChatClient;
 import ru.izpz.bot.exception.EduLoginCheckException;
-import ru.izpz.dto.ProfileDto;
-import ru.izpz.dto.ProfileRequest;
-import ru.izpz.dto.ProfileStatus;
+import ru.izpz.bot.exception.RocketChatSendException;
+import ru.izpz.dto.*;
 import ru.izpz.dto.model.ErrorResponseDTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.utils.FeignErrorParser;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -19,13 +21,14 @@ import ru.izpz.utils.FeignErrorParser;
 public class ProfileService {
 
     private final ProfileClient profileClient;
+    private final RocketChatClient rocketChatClient;
 
     public ProfileDto getProfile(Long chatId) {
         log.info("Получение профиля {}", chatId);
         try {
             return profileClient.getOrCreateProfile(chatId.toString());
         } catch (FeignException e) {
-            log.error("Ошибка обработки профиля", e);
+            log.error("Ошибка обработки профиля для {}", chatId, e);
             throw e;
         }
     }
@@ -49,12 +52,108 @@ public class ProfileService {
                 .telegramId(chatId.toString())
                 .status(status)
                 .build();
-        System.out.println(profileRequest);
         try {
             return profileClient.updateProfileStatus(profileRequest);
+        } catch (FeignException e) {
+            log.error("Ошибка обновления статуса профиля {}", e.contentUTF8());
+            throw e;
+        }
+    }
+
+    public ProfileDto checkAndSetLogin(Long chatId, String login) {
+        log.info("Сохранение логина профиля {} для {}", chatId, login);
+        ProfileRequest profileRequest = ProfileRequest.builder()
+                .telegramId(chatId.toString())
+                .s21login(login)
+                .build();
+        try {
+            return profileClient.checkAndSetLogin(profileRequest);
         } catch (FeignException e) {
             log.error("Ошибка обновления профиля {}", e.contentUTF8());
             throw e;
         }
+    }
+
+    public ProfileCodeResponse getVerificationCode(String s21login) {
+        ProfileCodeRequest request = ProfileCodeRequest.builder()
+                .s21login(s21login)
+                .build();
+        try {
+            return profileClient.getProfileCode(request);
+        } catch (FeignException e) {
+            log.error("Ошибка генерации кода подтверждения {}", e.contentUTF8());
+            throw e;
+        }
+    }
+
+    public RocketChatSendResponse sendVerificationCode(String s21login) {
+        try {
+            ProfileCodeResponse code = getVerificationCode(s21login);
+            String message = String.format("Привет! Вот твой код подтверждения: %s", code.getSecretCode());
+            RocketChatSendRequest rocketChatSendRequest = RocketChatSendRequest.builder()
+                    .username(code.getS21login())
+                    .message(message)
+                    .build();
+            var response = rocketChatClient.sendMessage(rocketChatSendRequest);
+            if (response.isSuccess()) {
+                return response;
+            } else {
+                throw new RocketChatSendException(response);
+            }
+        } catch (FeignException e) {
+            log.error("Ошибка отправки кода подтверждения {}", e.contentUTF8());
+            throw e;
+        }
+    }
+
+    public CampusResponse showCampusMap(Long chatId) {
+        var request = CampusRequest.builder().telegramId(chatId.toString()).build();
+        try {
+            return profileClient.getCampusMap(request);
+        } catch (FeignException e) {
+            log.error("Ошибка получения карты кампуса {}", e.contentUTF8());
+            throw e;
+        }
+    }
+
+    public ParticipantDto showParticipant(String telegramId, String eduLogin) {
+        var request = ParticipantRequest.builder().telegramId(telegramId).eduLogin(eduLogin).build();
+        try {
+            return profileClient.getParticipant(request);
+        } catch (FeignException e) {
+            log.error("Ошибка получения профиля {}", e.contentUTF8());
+            throw e;
+        }
+    }
+
+    public void setLastCommand(Long chatId, LastCommandState command) {
+        profileClient.setLastCommand(new LastCommandRequest(chatId.toString(), command));
+    }
+
+    public FriendDto applyFriend(Long telegramId, String login, FriendRequest.Action action, @Nullable String name) {
+        var builder = FriendRequest.builder()
+                .telegramId(telegramId.toString())
+                .action(action)
+                .login(login);
+        if (name != null) {
+            builder.name(name);
+        }
+        return profileClient.applyFriend(builder.build());
+    }
+
+    public FriendsSliceDto getFriends(Long chatId, int page, int pageSize) {
+        return profileClient.getFriends(chatId.toString(), page, pageSize);
+    }
+
+    public EventDto getEvent(long eventId) {
+        return profileClient.getEvent(eventId);
+    }
+
+    public EventsSliceDto getEvents(Long chatId, int page, int pageSize) {
+        return profileClient.getEvents(chatId.toString(), page, pageSize);
+    }
+
+    public List<ProjectsDto> getProjects(String login) {
+        return profileClient.getProjects(login);
     }
 }

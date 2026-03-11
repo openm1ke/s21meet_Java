@@ -1,6 +1,12 @@
 server:
   port: 8083
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
 spring:
   application:
       name: s21bot
@@ -8,10 +14,32 @@ spring:
 bot:
   token: ${BOT_TOKEN}
   admin: ${BOT_ADMIN}
+  group: ${BOT_GROUP}
+  group-invite-link: ${BOT_GROUP_INVITE_LINK}
+
+resilience4j:
+  ratelimiter:
+    instances:
+      telegram:
+        limitForPeriod: 25
+        limitRefreshPeriod: 1s
+        timeoutDuration: 5s
+  retry:
+    instances:
+      telegram:
+        maxAttempts: 5
+        waitDuration: 500ms
+        ignoreExceptions:
+          - org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
+          - org.telegram.telegrambots.meta.exceptions.TelegramApiValidationException
 
 logging:
   level:
     io.github.resilience4j: INFO
+
+rocketchat:
+  service:
+    url: ${ROCKETCHAT_SERVICE_URL}
 
 profile:
   service:

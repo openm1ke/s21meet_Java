@@ -1,16 +1,19 @@
 package ru.izpz.auth.controller;
 
-import lombok.RequiredArgsConstructor;
-import ru.izpz.auth.dto.TokenRequest;
-import ru.izpz.auth.service.TokenService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ru.izpz.auth.dto.TokenRequest;
+import ru.izpz.auth.service.TokenService;
 
 @Slf4j
 @RestController
+@Validated
 @RequiredArgsConstructor
 @RequestMapping("/api/tokens")
 public class TokenController {
@@ -38,8 +41,8 @@ public class TokenController {
     }
 
     @GetMapping
-    public ResponseEntity<String> getToken(@RequestParam String login) {
-        return tokenService.findByLogin(login)
+    public ResponseEntity<String> getToken(@RequestParam @NotBlank String login) {
+        return tokenService.findById(login)
                 .map(tokenEntity -> ResponseEntity.ok(tokenEntity.getAccessToken()))
                 .orElse(ResponseEntity.notFound().build());
     }

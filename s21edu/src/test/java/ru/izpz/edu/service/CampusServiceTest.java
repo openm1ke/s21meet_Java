@@ -1,21 +1,24 @@
 package ru.izpz.edu.service;
 
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.izpz.dto.ApiClient;
-import ru.izpz.dto.ApiException;
-import ru.izpz.dto.model.*;
-import ru.izpz.edu.repository.ClusterRepository;
-import ru.izpz.edu.repository.WorkplaceRepository;
+import ru.izpz.dto.*;
+import ru.izpz.dto.model.ClusterV1DTO;
+import ru.izpz.edu.client.CampusClient;
+import ru.izpz.edu.mapper.CampusMapper;
+import ru.izpz.edu.mapper.ProjectsMapper;
+import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.service.provider.WorkplaceProvider;
+import ru.izpz.edu.dto.GraphQLStudentProject;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,131 +28,123 @@ class CampusServiceTest {
     private CampusService campusService;
 
     @Mock
-    private CampusApiProxy campusApi;
+    private CampusPersistenceService persistenceService;
 
     @Mock
-    private ClusterApiProxy clusterApi;
+    private CampusMapper campusMapper;
 
     @Mock
-    private ParticipantApiProxy participantApi;
+    private CampusClient campusClient;
 
     @Mock
-    private ClusterRepository clusterRepository;
+    private ProjectsMapper projectsMapper;
 
     @Mock
-    private WorkplaceRepository workplaceRepository;
+    private WorkplaceProvider workplaceProvider;
 
     @Mock
-    private ApiClient apiClient;
-
-    @Mock
-    private TokenService tokenService;
+    private SchedulerMetricsService schedulerMetricsService;
 
     private static final UUID CAMPUS_ID = UUID.fromString("6bfe3c56-0211-4fe1-9e59-51616caac4dd");
     private static final Long CLUSTER_ID = 123L;
 
     @Test
-    void getClustersByCampus_shouldLogWarning_whenApiReturnsNull() throws ApiException {
-        when(campusApi.getClustersByCampus(CAMPUS_ID)).thenReturn(null);
+    void replaceParticipantsByClusterIdWithProvider_shouldUseConfiguredProvider() throws ApiException {
+        // Arrange
+        doNothing().when(workplaceProvider).updateParticipantsByCluster(CLUSTER_ID);
 
-        campusService.getClustersByCampus(CAMPUS_ID);
+        // Act
+        campusService.replaceParticipantsByClusterIdWithProvider(CLUSTER_ID);
 
-        verify(clusterRepository, never()).saveAllAndFlush(anyList());
+        // Assert
+        verify(workplaceProvider).updateParticipantsByCluster(CLUSTER_ID);
     }
 
     @Test
-    void getClustersByCampus_shouldSaveClusters_whenApiReturnsClusters() throws ApiException {
-        ClustersV1DTO response = new ClustersV1DTO();
-        ClusterV1DTO cluster = new ClusterV1DTO();
-        cluster.setId(CLUSTER_ID);
-        cluster.setName("Test Cluster");
-        cluster.setCapacity(100);
-        cluster.setAvailableCapacity(50);
-        cluster.setFloor(2);
-        response.setClusters(List.of(cluster));
+    void replaceClustersByCampusId_shouldCallPersistenceService() {
+        // Arrange
+        List<ClusterV1DTO> clustersDto = List.of(new ClusterV1DTO());
+        Cluster expectedCluster = new Cluster();
+        expectedCluster.setName("cluster-1");
+        expectedCluster.setCapacity(20);
+        expectedCluster.setAvailableCapacity(7);
+        when(campusMapper.toClusterEntity(any(ClusterV1DTO.class), anyString())).thenReturn(expectedCluster);
 
-        when(campusApi.getClustersByCampus(CAMPUS_ID)).thenReturn(response);
+        // Act
+        campusService.replaceClustersByCampusId(CAMPUS_ID.toString(), clustersDto);
 
-        campusService.getClustersByCampus(CAMPUS_ID);
-
-        verify(clusterRepository).saveAllAndFlush(anyList());
+        // Assert
+        verify(persistenceService).replaceClusters(eq(CAMPUS_ID.toString()), argThat(list -> list.size() == 1));
+        verify(campusMapper).toClusterEntity(any(ClusterV1DTO.class), eq(CAMPUS_ID.toString()));
+        verify(schedulerMetricsService).recordClusterPlaces(CAMPUS_ID.toString(), "cluster-1", 7, 13);
     }
 
     @Test
-    void getParticipantsByCluster_shouldDeleteOldRecords_whenApiReturnsNull() throws ApiException {
-        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true)).thenReturn(null);
+    void replaceClustersByCampusId_shouldHandleEmptyList() {
+        // Arrange
+        List<ClusterV1DTO> emptyClustersDto = List.of();
 
-        campusService.getParticipantsByCluster(CLUSTER_ID);
+        // Act
+        campusService.replaceClustersByCampusId(CAMPUS_ID.toString(), emptyClustersDto);
 
-        verify(workplaceRepository).deleteByIdClusterId(CLUSTER_ID);
-        verify(workplaceRepository, never()).saveAllAndFlush(anyList());
+        // Assert
+        verify(persistenceService, never()).replaceClusters(anyString(), anyList());
+        verify(campusMapper, never()).toClusterEntity(any(ClusterV1DTO.class), anyString());
+        verifyNoInteractions(schedulerMetricsService);
     }
 
     @Test
-    void getParticipantsByCluster_shouldDeleteOldRecords_whenApiReturnsEmptyList() throws ApiException {
-        ClusterMapV1DTO emptyResponse = new ClusterMapV1DTO();
-        emptyResponse.setClusterMap(List.of());
+    void getClusters_shouldMapToClustersDto() {
+        // Arrange
+        Cluster c = new Cluster();
+        c.setName("c");
+        c.setCapacity(10);
+        c.setAvailableCapacity(5);
+        c.setFloor(2);
+        when(persistenceService.findAllByCampusIdOrderByFloorAsc(CAMPUS_ID.toString()))
+                .thenReturn(List.of(c));
 
-        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true)).thenReturn(emptyResponse);
+        CampusDto campus = new CampusDto("name", CAMPUS_ID.toString());
 
-        campusService.getParticipantsByCluster(CLUSTER_ID);
+        // Act
+        List<Clusters> result = campusService.getClusters(campus);
 
-        verify(workplaceRepository).deleteByIdClusterId(CLUSTER_ID);
-        verify(workplaceRepository, never()).saveAllAndFlush(anyList());
+        // Assert
+        assertEquals(1, result.size());
+        Clusters dto = result.getFirst();
+        assertEquals("c", dto.getName());
+        assertEquals(10, dto.getCapacity());
+        assertEquals(5, dto.getAvailableCapacity());
+        assertEquals(2, dto.getFloor());
     }
 
     @Test
-    void getParticipantsByCluster_shouldSaveParticipants_whenApiReturnsParticipants() throws ApiException {
-        ClusterMapV1DTO response = new ClusterMapV1DTO();
-        WorkplaceV1DTO participant1 = new WorkplaceV1DTO();
-        participant1.setRow("A");
-        participant1.setNumber(5);
-        participant1.setLogin("user1");
+    void findAllByOrderByCampusIdAsc_shouldDelegate() {
+        // Arrange
+        Cluster c = new Cluster();
+        when(persistenceService.findAllByOrderByCampusIdAsc()).thenReturn(List.of(c));
 
-        WorkplaceV1DTO participant2 = new WorkplaceV1DTO();
-        participant2.setRow("B");
-        participant2.setNumber(3);
-        participant2.setLogin("user2");
+        // Act
+        List<Cluster> result = campusService.findAllByOrderByCampusIdAsc();
 
-        response.setClusterMap(List.of(participant1, participant2));
-
-        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true)).thenReturn(response);
-
-        campusService.getParticipantsByCluster(CLUSTER_ID);
-
-        verify(workplaceRepository).deleteByIdClusterId(CLUSTER_ID);
-        verify(workplaceRepository).saveAllAndFlush(anyList());
+        // Assert
+        assertEquals(1, result.size());
+        org.junit.jupiter.api.Assertions.assertSame(c, result.getFirst());
     }
 
     @Test
-    void getParticipantsByCluster_shouldHandleApiException() throws ApiException {
-        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true))
-                .thenThrow(new ApiException(500, "Internal Server Error"));
+    void getStudentProjectsByLogin_shouldMapViaProjectsMapper() {
+        // Arrange
+        GraphQLStudentProject src = new GraphQLStudentProject("g", "n", "d", 1, "dt", 1, 1, "e", "gs", "ct", "ds", 1, 1, 1, 1, 1, 1, "grp", 1);
+        ProjectsDto dto = new ProjectsDto("g","n","d",1,"dt",1,1,"e","gs","ct","ds",1,1,1,1,1,1,"grp",1);
+        when(campusClient.getStudentProjectsByLogin("login")).thenReturn(List.of(src));
+        when(projectsMapper.toDto(src)).thenReturn(dto);
 
-        // Проверяем, что аспект выбросит RetryableApiException
-        assertThrows(ApiException.class, () ->
-                campusService.getParticipantsByCluster(CLUSTER_ID)
-        );
+        // Act
+        List<ProjectsDto> result = campusService.getStudentProjectsByLogin("login");
 
-        verify(workplaceRepository, never()).saveAllAndFlush(anyList());
-    }
-
-    @Test
-    void getParticipantsByCluster_shouldThrowNonRetryableException_whenApiReturns400() throws ApiException {
-        when(clusterApi.getParticipantsByCoalitionId1(CLUSTER_ID, 1000, 0, true))
-                .thenThrow(new ApiException(400, "Bad Request"));
-
-        // Проверяем, что аспект выбросит NonRetryableApiException
-        assertThrows(ApiException.class, () ->
-                campusService.getParticipantsByCluster(CLUSTER_ID)
-        );
-
-        verify(workplaceRepository, never()).saveAllAndFlush(anyList());
-    }
-
-    @Test
-    void getParticipantByLogin() throws ApiException {
-        when(participantApi.getParticipantByLogin("login")).thenReturn(new ParticipantV1DTO());
-        campusService.checkEduLogin("login");
+        // Assert
+        assertEquals(1, result.size());
+        org.junit.jupiter.api.Assertions.assertSame(dto, result.getFirst());
     }
 }

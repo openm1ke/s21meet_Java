@@ -1,0 +1,156 @@
+services:
+  postgres:
+    profiles: ["infra"]
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+    env_file:
+      - ./env/${APP_ENV:-test}/postgres.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "${POSTGRES_BIND_ADDR:-127.0.0.1}:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - s21meet-network
+
+  s21auth:
+    image: ${IMAGE_REPO:-s21meet}/s21auth:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    env_file:
+      - ./env/${APP_ENV:-test}/s21auth.env
+    environment:
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "${S21AUTH_BIND_ADDR:-127.0.0.1}:8081:8081"
+    networks:
+      - s21meet-network
+
+  s21edu:
+    image: ${IMAGE_REPO:-s21meet}/s21edu:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    depends_on:
+      s21auth:
+        condition: service_healthy
+      s21edu-migrator:
+        condition: service_completed_successfully
+    env_file:
+      - ./env/${APP_ENV:-test}/s21edu.env
+    environment:
+      TZ: UTC
+      SPRING_LIQUIBASE_ENABLED: false
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "${S21EDU_BIND_ADDR:-127.0.0.1}:8082:8082"
+    networks:
+      - s21meet-network
+
+  s21edu-migrator:
+    image: ${IMAGE_REPO:-s21meet}/s21edu-migrator:${IMAGE_TAG:-local}
+    restart: "no"
+    env_file:
+      - ./env/${APP_ENV:-test}/s21edu.env
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        liquibase --search-path=/liquibase/changelog \
+          --url="$$DB_URL" \
+          --username="$$DB_USER" \
+          --password="$$DB_PASSWORD" \
+          --changelog-file=db/changelog/db.changelog-master.yaml \
+          update
+    networks:
+      - s21meet-network
+
+  s21bot:
+    image: ${IMAGE_REPO:-s21meet}/s21bot:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    depends_on:
+      s21edu:
+        condition: service_healthy
+      s21rocket:
+        condition: service_healthy
+    env_file:
+      - ./env/${APP_ENV:-test}/s21bot.env
+    environment:
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "${S21BOT_BIND_ADDR:-127.0.0.1}:8083:8083"
+    networks:
+      - s21meet-network
+
+  s21rocket:
+    image: ${IMAGE_REPO:-s21meet}/s21rocket:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    env_file:
+      - ./env/${APP_ENV:-test}/s21rocket.env
+    environment:
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "${S21ROCKET_BIND_ADDR:-127.0.0.1}:8084:8084"
+    networks:
+      - s21meet-network
+
+  prometheus:
+    profiles: ["infra"]
+    image: prom/prometheus:v2.52.0
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_BIND_ADDR:-127.0.0.1}:9090:9090"
+    networks:
+      - s21meet-network
+
+  grafana:
+    profiles: ["infra"]
+    image: grafana/grafana:11.2.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "${GRAFANA_BIND_ADDR:-0.0.0.0}:3001:3000"
+    networks:
+      - s21meet-network
+
+networks:
+  s21meet-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:

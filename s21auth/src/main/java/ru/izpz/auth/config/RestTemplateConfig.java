@@ -11,14 +11,14 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class RestTemplateConfig {
 
-    private static final String BASE_URL = "https://auth.sberclass.ru";
+    private static final String BASE_URL = "https://auth.21-school.ru";
 
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
         return builder
                 .rootUri(BASE_URL)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                .additionalMessageConverters(new FormHttpMessageConverter()) // Добавляем поддержку form-data
+                .additionalMessageConverters(new FormHttpMessageConverter())
                 .build();
     }
 }
