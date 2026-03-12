@@ -29,9 +29,39 @@ if [[ -n "$PROFILE_NAME" ]]; then
   compose_cmd=(docker compose --profile "$PROFILE_NAME" --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE")
 fi
 
+wait_for_postgres_healthy() {
+  local timeout_seconds="${1:-180}"
+  local poll_interval=3
+  local waited=0
+  local container_id status
+
+  container_id="$("${compose_cmd[@]}" ps -q postgres 2>/dev/null || true)"
+  if [[ -z "$container_id" ]]; then
+    echo "Postgres container not found, skip readiness wait"
+    return 0
+  fi
+
+  while (( waited < timeout_seconds )); do
+    status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id" 2>/dev/null || true)"
+    if [[ "$status" == "healthy" ]]; then
+      echo "Postgres is healthy"
+      return 0
+    fi
+    sleep "$poll_interval"
+    waited=$((waited + poll_interval))
+  done
+
+  echo "Timeout waiting for postgres to become healthy"
+  return 1
+}
+
 case "$STRATEGY" in
   rolling)
     "${compose_cmd[@]}" pull
+    if [[ -n "$PROFILE_NAME" ]]; then
+      "${compose_cmd[@]}" up -d postgres
+      wait_for_postgres_healthy 180
+    fi
     "${compose_cmd[@]}" run --rm s21edu-migrator
     "${compose_cmd[@]}" up -d --remove-orphans
     ;;
@@ -41,6 +71,7 @@ case "$STRATEGY" in
     # Bring infra back before migrations for test profile deployments.
     if [[ -n "$PROFILE_NAME" ]]; then
       "${compose_cmd[@]}" up -d postgres prometheus grafana
+      wait_for_postgres_healthy 180
     fi
     "${compose_cmd[@]}" run --rm s21edu-migrator
     "${compose_cmd[@]}" up -d --force-recreate --remove-orphans

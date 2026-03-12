@@ -60,7 +60,16 @@ jobs:
           if [[ -n "${{ vars.DEPLOY_KNOWN_HOSTS }}" ]]; then
             echo "${{ vars.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           else
-            ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+            for attempt in 1 2 3 4 5; do
+              if ssh-keyscan -T 10 -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
+                break
+              fi
+              if [[ "$attempt" == "5" ]]; then
+                echo "ssh-keyscan failed after 5 attempts"
+                exit 1
+              fi
+              sleep 3
+            done
           fi
 
       - name: Copy deploy files to prod host
@@ -74,10 +83,23 @@ jobs:
           APP_DIR="${{ vars.DEPLOY_APP_DIR }}"
           if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
+          SSH_OPTS=(
+            -i ~/.ssh/id_ed25519
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o PreferredAuthentications=publickey
+            -o PubkeyAuthentication=yes
+            -o PasswordAuthentication=no
+            -o KbdInteractiveAuthentication=no
+            -o ConnectTimeout=15
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=10
+            -o ServerAliveCountMax=6
+          )
 
-          ssh -p "$PORT" "$REMOTE" "mkdir -p \"$APP_DIR/scripts\" \"$APP_DIR/env/prod\""
-          scp -P "$PORT" docker-compose.yml "$REMOTE:$APP_DIR/docker-compose.yml"
-          scp -P "$PORT" scripts/deploy-compose.sh "$REMOTE:$APP_DIR/scripts/deploy-compose.sh"
+          ssh "${SSH_OPTS[@]}" -p "$PORT" "$REMOTE" "mkdir -p \"$APP_DIR/scripts\" \"$APP_DIR/env/prod\""
+          scp "${SSH_OPTS[@]}" -P "$PORT" docker-compose.yml "$REMOTE:$APP_DIR/docker-compose.yml"
+          scp "${SSH_OPTS[@]}" -P "$PORT" scripts/deploy-compose.sh "$REMOTE:$APP_DIR/scripts/deploy-compose.sh"
 
       - name: Run prod deploy
         shell: bash
@@ -90,8 +112,21 @@ jobs:
           APP_DIR="${{ vars.DEPLOY_APP_DIR }}"
           if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
+          SSH_OPTS=(
+            -i ~/.ssh/id_ed25519
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o PreferredAuthentications=publickey
+            -o PubkeyAuthentication=yes
+            -o PasswordAuthentication=no
+            -o KbdInteractiveAuthentication=no
+            -o ConnectTimeout=15
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=10
+            -o ServerAliveCountMax=6
+          )
 
-          ssh -p "$PORT" "$REMOTE" "\
+          ssh "${SSH_OPTS[@]}" -p "$PORT" "$REMOTE" "\
             set -euo pipefail; \
             cd \"$APP_DIR\"; \
             chmod +x scripts/deploy-compose.sh; \
