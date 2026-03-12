@@ -61,7 +61,16 @@ jobs:
           if [[ -n "${{ vars.DEPLOY_KNOWN_HOSTS }}" ]]; then
             echo "${{ vars.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           else
-            ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+            for attempt in 1 2 3 4 5; do
+              if ssh-keyscan -T 10 -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
+                break
+              fi
+              if [[ "$attempt" == "5" ]]; then
+                echo "ssh-keyscan failed after 5 attempts"
+                exit 1
+              fi
+              sleep 3
+            done
           fi
 
           chmod 644 ~/.ssh/known_hosts
@@ -80,6 +89,19 @@ jobs:
           if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
 
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
+          SSH_OPTS=(
+            -i ~/.ssh/id_ed25519
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o PreferredAuthentications=publickey
+            -o PubkeyAuthentication=yes
+            -o PasswordAuthentication=no
+            -o KbdInteractiveAuthentication=no
+            -o ConnectTimeout=15
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=10
+            -o ServerAliveCountMax=6
+          )
 
           echo "Local workspace:"
           pwd
@@ -90,7 +112,7 @@ jobs:
           test -f ./monitoring/prometheus/prometheus.yml
           test -d ./monitoring/grafana/provisioning
 
-          ssh -p "$PORT" "$REMOTE" "
+          ssh "${SSH_OPTS[@]}" -p "$PORT" "$REMOTE" "
             set -euo pipefail
 
             mkdir -p \
@@ -106,19 +128,19 @@ jobs:
             rm -rf \"$APP_DIR/monitoring/grafana/provisioning\"
           "
 
-          scp -P "$PORT" ./docker-compose.yml \
+          scp "${SSH_OPTS[@]}" -P "$PORT" ./docker-compose.yml \
             "$REMOTE:$APP_DIR/docker-compose.yml"
 
-          scp -P "$PORT" ./scripts/deploy-compose.sh \
+          scp "${SSH_OPTS[@]}" -P "$PORT" ./scripts/deploy-compose.sh \
             "$REMOTE:$APP_DIR/scripts/deploy-compose.sh"
 
-          scp -P "$PORT" ./monitoring/prometheus/prometheus.yml \
+          scp "${SSH_OPTS[@]}" -P "$PORT" ./monitoring/prometheus/prometheus.yml \
             "$REMOTE:$APP_DIR/monitoring/prometheus/prometheus.yml"
 
-          scp -r -P "$PORT" ./monitoring/grafana/provisioning \
+          scp "${SSH_OPTS[@]}" -r -P "$PORT" ./monitoring/grafana/provisioning \
             "$REMOTE:$APP_DIR/monitoring/grafana/"
 
-          ssh -p "$PORT" "$REMOTE" "
+          ssh "${SSH_OPTS[@]}" -p "$PORT" "$REMOTE" "
             set -euo pipefail
 
             chmod +x \"$APP_DIR/scripts/deploy-compose.sh\"
@@ -145,8 +167,21 @@ jobs:
           if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
 
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
+          SSH_OPTS=(
+            -i ~/.ssh/id_ed25519
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o PreferredAuthentications=publickey
+            -o PubkeyAuthentication=yes
+            -o PasswordAuthentication=no
+            -o KbdInteractiveAuthentication=no
+            -o ConnectTimeout=15
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=10
+            -o ServerAliveCountMax=6
+          )
 
-          ssh -p "$PORT" "$REMOTE" "
+          ssh "${SSH_OPTS[@]}" -p "$PORT" "$REMOTE" "
             set -euo pipefail
             cd \"$APP_DIR\"
             chmod +x scripts/deploy-compose.sh
