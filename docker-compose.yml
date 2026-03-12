@@ -26,6 +26,7 @@ services:
       - ./env/${APP_ENV:-test}/s21auth.env
     environment:
       TZ: UTC
+      JAVA_TOOL_OPTIONS: ${S21AUTH_JAVA_OPTS:--Xms96m -Xmx192m -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=64m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
       interval: 10s
@@ -49,6 +50,7 @@ services:
     environment:
       TZ: UTC
       SPRING_LIQUIBASE_ENABLED: false
+      JAVA_TOOL_OPTIONS: ${S21EDU_JAVA_OPTS:--Xms128m -Xmx384m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=96m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
       interval: 10s
@@ -89,6 +91,7 @@ services:
       - ./env/${APP_ENV:-test}/s21bot.env
     environment:
       TZ: UTC
+      JAVA_TOOL_OPTIONS: ${S21BOT_JAVA_OPTS:--Xms128m -Xmx320m -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=64m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health || exit 1"]
       interval: 10s
@@ -106,6 +109,7 @@ services:
       - ./env/${APP_ENV:-test}/s21rocket.env
     environment:
       TZ: UTC
+      JAVA_TOOL_OPTIONS: ${S21ROCKET_JAVA_OPTS:--Xms96m -Xmx160m -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=48m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health || exit 1"]
       interval: 10s
