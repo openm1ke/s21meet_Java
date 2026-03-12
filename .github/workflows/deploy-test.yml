@@ -25,6 +25,7 @@ jobs:
   deploy-test:
     runs-on: ubuntu-latest
     environment: test
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -56,51 +57,99 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+
           if [[ -n "${{ vars.DEPLOY_KNOWN_HOSTS }}" ]]; then
             echo "${{ vars.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           else
             ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
           fi
 
+          chmod 644 ~/.ssh/known_hosts
+
       - name: Copy deploy files to test host
         shell: bash
         run: |
           set -euo pipefail
+
           DEPLOY_HOST="${{ vars.DEPLOY_HOST }}"
           DEPLOY_USER="${{ vars.DEPLOY_USER }}"
           PORT="${{ vars.DEPLOY_PORT }}"
-          if [[ -z "$PORT" ]]; then PORT="22"; fi
           APP_DIR="${{ vars.DEPLOY_APP_DIR }}"
+
+          if [[ -z "$PORT" ]]; then PORT="22"; fi
           if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
+
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
 
-          ssh -p "$PORT" "$REMOTE" "\
-            set -euo pipefail; \
-            mkdir -p \"$APP_DIR/scripts\" \"$APP_DIR/env/test\" \"$APP_DIR/monitoring/prometheus\" \"$APP_DIR/monitoring/grafana\"; \
-            if [[ -d \"$APP_DIR/monitoring/prometheus/prometheus.yml\" ]]; then \
-              rm -rf \"$APP_DIR/monitoring/prometheus/prometheus.yml\"; \
-            fi; \
-            touch \"$APP_DIR/monitoring/prometheus/prometheus.yml\""
-          scp -P "$PORT" docker-compose.yml "$REMOTE:$APP_DIR/docker-compose.yml"
-          scp -P "$PORT" scripts/deploy-compose.sh "$REMOTE:$APP_DIR/scripts/deploy-compose.sh"
-          scp -P "$PORT" monitoring/prometheus/prometheus.yml "$REMOTE:$APP_DIR/monitoring/prometheus/prometheus.yml"
-          scp -P "$PORT" -r monitoring/grafana/provisioning "$REMOTE:$APP_DIR/monitoring/grafana/"
+          echo "Local workspace:"
+          pwd
+          ls -la
+
+          test -f ./docker-compose.yml
+          test -f ./scripts/deploy-compose.sh
+          test -f ./monitoring/prometheus/prometheus.yml
+          test -d ./monitoring/grafana/provisioning
+
+          ssh -p "$PORT" "$REMOTE" "
+            set -euo pipefail
+
+            mkdir -p \
+              \"$APP_DIR\" \
+              \"$APP_DIR/scripts\" \
+              \"$APP_DIR/env/test\" \
+              \"$APP_DIR/monitoring/prometheus\" \
+              \"$APP_DIR/monitoring/grafana\"
+
+            rm -f \"$APP_DIR/docker-compose.yml\"
+            rm -f \"$APP_DIR/scripts/deploy-compose.sh\"
+            rm -f \"$APP_DIR/monitoring/prometheus/prometheus.yml\"
+            rm -rf \"$APP_DIR/monitoring/grafana/provisioning\"
+          "
+
+          scp -P "$PORT" ./docker-compose.yml \
+            "$REMOTE:$APP_DIR/docker-compose.yml"
+
+          scp -P "$PORT" ./scripts/deploy-compose.sh \
+            "$REMOTE:$APP_DIR/scripts/deploy-compose.sh"
+
+          scp -P "$PORT" ./monitoring/prometheus/prometheus.yml \
+            "$REMOTE:$APP_DIR/monitoring/prometheus/prometheus.yml"
+
+          scp -r -P "$PORT" ./monitoring/grafana/provisioning \
+            "$REMOTE:$APP_DIR/monitoring/grafana/"
+
+          ssh -p "$PORT" "$REMOTE" "
+            set -euo pipefail
+
+            chmod +x \"$APP_DIR/scripts/deploy-compose.sh\"
+
+            echo 'Remote files after copy:'
+            ls -la \"$APP_DIR\"
+            ls -la \"$APP_DIR/scripts\"
+            ls -la \"$APP_DIR/monitoring/prometheus\"
+            ls -la \"$APP_DIR/monitoring/grafana\"
+            ls -la \"$APP_DIR/monitoring/grafana/provisioning\"
+          "
 
       - name: Run test deploy
         shell: bash
         run: |
           set -euo pipefail
+
           DEPLOY_HOST="${{ vars.DEPLOY_HOST }}"
           DEPLOY_USER="${{ vars.DEPLOY_USER }}"
           PORT="${{ vars.DEPLOY_PORT }}"
-          if [[ -z "$PORT" ]]; then PORT="22"; fi
           APP_DIR="${{ vars.DEPLOY_APP_DIR }}"
+
+          if [[ -z "$PORT" ]]; then PORT="22"; fi
           if [[ -z "$APP_DIR" ]]; then APP_DIR="/home/${DEPLOY_USER}/app"; fi
+
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
 
-          ssh -p "$PORT" "$REMOTE" "\
-            set -euo pipefail; \
-            cd \"$APP_DIR\"; \
-            chmod +x scripts/deploy-compose.sh; \
+          ssh -p "$PORT" "$REMOTE" "
+            set -euo pipefail
+            cd \"$APP_DIR\"
+            chmod +x scripts/deploy-compose.sh
             IMAGE_REPO='${{ steps.vars.outputs.image_repo }}' IMAGE_TAG='${{ inputs.image_tag }}' \
-            scripts/deploy-compose.sh 'env/test/compose.env' 'infra' 'recreate-all'"
+            scripts/deploy-compose.sh 'env/test/compose.env' 'infra' 'recreate-all'
+          "
