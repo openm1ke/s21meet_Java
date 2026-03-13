@@ -20,13 +20,11 @@ class MetricsServiceTest {
 
     @Test
     void testRecordButtonPress() {
-        // Given
-        Long userId = 12345L;
         String buttonCode = "SEARCH";
         ButtonMetricType buttonType = ButtonMetricType.KEYBOARD;
 
         // When
-        metricsService.recordButtonPress(userId, buttonCode, buttonType);
+        metricsService.recordButtonPress(buttonCode, buttonType);
 
         // Then
         double count = meterRegistry.get("bot_button_press_total")
@@ -39,13 +37,11 @@ class MetricsServiceTest {
 
     @Test
     void testRecordButtonPressWithInlineButton() {
-        // Given
-        Long userId = 67890L;
         String buttonCode = "add_friend";
         ButtonMetricType buttonType = ButtonMetricType.INLINE;
 
         // When
-        metricsService.recordButtonPress(userId, buttonCode, buttonType);
+        metricsService.recordButtonPress(buttonCode, buttonType);
 
         // Then
         double count = meterRegistry.get("bot_button_press_total")
@@ -79,4 +75,38 @@ class MetricsServiceTest {
         assertEquals(1.0, count, 0.001);
     }
 
+    @Test
+    void testRecordButtonPressNormalizesUnknownTags() {
+        metricsService.recordButtonPress("   ", null);
+
+        double count = meterRegistry.get("bot_button_press_total")
+                .tag("button", "unknown")
+                .tag("type", "unknown")
+                .counter()
+                .count();
+        assertEquals(1.0, count, 0.001);
+    }
+
+    @Test
+    void testRecordTelegramApiRequestNormalizesUnknownTags() {
+        metricsService.recordTelegramApiRequest(null, " ");
+
+        double count = meterRegistry.get("bot_telegram_api_requests_total")
+                .tag("method", "unknown")
+                .tag("outcome", "unknown")
+                .counter()
+                .count();
+        assertEquals(1.0, count, 0.001);
+    }
+
+    @Test
+    void testRecordNotifyDeliveryNormalizesUnknownTags() {
+        metricsService.recordNotifyDelivery("  ");
+
+        double count = meterRegistry.get("bot_notify_delivery_total")
+                .tag("outcome", "unknown")
+                .counter()
+                .count();
+        assertEquals(1.0, count, 0.001);
+    }
 }
