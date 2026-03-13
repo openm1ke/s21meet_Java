@@ -1,16 +1,17 @@
-name: Test Push
+name: Test PR
 
 on:
-  push:
+  pull_request:
     branches:
-      - "feature/**"
+      - develop
+      - master
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: test-push-${{ github.ref }}
+  group: test-pr-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:

@@ -1,0 +1,33 @@
+name: Reusable Tests
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gradle-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [s21auth, s21bot, s21edu, s21rocket]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Run tests
+        run: ./gradlew :${{ matrix.module }}:test :${{ matrix.module }}:jacocoTestReport --parallel --max-workers=4 --build-cache --configuration-cache
