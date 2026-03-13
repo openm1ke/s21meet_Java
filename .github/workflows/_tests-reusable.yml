@@ -10,6 +10,10 @@ permissions:
 jobs:
   gradle-tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [s21auth, s21bot, s21edu, s21rocket]
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -19,10 +23,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-          cache: gradle
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
 
       - name: Run tests
-        run: ./gradlew runAllTests --parallel --max-workers=4 --build-cache
+        run: ./gradlew :${{ matrix.module }}:test :${{ matrix.module }}:jacocoTestReport --parallel --max-workers=4 --build-cache --configuration-cache
