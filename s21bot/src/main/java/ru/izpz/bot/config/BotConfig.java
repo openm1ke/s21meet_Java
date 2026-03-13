@@ -1,6 +1,7 @@
 package ru.izpz.bot.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
@@ -30,6 +31,7 @@ public class BotConfig {
     }
 
     @Bean
+    @ConditionalOnProperty(name = "bot.session.enabled", havingValue = "true", matchIfMissing = true)
     public BotSession botSession(TelegramBotsLongPollingApplication botsApplication, SimpleBot simpleBot, BotProperties botProperties) throws Exception {
         BotSession session = botsApplication.registerBot(botProperties.token(), simpleBot);
         log.info("✅ Telegram бот успешно запущен: {}", session.isRunning());
