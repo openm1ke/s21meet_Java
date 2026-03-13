@@ -17,12 +17,15 @@ import ru.izpz.edu.service.SchedulerMetricsService;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,11 +72,7 @@ class CampusSchedulerFailurePathsTest {
     void parseMskKznNsk_clustersExceedTimeout_marksRunAsFailed() throws ApiException {
         schedulerProperties.getTimeout().setClusters(Duration.ofMillis(1));
         when(campusClient.getClustersByCampus(anyString())).thenAnswer(invocation -> {
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            blockUntilInterrupted();
             return List.<ClusterV1DTO>of();
         });
 
@@ -93,16 +92,63 @@ class CampusSchedulerFailurePathsTest {
         cluster.setName("cluster");
         when(campusService.findAllByOrderByCampusIdAsc()).thenReturn(List.of(cluster));
         doAnswer(invocation -> {
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            blockUntilInterrupted();
             return null;
         }).when(campusService).replaceParticipantsByClusterIdWithProvider(cluster.getClusterId());
 
         scheduler.parseMskKznNsk();
 
         verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.FAILED);
+    }
+
+    @Test
+    void parseMskKznNsk_partialErrors_recordsPartialStatus() throws ApiException {
+        schedulerProperties.getTimeout().setClusters(Duration.ofSeconds(1));
+        schedulerProperties.getTimeout().setParticipants(Duration.ofSeconds(1));
+
+        AtomicInteger callOrdinal = new AtomicInteger();
+        when(campusClient.getClustersByCampus(anyString())).thenAnswer(invocation -> {
+            if (callOrdinal.getAndIncrement() == 0) {
+                throw new ApiException("boom");
+            }
+            return List.<ClusterV1DTO>of();
+        });
+
+        Cluster cluster = new Cluster();
+        cluster.setClusterId(1L);
+        cluster.setName("cluster");
+        when(campusService.findAllByOrderByCampusIdAsc()).thenReturn(List.of(cluster));
+
+        scheduler.parseMskKznNsk();
+
+        verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.PARTIAL);
+    }
+
+    @Test
+    void parseMskKznNsk_participantsError_recordsPartialStatus() throws ApiException {
+        schedulerProperties.getTimeout().setClusters(Duration.ofSeconds(1));
+        schedulerProperties.getTimeout().setParticipants(Duration.ofSeconds(1));
+
+        when(campusClient.getClustersByCampus(anyString())).thenReturn(List.of());
+        Cluster cluster = new Cluster();
+        cluster.setClusterId(2L);
+        cluster.setName("cluster");
+        when(campusService.findAllByOrderByCampusIdAsc()).thenReturn(List.of(cluster));
+        doThrow(new ApiException("boom"))
+            .when(campusService)
+            .replaceParticipantsByClusterIdWithProvider(cluster.getClusterId());
+
+        scheduler.parseMskKznNsk();
+
+        verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.PARTIAL);
+    }
+
+    private static void blockUntilInterrupted() {
+        CountDownLatch latch = new CountDownLatch(1);
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }
