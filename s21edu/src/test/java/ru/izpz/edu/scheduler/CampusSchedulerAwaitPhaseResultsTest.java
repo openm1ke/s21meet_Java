@@ -78,6 +78,40 @@ class CampusSchedulerAwaitPhaseResultsTest {
         verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "participants", SchedulerErrorReason.API_EXCEPTION);
     }
 
+    @Test
+    void awaitPhaseResults_timeout_recordsTimeoutIssue() throws Exception {
+        List<CompletableFuture<Object>> futures = List.of(new CompletableFuture<>());
+        invokeAwaitPhase("clusters", Duration.ofMillis(1), futures);
+
+        verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "clusters", SchedulerErrorReason.TIMEOUT);
+    }
+
+    @Test
+    void awaitPhaseResults_interrupted_recordsInterruptedIssue() throws Exception {
+        List<CompletableFuture<Object>> futures = List.of(new CompletableFuture<>());
+        Thread.currentThread().interrupt();
+        try {
+            invokeAwaitPhase("participants", Duration.ofMillis(1), futures);
+        } finally {
+            if (Thread.interrupted()) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "participants", SchedulerErrorReason.INTERRUPTED);
+    }
+
+    @Test
+    void awaitPhaseResults_exception_recordsExecutionIssue() throws Exception {
+        CompletableFuture<Object> failure = new CompletableFuture<>();
+        failure.completeExceptionally(new IllegalStateException("boom"));
+        List<CompletableFuture<Object>> futures = List.of(failure);
+
+        invokeAwaitPhase("clusters", Duration.ofMillis(100), futures);
+
+        verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "clusters", SchedulerErrorReason.EXECUTION_EXCEPTION);
+    }
+
     private void invokeAwaitPhase(String phase, Duration timeout, List<CompletableFuture<Object>> futures) throws Exception {
         Method awaitMethod = CampusScheduler.class.getDeclaredMethod("awaitPhaseResults", String.class, Duration.class, List.class);
         awaitMethod.setAccessible(true);
