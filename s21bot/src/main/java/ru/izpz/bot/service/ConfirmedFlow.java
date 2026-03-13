@@ -35,17 +35,7 @@ public class ConfirmedFlow {
         }
 
         if (SlashCommandEnum.contains(text)) {
-            SlashCommandEnum.fromText(text).ifPresent(command -> {
-                switch (command) {
-                    case START -> {
-                        ReplyKeyboard keyboard = telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
-                        messageSender.sendMessage(chatId, "Выберите команду", keyboard);
-                    }
-                    case ME -> messageSender.sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
-                    case HELP -> messageSender.sendMessage(chatId, "Помощь по командам бота", null);
-                    case DONATE -> messageSender.sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
-                }
-            });
+            SlashCommandEnum.fromText(text).ifPresent(command -> handleSlashCommand(chatId, profile, command));
         }
 
         // если текст это команда меню
@@ -53,27 +43,7 @@ public class ConfirmedFlow {
             MenuCommandEnum.fromText(text).ifPresent(command -> {
                 // Записываем метрику для команд клавиатуры
                 metricsService.recordButtonPress(command.name(), ButtonMetricType.KEYBOARD);
-                
-                switch (command) {
-                    case SEARCH -> {
-                        callbackHandler.setLastCommand(chatId, LastCommandType.SEARCH, null);
-                        messageSender.sendMessage(chatId, "Введите логин для поиска", null);
-                    }
-                    case FRIENDS -> callbackHandler.showFriends(chatId, 0, null);
-                    case PROFILE -> {
-                        ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
-                        messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
-                    }
-                    case EVENTS -> callbackHandler.showEvents(chatId, 0, null);
-                    case CAMPUS -> {
-                        var campusMap = showCampusMap(chatId);
-                        messageSender.sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
-                    }
-                    case PROJECTS -> {
-                        var projectsByLogin = getProjectsByLogin(profile.s21login());
-                        messageSender.sendMessage(chatId, projectsByLogin, null);
-                    }
-                }
+                handleMenuCommand(chatId, profile, command);
             });
             return;
         }
@@ -82,22 +52,59 @@ public class ConfirmedFlow {
         LastCommandType.fromName(profile.lastCommand()).ifPresent(cmd -> {
             // Записываем метрику для LastCommand
             metricsService.recordButtonPress(cmd.name(), ButtonMetricType.LAST_COMMAND);
-            
-            switch (cmd) {
-                case SEARCH -> callbackHandler.showProfile(chatId, text);
-                case SET_NAME -> {
-                    if (text.length() > 100) {
-                        messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);
-                    } else {
-                        var login = profile.lastCommand().args().get("login").toString();
-                        profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
-                        messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
-                    }
-                }
-            }
-
+            handleLastCommand(chatId, profile, text, cmd);
             callbackHandler.setLastCommand(chatId, null, null);
         });
+    }
+
+    private void handleSlashCommand(Long chatId, ProfileDto profile, SlashCommandEnum command) {
+        switch (command) {
+            case START -> {
+                ReplyKeyboard keyboard = telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
+                messageSender.sendMessage(chatId, "Выберите команду", keyboard);
+            }
+            case ME -> messageSender.sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
+            case HELP -> messageSender.sendMessage(chatId, "Помощь по командам бота", null);
+            case DONATE -> messageSender.sendMessage(chatId, "\uD83D\uDCB8 На работу бота и корм кисе \uD83D\uDE3D", null);
+        }
+    }
+
+    private void handleMenuCommand(Long chatId, ProfileDto profile, MenuCommandEnum command) {
+        switch (command) {
+            case SEARCH -> {
+                callbackHandler.setLastCommand(chatId, LastCommandType.SEARCH, null);
+                messageSender.sendMessage(chatId, "Введите логин для поиска", null);
+            }
+            case FRIENDS -> callbackHandler.showFriends(chatId, 0, null);
+            case PROFILE -> {
+                ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
+                messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
+            }
+            case EVENTS -> callbackHandler.showEvents(chatId, 0, null);
+            case CAMPUS -> {
+                var campusMap = showCampusMap(chatId);
+                messageSender.sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
+            }
+            case PROJECTS -> {
+                var projectsByLogin = getProjectsByLogin(profile.s21login());
+                messageSender.sendMessage(chatId, projectsByLogin, null);
+            }
+        }
+    }
+
+    private void handleLastCommand(Long chatId, ProfileDto profile, String text, LastCommandType cmd) {
+        if (cmd == LastCommandType.SEARCH) {
+            callbackHandler.showProfile(chatId, text);
+        } else if (cmd == LastCommandType.SET_NAME) {
+            if (text.length() > 100) {
+                messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);
+            } else {
+                var login = profile.lastCommand().args().get("login").toString();
+                profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
+                messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
+            }
+        }
+        // Остальные enum-значения либо игнорируются, либо не выставляются в LastCommandState.
     }
 
     private boolean isUserInGroup(Long chatId) {
