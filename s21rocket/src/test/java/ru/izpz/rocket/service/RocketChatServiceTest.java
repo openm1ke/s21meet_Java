@@ -49,7 +49,9 @@ class RocketChatServiceTest {
     void generateQrCode_shouldSingleFlight_whenCalledConcurrently() throws Exception {
         // Given
         AtomicInteger executeCalls = new AtomicInteger();
+        AtomicInteger superCalls = new AtomicInteger();
         CountDownLatch bothCallsReady = new CountDownLatch(2);
+        CountDownLatch secondEnteredSuper = new CountDownLatch(1);
         CountDownLatch executeStarted = new CountDownLatch(1);
         CountDownLatch allowExecuteFinish = new CountDownLatch(1);
 
@@ -65,6 +67,9 @@ class RocketChatServiceTest {
                     Thread.currentThread().interrupt();
                     return new RocketChatSendResponse(false, "barrier-interrupted");
                 }
+                if (superCalls.incrementAndGet() == 2) {
+                    secondEnteredSuper.countDown();
+                }
                 return super.generateQrCode();
             }
 
@@ -73,9 +78,12 @@ class RocketChatServiceTest {
                 return new RocketChatWebSocketClient(properties.getWebsocketUri(), properties.getToken(), targetUsername, messageToSend, isQrMode) {
                     @Override
                     public RocketChatSendResponse execute(long timeoutSeconds) {
-                        executeCalls.incrementAndGet();
+                        int callNumber = executeCalls.incrementAndGet();
                         executeStarted.countDown();
                         try {
+                            if (callNumber == 1 && !secondEnteredSuper.await(2, TimeUnit.SECONDS)) {
+                                return new RocketChatSendResponse(false, "second-not-entered");
+                            }
                             if (!allowExecuteFinish.await(3, TimeUnit.SECONDS)) {
                                 return new RocketChatSendResponse(false, "blocked");
                             }
