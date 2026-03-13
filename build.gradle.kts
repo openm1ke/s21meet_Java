@@ -14,7 +14,7 @@ plugins {
 
 allprojects {
     group = "ru.izpz"
-    version = "0.0.1-SNAPSHOT"
+    version = (findProperty("appVersion") as String?) ?: "0.0.1-SNAPSHOT"
 
     repositories {
         mavenCentral()
@@ -132,14 +132,6 @@ tasks.register("runAllTestsWithCoverage") {
 
 val orderedSubprojectTests = subprojects
     .map { it.tasks.named<Test>("test") }
-
-orderedSubprojectTests
-    .zipWithNext()
-    .forEach { (previous, next) ->
-        next.configure {
-            mustRunAfter(previous)
-        }
-    }
 
 tasks.register("runAllTests") {
     group = "verification"

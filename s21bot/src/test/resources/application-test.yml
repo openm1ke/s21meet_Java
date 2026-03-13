@@ -1,0 +1,17 @@
+bot:
+  token: test-token
+  admin: 1
+  group: 1
+  group-invite-link: https://example.org/invite
+  session:
+    enabled: false
+  notify:
+    enabled: false
+
+rocketchat:
+  service:
+    url: http://localhost:18081
+
+profile:
+  service:
+    url: http://localhost:18082

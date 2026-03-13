@@ -1,6 +1,9 @@
 spring:
   liquibase:
     enabled: false
+  task:
+    scheduling:
+      enabled: false
   main:
     allow-bean-definition-overriding: true
   datasource:
@@ -11,7 +14,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
@@ -29,8 +32,15 @@ profile.service.enabled: false
 profile.api.enabled: false
 graphql.api.enabled: false
 notify.service.enabled: false
+notify.scheduler.enabled: false
 cluster.api.enabled: false
 api.client.enabled: false
+bot.service.url: http://localhost:18083
+event:
+  scheduler:
+    enabled: false
 campus:
   api.enabled: false
   service.enabled: false
+  scheduler:
+    enabled: false

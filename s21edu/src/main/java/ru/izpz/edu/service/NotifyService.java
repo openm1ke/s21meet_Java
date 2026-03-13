@@ -49,11 +49,8 @@ public class NotifyService {
             Optional<Online> opt = onlineRepository.findByLogin(login);
 
             if (inCampus) {
-                if (opt.isEmpty()) {
-                    persistOnlineStatus(opt, login, true);
-                    addChangeIfSubscribers(changes, login, true);
-                    becameOnline++;
-                } else if (Boolean.FALSE.equals(opt.get().getIsOnline())) {
+                boolean shouldMarkOnline = opt.isEmpty() || Boolean.FALSE.equals(opt.get().getIsOnline());
+                if (shouldMarkOnline) {
                     persistOnlineStatus(opt, login, true);
                     addChangeIfSubscribers(changes, login, true);
                     becameOnline++;

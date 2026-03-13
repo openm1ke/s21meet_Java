@@ -1,0 +1,25 @@
+name: Sonar Push
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: sonar-push-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sonar-quality:
+    name: Sonar Quality (push)
+    uses: ./.github/workflows/sonar-common.yml
+    with:
+      sonar-host-url: ${{ vars.SONAR_HOST_URL }}
+      sonar-organization: ${{ vars.SONAR_ORGANIZATION }}
+      sonar-project-key: ${{ vars.SONAR_PROJECT_KEY }}
+    secrets:
+      sonar-token: ${{ secrets.SONAR_TOKEN }}

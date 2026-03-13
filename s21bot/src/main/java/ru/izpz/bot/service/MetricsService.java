@@ -10,7 +10,7 @@ public class MetricsService {
 
     private final MeterRegistry meterRegistry;
 
-    public void recordButtonPress(Long userId, String buttonCode, ButtonMetricType buttonType) {
+    public void recordButtonPress(String buttonCode, ButtonMetricType buttonType) {
         meterRegistry.counter(
                 "bot_button_press_total",
                 "button", normalize(buttonCode),
