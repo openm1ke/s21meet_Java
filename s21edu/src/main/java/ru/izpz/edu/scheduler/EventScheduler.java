@@ -20,13 +20,15 @@ import java.time.OffsetDateTime;
 public class EventScheduler {
 
     private static final String SCHEDULER_NAME = "event_parser";
+    private static final String EVENT_API_CLIENT = "event_api";
+    private static final String OPERATION_GET_EVENTS = "get_events";
 
     private final EventClient eventClient;
     private final EventService eventService;
     private final SchedulerMetricsService schedulerMetricsService;
 
     @Scheduled(fixedDelayString = "${event.scheduler.fixed-delay:PT1M}")
-    @TrackSchedulerMetrics(scheduler = SCHEDULER_NAME, phase = "get_events")
+    @TrackSchedulerMetrics(scheduler = SCHEDULER_NAME, phase = OPERATION_GET_EVENTS)
     public void scheduleEvents() throws Exception {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime week = now.plusDays(7);
@@ -46,14 +48,14 @@ public class EventScheduler {
     private java.util.List<ru.izpz.dto.model.EventV1DTO> fetchEvents(OffsetDateTime from, OffsetDateTime to) throws Exception {
         try {
             var events = eventClient.getEvents(from, to, null, 50L, 0L);
-            schedulerMetricsService.recordExternalApiSuccess(SCHEDULER_NAME, "event_api", "get_events");
+            schedulerMetricsService.recordExternalApiSuccess(SCHEDULER_NAME, EVENT_API_CLIENT, OPERATION_GET_EVENTS);
             return events;
         } catch (ApiException e) {
-            schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "event_api", "get_events", e);
+            schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, EVENT_API_CLIENT, OPERATION_GET_EVENTS, e);
             log.error("Ошибка получения событий для кампуса", e);
             throw e;
         } catch (Exception e) {
-            schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, "event_api", "get_events", e);
+            schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, EVENT_API_CLIENT, OPERATION_GET_EVENTS, e);
             log.error("Непредвиденная ошибка вызова event API", e);
             throw e;
         }
