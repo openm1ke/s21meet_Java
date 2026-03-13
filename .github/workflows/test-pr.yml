@@ -1,0 +1,30 @@
+name: Test PR
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gradle-tests:
+    uses: ./.github/workflows/_tests-reusable.yml
+
+  sonar-quality:
+    name: Sonar Quality
+    needs: gradle-tests
+    uses: ./.github/workflows/sonar-common.yml
+    with:
+      sonar-host-url: ${{ vars.SONAR_HOST_URL }}
+      sonar-organization: ${{ vars.SONAR_ORGANIZATION }}
+      sonar-project-key: ${{ vars.SONAR_PROJECT_KEY }}
+    secrets:
+      sonar-token: ${{ secrets.SONAR_TOKEN }}

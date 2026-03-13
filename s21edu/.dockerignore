@@ -1,7 +1,12 @@
 **
 !Dockerfile
+!migrator.Dockerfile
 
 # Разрешаем только app.jar и папки-предки (иначе файл не "разигнорится")
 !build/
 !build/libs/
 !build/libs/app.jar
+!src/
+!src/main/
+!src/main/resources/
+!src/main/resources/**
