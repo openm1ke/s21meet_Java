@@ -12,7 +12,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Java 21
         uses: actions/setup-java@v5
@@ -36,6 +38,31 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Bump appVersion on master push
+        if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$(bash scripts/bump-app-version.sh gradle.properties appVersion)"
+          echo "$out"
+          next_version="$(echo "$out" | awk -F= '/^next_version=/{print $2}')"
+          if [[ -z "$next_version" ]]; then
+            echo "Failed to resolve next version"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add gradle.properties
+          git commit -m "ci: bump appVersion to ${next_version} [skip ci]"
+          version_tag="v${next_version}"
+          if git rev-parse -q --verify "refs/tags/${version_tag}" >/dev/null; then
+            echo "Tag ${version_tag} already exists, skip tag creation"
+          else
+            git tag -a "${version_tag}" -m "Release ${version_tag}"
+          fi
+          git push --follow-tags
+
       - name: Build jars
         run: ./gradlew :s21auth:bootJar :s21edu:bootJar :s21bot:bootJar :s21rocket:bootJar
 
@@ -46,17 +73,33 @@ jobs:
           set -euo pipefail
           OWNER_LC="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
           IMAGE_REPO="ghcr.io/${OWNER_LC}/s21meet"
-          SHORT_SHA="$(echo "${GITHUB_SHA}" | cut -c1-12)"
+          APP_VERSION="$(grep -E '^appVersion=' gradle.properties | cut -d'=' -f2)"
+          VERSION_TAG="v${APP_VERSION}"
 
           TAG_OVERRIDE="${{ github.event.inputs.image_tag || '' }}"
           if [[ -n "$TAG_OVERRIDE" ]]; then
-            SHA_TAG="$TAG_OVERRIDE"
+            IMAGE_TAG="$TAG_OVERRIDE"
           else
-            SHA_TAG="sha-${SHORT_SHA}"
+            IMAGE_TAG="$VERSION_TAG"
           fi
 
           echo "image_repo=${IMAGE_REPO}" >> "$GITHUB_OUTPUT"
-          echo "sha_tag=${SHA_TAG}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "version_tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish build summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### Build Images Summary"
+            echo ""
+            echo "- Image repository: \`${{ steps.meta.outputs.image_repo }}\`"
+            echo "- Version tag from \`gradle.properties\`: \`${{ steps.meta.outputs.version_tag }}\`"
+            echo "- Published image tag: \`${{ steps.meta.outputs.image_tag }}\`"
+            echo ""
+            echo "Deploy with tag: \`${{ steps.meta.outputs.image_tag }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -74,7 +117,7 @@ jobs:
           context: ./s21auth
           push: true
           tags: |
-            ${{ steps.meta.outputs.image_repo }}/s21auth:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.image_repo }}/s21auth:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_repo }}/s21auth:latest
 
       - name: Build and push s21edu
@@ -83,7 +126,7 @@ jobs:
           context: ./s21edu
           push: true
           tags: |
-            ${{ steps.meta.outputs.image_repo }}/s21edu:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.image_repo }}/s21edu:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_repo }}/s21edu:latest
 
       - name: Build and push s21edu-migrator
@@ -93,7 +136,7 @@ jobs:
           file: ./s21edu/migrator.Dockerfile
           push: true
           tags: |
-            ${{ steps.meta.outputs.image_repo }}/s21edu-migrator:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.image_repo }}/s21edu-migrator:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_repo }}/s21edu-migrator:latest
 
       - name: Build and push s21bot
@@ -102,7 +145,7 @@ jobs:
           context: ./s21bot
           push: true
           tags: |
-            ${{ steps.meta.outputs.image_repo }}/s21bot:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.image_repo }}/s21bot:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_repo }}/s21bot:latest
 
       - name: Build and push s21rocket
@@ -111,5 +154,5 @@ jobs:
           context: ./s21rocket
           push: true
           tags: |
-            ${{ steps.meta.outputs.image_repo }}/s21rocket:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.image_repo }}/s21rocket:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_repo }}/s21rocket:latest

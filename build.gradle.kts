@@ -14,7 +14,7 @@ plugins {
 
 allprojects {
     group = "ru.izpz"
-    version = "0.0.1-SNAPSHOT"
+    version = (findProperty("appVersion") as String?) ?: "0.0.1-SNAPSHOT"
 
     repositories {
         mavenCentral()
