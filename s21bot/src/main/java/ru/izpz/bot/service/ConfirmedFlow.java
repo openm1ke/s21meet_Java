@@ -83,19 +83,19 @@ public class ConfirmedFlow {
             // Записываем метрику для LastCommand
             metricsService.recordButtonPress(cmd.name(), ButtonMetricType.LAST_COMMAND);
             
-            switch (cmd) {
-                case SEARCH -> callbackHandler.showProfile(chatId, text);
-                case SET_NAME -> {
-                    if (text.length() > 100) {
-                        messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);
-                    } else {
-                        var login = profile.lastCommand().args().get("login").toString();
-                        profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
-                        messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
-                    }
+            if (cmd == LastCommandType.SEARCH) {
+                callbackHandler.showProfile(chatId, text);
+            } else if (cmd == LastCommandType.SET_NAME) {
+                if (text.length() > 100) {
+                    messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);
+                } else {
+                    var login = profile.lastCommand().args().get("login").toString();
+                    profileService.applyFriend(chatId, login, FriendRequest.Action.SET_NAME, text);
+                    messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
                 }
             }
 
+            // Остальные enum-значения либо игнорируются, либо не выставляются в LastCommandState.
             callbackHandler.setLastCommand(chatId, null, null);
         });
     }
