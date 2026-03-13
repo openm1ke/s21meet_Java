@@ -3,6 +3,9 @@ name: Test
 on:
   pull_request:
     branches:
+      - master
+  push:
+    branches:
       - develop
       - "feature/**"
   workflow_dispatch:
@@ -12,6 +15,7 @@ permissions:
 
 jobs:
   gradle-tests:
+    if: github.event_name != 'pull_request' || github.head_ref == 'develop'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
