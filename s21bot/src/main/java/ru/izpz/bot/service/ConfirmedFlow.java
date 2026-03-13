@@ -52,7 +52,7 @@ public class ConfirmedFlow {
         if (MenuCommandEnum.contains(text)) {
             MenuCommandEnum.fromText(text).ifPresent(command -> {
                 // Записываем метрику для команд клавиатуры
-                metricsService.recordButtonPress(chatId, command.name(), ButtonMetricType.KEYBOARD);
+                metricsService.recordButtonPress(command.name(), ButtonMetricType.KEYBOARD);
                 
                 switch (command) {
                     case SEARCH -> {
@@ -81,7 +81,7 @@ public class ConfirmedFlow {
         // в ином случае нужно проверить ласт комманд и вызвать нужный метод
         LastCommandType.fromName(profile.lastCommand()).ifPresent(cmd -> {
             // Записываем метрику для LastCommand
-            metricsService.recordButtonPress(chatId, cmd.name(), ButtonMetricType.LAST_COMMAND);
+            metricsService.recordButtonPress(cmd.name(), ButtonMetricType.LAST_COMMAND);
             
             switch (cmd) {
                 case SEARCH -> callbackHandler.showProfile(chatId, text);
@@ -94,7 +94,6 @@ public class ConfirmedFlow {
                         messageSender.sendMessage(chatId, "Имя успешно обновлено", null);
                     }
                 }
-                default -> log.warn("Unhandled LastCommandType: {}", cmd);
             }
 
             callbackHandler.setLastCommand(chatId, null, null);

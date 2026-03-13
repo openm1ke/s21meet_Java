@@ -34,7 +34,7 @@ class NotifySchedulerTest {
     private NotifyScheduler scheduler;
 
     @Test
-    void poll_shouldSendNotification() throws Exception {
+    void poll_shouldSendNotification() {
         List<StatusChange> changes = List.of(new StatusChange("login", true, List.of("123")));
         when(notifyService.computeAndPersistChanges()).thenReturn(changes);
 
@@ -63,7 +63,7 @@ class NotifySchedulerTest {
     }
 
     @Test
-    void poll_shouldCountUniqueUsersAndDeliveries_whenTelegramIdsOverlap() throws Exception {
+    void poll_shouldCountUniqueUsersAndDeliveries_whenTelegramIdsOverlap() {
         List<StatusChange> changes = List.of(
             new StatusChange("login1", true, List.of("100", "200", "300")),
             new StatusChange("login2", false, List.of("200", "300", "400"))
