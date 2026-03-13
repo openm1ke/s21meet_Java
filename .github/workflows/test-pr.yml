@@ -21,7 +21,6 @@ jobs:
   sonar-quality:
     name: Sonar Quality
     needs: gradle-tests
-    if: ${{ secrets.SONAR_TOKEN != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,21 +30,29 @@ jobs:
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
     steps:
+      - name: Skip Sonar when token is not configured
+        if: env.SONAR_TOKEN == ''
+        run: echo "SONAR_TOKEN is not configured, skipping Sonar analysis."
+
       - name: Checkout
+        if: env.SONAR_TOKEN != ''
         uses: actions/checkout@v5
 
       - name: Setup Java 21
+        if: env.SONAR_TOKEN != ''
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Setup Gradle
+        if: env.SONAR_TOKEN != ''
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
 
       - name: Run Sonar analysis with coverage
+        if: env.SONAR_TOKEN != ''
         shell: bash
         run: |
           set -euo pipefail
