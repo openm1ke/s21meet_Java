@@ -1,0 +1,134 @@
+name: Sonar Common
+
+on:
+  workflow_call:
+    inputs:
+      sonar-host-url:
+        required: true
+        type: string
+      sonar-organization:
+        required: true
+        type: string
+      sonar-project-key:
+        required: true
+        type: string
+    secrets:
+      sonar-token:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  sonar-quality:
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.sonar-token }}
+      SONAR_HOST_URL: ${{ inputs.sonar-host-url }}
+      SONAR_ORGANIZATION: ${{ inputs.sonar-organization }}
+      SONAR_PROJECT_KEY: ${{ inputs.sonar-project-key }}
+    steps:
+      - name: Check Sonar token
+        id: sonar-check
+        shell: bash
+        run: |
+          if [[ -z "${SONAR_TOKEN:-}" ]]; then
+            echo "Skipping Sonar run because SONAR_TOKEN is empty."
+            echo "ready=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "ready=1" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Sonar settings
+        if: ${{ steps.sonar-check.outputs.ready == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "${SONAR_HOST_URL:-}" =~ ^https?:// ]]; then
+            echo "Invalid SONAR_HOST_URL: '${SONAR_HOST_URL}'. It must start with http:// or https://"
+            exit 1
+          fi
+
+          if [[ -z "${SONAR_ORGANIZATION:-}" ]]; then
+            echo "SONAR_ORGANIZATION is not configured in repository variables"
+            exit 1
+          fi
+          if [[ -z "${SONAR_PROJECT_KEY:-}" ]]; then
+            echo "SONAR_PROJECT_KEY is not configured in repository variables"
+            exit 1
+          fi
+
+      - name: Checkout
+        if: ${{ steps.sonar-check.outputs.ready == '1' }}
+        uses: actions/checkout@v5
+
+      - name: Setup Java 21
+        if: ${{ steps.sonar-check.outputs.ready == '1' }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        if: ${{ steps.sonar-check.outputs.ready == '1' }}
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: false
+
+      - name: Run Sonar analysis with coverage
+        if: ${{ steps.sonar-check.outputs.ready == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew runAllTestsWithCoverage sonar \
+            --parallel --max-workers=4 --build-cache --configuration-cache \
+            -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=600
+
+      - name: Enforce Sonar Quality Gate
+        if: ${{ steps.sonar-check.outputs.ready == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REPORT_FILE="$(find . -type f -path '*/build/sonar/report-task.txt' | head -n1 || true)"
+          if [[ -z "${REPORT_FILE}" ]]; then
+            echo "Sonar report-task.txt not found"
+            exit 1
+          fi
+
+          CE_TASK_URL="$(grep '^ceTaskUrl=' "${REPORT_FILE}" | cut -d= -f2-)"
+          if [[ -z "${CE_TASK_URL}" ]]; then
+            echo "ceTaskUrl not found in ${REPORT_FILE}"
+            exit 1
+          fi
+
+          echo "Polling Sonar CE task: ${CE_TASK_URL}"
+          for _ in $(seq 1 120); do
+            CE_JSON="$(curl -fsS -u "${SONAR_TOKEN}:" "${CE_TASK_URL}")"
+            CE_STATUS="$(echo "${CE_JSON}" | jq -r '.task.status')"
+            if [[ "${CE_STATUS}" == "SUCCESS" ]]; then
+              break
+            fi
+            if [[ "${CE_STATUS}" == "FAILED" || "${CE_STATUS}" == "CANCELED" ]]; then
+              echo "Sonar CE task status: ${CE_STATUS}"
+              exit 1
+            fi
+            sleep 5
+          done
+
+          ANALYSIS_ID="$(echo "${CE_JSON}" | jq -r '.task.analysisId')"
+          if [[ -z "${ANALYSIS_ID}" || "${ANALYSIS_ID}" == "null" ]]; then
+            echo "Sonar analysisId not found"
+            exit 1
+          fi
+
+          QG_JSON="$(curl -fsS -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/qualitygates/project_status?analysisId=${ANALYSIS_ID}")"
+          QG_STATUS="$(echo "${QG_JSON}" | jq -r '.projectStatus.status')"
+          echo "Quality Gate status: ${QG_STATUS}"
+
+          if [[ "${QG_STATUS}" != "OK" ]]; then
+            echo "Quality Gate failed"
+            echo "${QG_JSON}" | jq -r '.projectStatus.conditions[] | "\(.metricKey): \(.status) (actual=\(.actualValue // "-"), error=\(.errorThreshold // "-"))"'
+            exit 1
+          fi
