@@ -17,3 +17,41 @@ concurrency:
 jobs:
   gradle-tests:
     uses: ./.github/workflows/_tests-reusable.yml
+
+  sonar-quality:
+    name: Sonar Quality
+    needs: gradle-tests
+    if: ${{ secrets.SONAR_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Run Sonar analysis with coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f .env ]]; then
+            set -a
+            source .env
+            set +a
+          fi
+          ./gradlew runAllTestsWithCoverage sonarqube --parallel --max-workers=4 --build-cache --configuration-cache
