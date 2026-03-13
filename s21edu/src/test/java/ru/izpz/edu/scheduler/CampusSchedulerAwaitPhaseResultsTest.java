@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -76,6 +77,58 @@ class CampusSchedulerAwaitPhaseResultsTest {
 
         verify(schedulerMetricsService).recordPhaseRequest("campus_parser", "participants", SchedulerPhaseRequestStatus.FAILED);
         verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "participants", SchedulerErrorReason.API_EXCEPTION);
+    }
+
+    @Test
+    void awaitPhaseResults_timeout_recordsTimeoutIssue() throws Exception {
+        List<CompletableFuture<Object>> futures = List.of(new CompletableFuture<>());
+        invokeAwaitPhase("clusters", Duration.ofMillis(1), futures);
+
+        verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "clusters", SchedulerErrorReason.TIMEOUT);
+    }
+
+    @Test
+    void awaitPhaseResults_timeout_cancelsPendingFutures() throws Exception {
+        CompletableFuture<Object> future = new CompletableFuture<>();
+        invokeAwaitPhase("clusters", Duration.ofMillis(1), List.of(future));
+
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    void awaitPhaseResults_interrupted_recordsInterruptedIssue() throws Exception {
+        List<CompletableFuture<Object>> futures = List.of(new CompletableFuture<>());
+        Thread.currentThread().interrupt();
+        try {
+            invokeAwaitPhase("participants", Duration.ofMillis(1), futures);
+        } finally {
+            if (Thread.interrupted()) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "participants", SchedulerErrorReason.INTERRUPTED);
+    }
+
+    @Test
+    void awaitPhaseResults_exception_recordsExecutionIssue() throws Exception {
+        CompletableFuture<Object> failure = new CompletableFuture<>();
+        failure.completeExceptionally(new IllegalStateException("boom"));
+        List<CompletableFuture<Object>> futures = List.of(failure);
+
+        invokeAwaitPhase("clusters", Duration.ofMillis(100), futures);
+
+        verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "clusters", SchedulerErrorReason.EXECUTION_EXCEPTION);
+    }
+
+    @Test
+    void cancelPendingFutures_handlesIncompleteFuture() throws Exception {
+        CompletableFuture<Object> future = new CompletableFuture<>();
+        Method cancelMethod = CampusScheduler.class.getDeclaredMethod("cancelPendingFutures", List.class);
+        cancelMethod.setAccessible(true);
+        cancelMethod.invoke(scheduler, List.of(future));
+
+        assertTrue(future.isCancelled());
     }
 
     private void invokeAwaitPhase(String phase, Duration timeout, List<CompletableFuture<Object>> futures) throws Exception {
