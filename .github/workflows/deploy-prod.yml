@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (example: sha-abc123456789)"
+        description: "Image tag to deploy (example: v1.2.3)"
         required: true
         type: string
       image_repo:
