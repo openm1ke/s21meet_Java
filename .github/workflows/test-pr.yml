@@ -47,18 +47,40 @@ jobs:
 
       - name: Setup Gradle
         if: env.SONAR_TOKEN != ''
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           cache-read-only: false
+
+      - name: Prepare Sonar settings
+        if: env.SONAR_TOKEN != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${SONAR_HOST_URL:-}" ]]; then
+            echo "SONAR_HOST_URL is not configured in repository variables"
+            exit 1
+          fi
+          if [[ -z "${SONAR_ORGANIZATION:-}" ]]; then
+            echo "SONAR_ORGANIZATION is not configured in repository variables"
+            exit 1
+          fi
+          if [[ -z "${SONAR_PROJECT_KEY:-}" ]]; then
+            echo "SONAR_PROJECT_KEY is not configured in repository variables"
+            exit 1
+          fi
+
+          if [[ ! "${SONAR_HOST_URL}" =~ ^https?:// ]]; then
+            echo "Invalid SONAR_HOST_URL: '${SONAR_HOST_URL}'. It must start with http:// or https://"
+            exit 1
+          fi
+
+          echo "SONAR_HOST_URL=${SONAR_HOST_URL}" >> "$GITHUB_ENV"
+          echo "SONAR_ORGANIZATION=${SONAR_ORGANIZATION}" >> "$GITHUB_ENV"
+          echo "SONAR_PROJECT_KEY=${SONAR_PROJECT_KEY}" >> "$GITHUB_ENV"
 
       - name: Run Sonar analysis with coverage
         if: env.SONAR_TOKEN != ''
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f .env ]]; then
-            set -a
-            source .env
-            set +a
-          fi
-          ./gradlew runAllTestsWithCoverage sonarqube --parallel --max-workers=4 --build-cache --configuration-cache
+          ./gradlew runAllTestsWithCoverage sonar --parallel --max-workers=4 --build-cache --configuration-cache
