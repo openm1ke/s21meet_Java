@@ -57,15 +57,17 @@ wait_for_postgres_healthy() {
 
 case "$STRATEGY" in
   rolling)
+    app_services=(s21auth s21edu s21rocket s21bot)
     "${compose_cmd[@]}" pull
     if [[ -n "$PROFILE_NAME" ]]; then
       "${compose_cmd[@]}" up -d postgres
       wait_for_postgres_healthy 180
     fi
     "${compose_cmd[@]}" run --rm s21edu-migrator
-    "${compose_cmd[@]}" up -d --remove-orphans
+    "${compose_cmd[@]}" up -d --remove-orphans "${app_services[@]}"
     ;;
   recreate-all)
+    app_services=(s21auth s21edu s21rocket s21bot)
     "${compose_cmd[@]}" pull
     "${compose_cmd[@]}" down --remove-orphans
     # Bring infra back before migrations for test profile deployments.
@@ -74,7 +76,7 @@ case "$STRATEGY" in
       wait_for_postgres_healthy 180
     fi
     "${compose_cmd[@]}" run --rm s21edu-migrator
-    "${compose_cmd[@]}" up -d --force-recreate --remove-orphans
+    "${compose_cmd[@]}" up -d --force-recreate --remove-orphans "${app_services[@]}"
     ;;
   *)
     echo "Unknown strategy: $STRATEGY"

@@ -42,8 +42,6 @@ services:
     depends_on:
       s21auth:
         condition: service_healthy
-      s21edu-migrator:
-        condition: service_completed_successfully
     env_file:
       - ./env/${APP_ENV:-test}/s21edu.env
     environment:
