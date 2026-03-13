@@ -69,4 +69,19 @@ class BotMetricsAspectTest {
 
         verify(metricsService).recordTelegramApiRequest("unknown", "error");
     }
+
+    @Test
+    void trackTelegramExecute_blankMethodName_recordsUnknownSuccess() throws Throwable {
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        BotApiMethod<?> method = mock(BotApiMethod.class);
+        when(method.getMethod()).thenReturn("  ");
+        when(joinPoint.getArgs()).thenReturn(new Object[]{method});
+        Optional<String> response = Optional.of("ok");
+        when(joinPoint.proceed()).thenReturn(response);
+
+        Object result = aspect.trackTelegramExecute(joinPoint);
+
+        assertSame(response, result);
+        verify(metricsService).recordTelegramApiRequest("unknown", "success");
+    }
 }
