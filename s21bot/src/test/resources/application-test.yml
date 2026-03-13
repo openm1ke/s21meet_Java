@@ -3,6 +3,8 @@ bot:
   admin: 1
   group: 1
   group-invite-link: https://example.org/invite
+  session:
+    enabled: false
 
 rocketchat:
   service:
