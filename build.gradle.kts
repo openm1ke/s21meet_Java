@@ -133,14 +133,6 @@ tasks.register("runAllTestsWithCoverage") {
 val orderedSubprojectTests = subprojects
     .map { it.tasks.named<Test>("test") }
 
-orderedSubprojectTests
-    .zipWithNext()
-    .forEach { (previous, next) ->
-        next.configure {
-            mustRunAfter(previous)
-        }
-    }
-
 tasks.register("runAllTests") {
     group = "verification"
     description = "Запускает все тесты во всех subprojects"
