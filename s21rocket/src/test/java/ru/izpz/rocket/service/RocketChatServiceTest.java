@@ -49,14 +49,22 @@ class RocketChatServiceTest {
     void generateQrCode_shouldSingleFlight_whenCalledConcurrently() throws Exception {
         // Given
         AtomicInteger executeCalls = new AtomicInteger();
-        CountDownLatch bothCallsEntered = new CountDownLatch(2);
+        CountDownLatch bothCallsReady = new CountDownLatch(2);
         CountDownLatch executeStarted = new CountDownLatch(1);
         CountDownLatch allowExecuteFinish = new CountDownLatch(1);
 
         RocketChatService service = new RocketChatService(properties) {
             @Override
             public RocketChatSendResponse generateQrCode() {
-                bothCallsEntered.countDown();
+                bothCallsReady.countDown();
+                try {
+                    if (!bothCallsReady.await(2, TimeUnit.SECONDS)) {
+                        return new RocketChatSendResponse(false, "barrier-timeout");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return new RocketChatSendResponse(false, "barrier-interrupted");
+                }
                 return super.generateQrCode();
             }
 
@@ -88,7 +96,6 @@ class RocketChatServiceTest {
             Future<RocketChatSendResponse> f2 = executor.submit(service::generateQrCode);
 
             assertTrue(executeStarted.await(2, TimeUnit.SECONDS), "execute() should start");
-            assertTrue(bothCallsEntered.await(2, TimeUnit.SECONDS), "both concurrent calls should enter generateQrCode()");
             allowExecuteFinish.countDown();
 
             RocketChatSendResponse r1 = f1.get(3, TimeUnit.SECONDS);
