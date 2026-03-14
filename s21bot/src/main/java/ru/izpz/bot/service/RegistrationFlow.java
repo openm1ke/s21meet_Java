@@ -28,6 +28,7 @@ public class RegistrationFlow {
     private final TelegramButtons telegramButtons;
     private final MessageSender messageSender;
     private final TelegramKeyboardFactory telegramKeyboardFactory;
+    private final MetricsService metricsService;
 
     public void startOnboarding(Long chatId) {
         InlineKeyboardMarkup keyboard = telegramKeyboardFactory.createInlineKeyboardMarkup(telegramButtons.getRegistrationButton(), 1);
@@ -35,12 +36,22 @@ public class RegistrationFlow {
     }
 
     public void startValidation(Long chatId, ProfileDto profile, String text) {
-        var code = profileService.getVerificationCode(profile.s21login());
-        if (code.getSecretCode().equals(text)) {
-            profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
-            messageSender.sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
-        } else {
-            messageSender.sendMessage(chatId, "Введенный код не совпадает!", telegramKeyboardFactory.removeReplyKeyboard());
+        try {
+            var code = profileService.getVerificationCode(profile.s21login());
+            if (code.getSecretCode().equals(text)) {
+                profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
+                messageSender.sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
+            } else {
+                messageSender.sendMessage(chatId, "Введенный код не совпадает!", telegramKeyboardFactory.removeReplyKeyboard());
+            }
+        } catch (FeignException e) {
+            metricsService.recordProcessingError("registration_validation", "feign_exception");
+            messageSender.sendMessage(chatId, "Ошибка валидации, попробуйте позже", null);
+            messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
+        } catch (Exception e) {
+            metricsService.recordProcessingError("registration_validation", "unexpected_exception");
+            log.error("Unexpected validation error for chatId={}", chatId, e);
+            messageSender.sendMessage(chatId, "Ошибка валидации, попробуйте позже", null);
         }
     }
 
@@ -54,6 +65,7 @@ public class RegistrationFlow {
         try {
             participant = profileService.checkEduLogin(text);
         } catch (EduLoginCheckException e) {
+            metricsService.recordProcessingError("registration_flow", "edu_login_check_exception");
             ErrorResponseDTO error = e.getError();
             messageSender.sendMessage(chatId, "Ошибка проверки логина: " + error.getMessage(), null);
             messageSender.sendMessage(botProperties.admin(), "Ошибка проверки логина: " + error, null);
@@ -76,6 +88,7 @@ public class RegistrationFlow {
         try {
             profileDto = profileService.checkAndSetLogin(chatId, text);
         } catch (FeignException e) {
+            metricsService.recordProcessingError("registration_flow", "feign_exception");
             messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
             return;
@@ -86,10 +99,12 @@ public class RegistrationFlow {
             try {
                 rocketChatResponse = profileService.sendVerificationCode(text);
             } catch (RocketChatSendException e) {
+                metricsService.recordProcessingError("registration_flow", "rocketchat_send_exception");
                 messageSender.sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
                 messageSender.sendMessage(botProperties.admin(), e.getMessage(), null);
                 return;
             } catch (FeignException e) {
+                metricsService.recordProcessingError("registration_flow", "feign_exception");
                 messageSender.sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
                 messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
                 return;

@@ -21,6 +21,7 @@ public class MessageProcessor {
     private final CallbackHandler callbackHandler;
     private final RegistrationFlow registrationFlow;
     private final ConfirmedFlow confirmedFlow;
+    private final MetricsService metricsService;
 
     public void handleTextMessage(Message message) {
         Long chatId = message.getChatId();
@@ -30,8 +31,13 @@ public class MessageProcessor {
             log.info("Profile: {}", profile.toString());
             parseMessage(chatId, profile, text);
         } catch (FeignException e) {
+            metricsService.recordProcessingError("message_processor", "feign_exception");
             messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
+        } catch (Exception e) {
+            metricsService.recordProcessingError("message_processor", "unexpected_exception");
+            log.error("Unexpected error while handling text message", e);
+            messageSender.sendMessage(chatId, "Произошла внутренняя ошибка, попробуйте позже", null);
         }
     }
 
@@ -45,7 +51,13 @@ public class MessageProcessor {
     }
 
     public void handleCallbackMessage(Long chatId, String data, Integer messageId, String callbackId) {
-        callbackHandler.handleCallbackMessage(chatId, data, messageId, callbackId);
+        try {
+            callbackHandler.handleCallbackMessage(chatId, data, messageId, callbackId);
+        } catch (Exception e) {
+            metricsService.recordProcessingError("callback_dispatch", "unexpected_exception");
+            log.error("Unexpected error while handling callback message", e);
+            messageSender.sendMessage(chatId, "Произошла внутренняя ошибка, попробуйте позже", null);
+        }
     }
 
 }
