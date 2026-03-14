@@ -7,6 +7,7 @@ BUILDABLE_IMAGES=(s21auth s21edu s21edu-migrator s21bot s21rocket)
 INFRA_SERVICES=(postgres prometheus grafana)
 TEST_ENV_DIR="env/test"
 COMPOSE_ENV_FILE="$TEST_ENV_DIR/compose.env"
+PROXY_MODE=""
 
 # prefer docker compose v2, fallback to docker-compose
 if command -v docker &>/dev/null && docker compose version &>/dev/null; then
@@ -40,6 +41,7 @@ Options:
   --restart     # restart containers only (no build, no docker build)
   --recreate    # add --force-recreate to compose up
   --with-deps   # do not use --no-deps (recreate deps too)
+  --proxy MODE  # proxy mode: vless | ssh | none
   --down        # stop stack (down)
   --ps          # show compose ps
 
@@ -60,6 +62,7 @@ RECREATE=0
 WITH_DEPS=0
 DO_DOWN=0
 SHOW_PS=0
+PROXY_MODE_ARG=""
 
 TARGETS=()
 
@@ -72,6 +75,14 @@ while [[ $# -gt 0 ]]; do
     --restart) RESTART_ONLY=1; NO_BUILD=1; shift ;;
     --recreate) RECREATE=1; shift ;;
     --with-deps) WITH_DEPS=1; shift ;;
+    --proxy)
+      if [[ $# -lt 2 ]]; then
+        err "--proxy requires a value: vless | ssh | none"
+        exit 1
+      fi
+      PROXY_MODE_ARG="$2"
+      shift 2
+      ;;
     --down) DO_DOWN=1; shift ;;
     --ps) SHOW_PS=1; shift ;;
     all) TARGETS=("${APP_SERVICES[@]}"); shift ;;
@@ -139,8 +150,46 @@ ensure_test_env() {
   normalize_test_env
 }
 
+resolve_proxy_mode() {
+  local mode="${PROXY_MODE_ARG:-}"
+
+  if [[ -z "$mode" ]]; then
+    mode="$(grep '^PROXY_MODE=' "$COMPOSE_ENV_FILE" | cut -d= -f2- || true)"
+  fi
+
+  if [[ -z "$mode" ]]; then
+    mode="vless"
+  fi
+
+  case "$mode" in
+    vless|ssh|none)
+      PROXY_MODE="$mode"
+      ;;
+    *)
+      err "Unsupported proxy mode '$mode'. Allowed: vless | ssh | none"
+      exit 1
+      ;;
+  esac
+}
+
+proxy_service_for_mode() {
+  case "$PROXY_MODE" in
+    vless) echo "xray-client" ;;
+    ssh) echo "ssh-socks-client" ;;
+    none) echo "" ;;
+  esac
+}
+
 compose_cmd() {
-  "${COMPOSE[@]}" --profile infra --env-file "$COMPOSE_ENV_FILE" -f docker-compose.yml "$@"
+  local profile_args=(--profile infra)
+
+  case "$PROXY_MODE" in
+    vless) profile_args+=(--profile proxy-vless) ;;
+    ssh) profile_args+=(--profile proxy-ssh) ;;
+    none) ;;
+  esac
+
+  "${COMPOSE[@]}" "${profile_args[@]}" --env-file "$COMPOSE_ENV_FILE" -f docker-compose.yml "$@"
 }
 
 gradle_build() {
@@ -202,6 +251,9 @@ build_images() {
 
 compose_up_targets() {
   local services=("$@")
+  local with_proxy=("${services[@]}")
+  local has_bot=0
+  local proxy_service=""
 
   local extra=()
   [[ "$RECREATE" -eq 1 ]] && extra+=(--force-recreate)
@@ -211,14 +263,40 @@ compose_up_targets() {
     extra+=(--no-deps)
   fi
 
-  info "Compose up targets: ${services[*]}"
-  compose_cmd up -d "${extra[@]}" "${services[@]}"
+  for s in "${services[@]}"; do
+    [[ "$s" == "s21bot" ]] && has_bot=1
+  done
+
+  if [[ "$has_bot" -eq 1 ]]; then
+    proxy_service="$(proxy_service_for_mode)"
+    if [[ -n "$proxy_service" ]]; then
+      with_proxy+=("$proxy_service")
+    fi
+  fi
+
+  info "Compose up targets: ${with_proxy[*]}"
+  compose_cmd up -d "${extra[@]}" "${with_proxy[@]}"
 }
 
 compose_restart_targets() {
   local services=("$@")
-  info "Compose restart targets: ${services[*]}"
-  compose_cmd restart "${services[@]}"
+  local with_proxy=("${services[@]}")
+  local has_bot=0
+  local proxy_service=""
+
+  for s in "${services[@]}"; do
+    [[ "$s" == "s21bot" ]] && has_bot=1
+  done
+
+  if [[ "$has_bot" -eq 1 ]]; then
+    proxy_service="$(proxy_service_for_mode)"
+    if [[ -n "$proxy_service" ]]; then
+      with_proxy+=("$proxy_service")
+    fi
+  fi
+
+  info "Compose restart targets: ${with_proxy[*]}"
+  compose_cmd restart "${with_proxy[@]}"
 }
 
 wait_for_postgres() {
@@ -244,6 +322,8 @@ if ! compose_file_ok; then
 fi
 
 ensure_test_env
+resolve_proxy_mode
+info "Proxy mode: $PROXY_MODE"
 
 if [[ "$DO_DOWN" -eq 1 ]]; then
   info "Stopping stack..."
