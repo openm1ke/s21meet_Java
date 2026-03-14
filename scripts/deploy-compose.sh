@@ -13,6 +13,8 @@ COMPOSE_ENV_FILE="$1"
 PROFILE_NAME="${2:-}"
 STRATEGY="${3:-rolling}"
 COMPOSE_FILE="docker-compose.yml"
+PROXY_MODE=""
+PROXY_SERVICE=""
 
 if [[ ! -f "$COMPOSE_ENV_FILE" ]]; then
   echo "Compose env file not found: $COMPOSE_ENV_FILE"
@@ -24,10 +26,30 @@ if [[ ! -f "$COMPOSE_FILE" ]]; then
   exit 1
 fi
 
+PROXY_MODE="$(grep '^PROXY_MODE=' "$COMPOSE_ENV_FILE" | cut -d= -f2- || true)"
+
 compose_cmd=(docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE")
 if [[ -n "$PROFILE_NAME" ]]; then
   compose_cmd=(docker compose --profile "$PROFILE_NAME" --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE")
 fi
+
+case "${PROXY_MODE:-vless}" in
+  vless)
+    PROXY_SERVICE="xray-client"
+    compose_cmd=(docker compose --profile proxy-vless "${compose_cmd[@]:2}")
+    ;;
+  ssh)
+    PROXY_SERVICE="ssh-socks-client"
+    compose_cmd=(docker compose --profile proxy-ssh "${compose_cmd[@]:2}")
+    ;;
+  none)
+    PROXY_SERVICE=""
+    ;;
+  *)
+    echo "Unsupported PROXY_MODE: $PROXY_MODE (allowed: vless|ssh|none)"
+    exit 1
+    ;;
+esac
 
 wait_for_postgres_healthy() {
   local timeout_seconds="${1:-180}"
@@ -58,6 +80,9 @@ wait_for_postgres_healthy() {
 case "$STRATEGY" in
   rolling)
     app_services=(s21auth s21edu s21rocket s21bot)
+    if [[ -n "$PROXY_SERVICE" ]]; then
+      app_services+=("$PROXY_SERVICE")
+    fi
     "${compose_cmd[@]}" pull
     if [[ -n "$PROFILE_NAME" ]]; then
       "${compose_cmd[@]}" up -d postgres
@@ -68,6 +93,9 @@ case "$STRATEGY" in
     ;;
   recreate-all)
     app_services=(s21auth s21edu s21rocket s21bot)
+    if [[ -n "$PROXY_SERVICE" ]]; then
+      app_services+=("$PROXY_SERVICE")
+    fi
     "${compose_cmd[@]}" pull
     "${compose_cmd[@]}" down --remove-orphans
     # Bring infra back before migrations for test profile deployments.
