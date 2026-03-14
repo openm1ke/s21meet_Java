@@ -105,7 +105,7 @@ jobs:
 
           echo "Polling Sonar CE task: ${CE_TASK_URL}"
           for _ in $(seq 1 120); do
-            CE_JSON="$(curl -fsS -u "${SONAR_TOKEN}:" "${CE_TASK_URL}")"
+            CE_JSON="$(curl -fsS -u "${SONAR_TOKEN}:" "${CE_TASK_URL}")" # gitleaks:allow
             CE_STATUS="$(echo "${CE_JSON}" | jq -r '.task.status')"
             if [[ "${CE_STATUS}" == "SUCCESS" ]]; then
               break
@@ -123,7 +123,7 @@ jobs:
             exit 1
           fi
 
-          QG_JSON="$(curl -fsS -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/qualitygates/project_status?analysisId=${ANALYSIS_ID}")"
+          QG_JSON="$(curl -fsS -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/qualitygates/project_status?analysisId=${ANALYSIS_ID}")" # gitleaks:allow
           QG_STATUS="$(echo "${QG_JSON}" | jq -r '.projectStatus.status')"
           echo "Quality Gate status: ${QG_STATUS}"
 
