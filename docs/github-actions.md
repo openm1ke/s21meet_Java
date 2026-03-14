@@ -25,6 +25,10 @@
 - Запускается на `push` в `master`.
 - Выполняет Sonar-анализ для основной ветки.
 
+- `Sync Master To Develop` (`.github/workflows/sync-master-to-develop.yml`)
+- Запускается на `push` в `master` и вручную.
+- Автоматически создаёт (или переиспользует) PR `master -> develop`, чтобы синхронизация шла через обычный review flow.
+
 - `Deploy Test` (`.github/workflows/deploy-test.yml`)
 - Ручной деплой в тестовое окружение.
 - Использует стратегию `recreate-all` и профиль `infra`.
@@ -75,5 +79,6 @@ Runtime env-файлы должны существовать на сервере
 1. Разработка в `feature/*` -> автотесты (`Test Push`).
 2. PR в `develop`/`master` -> `Test PR` + `Secret Scan PR`.
 3. Merge в `master` -> `Build Images` и публикация образов в GHCR.
-4. Ручной запуск `Deploy Test` с нужным `image_tag`.
-5. После проверки — `Deploy Prod` с тем же `image_tag`.
+4. После merge в `master` автоматически создаётся PR `master -> develop` (`Sync Master To Develop`).
+5. Ручной запуск `Deploy Test` с нужным `image_tag`.
+6. После проверки — `Deploy Prod` с тем же `image_tag`.
