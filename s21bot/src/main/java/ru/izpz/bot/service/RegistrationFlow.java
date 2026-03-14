@@ -22,6 +22,10 @@ import ru.izpz.dto.model.ParticipantV1DTO;
 @RequiredArgsConstructor
 public class RegistrationFlow {
 
+    private static final String STAGE_REGISTRATION_FLOW = "registration_flow";
+    private static final String STAGE_REGISTRATION_VALIDATION = "registration_validation";
+    private static final String REASON_FEIGN_EXCEPTION = "feign_exception";
+
     private final BotProperties botProperties;
 
     private final ProfileService profileService;
@@ -45,11 +49,11 @@ public class RegistrationFlow {
                 messageSender.sendMessage(chatId, "Введенный код не совпадает!", telegramKeyboardFactory.removeReplyKeyboard());
             }
         } catch (FeignException e) {
-            metricsService.recordProcessingError("registration_validation", "feign_exception");
+            metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, REASON_FEIGN_EXCEPTION);
             messageSender.sendMessage(chatId, "Ошибка валидации, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         } catch (Exception e) {
-            metricsService.recordProcessingError("registration_validation", "unexpected_exception");
+            metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, "unexpected_exception");
             log.error("Unexpected validation error for chatId={}", chatId, e);
             messageSender.sendMessage(chatId, "Ошибка валидации, попробуйте позже", null);
         }
@@ -65,7 +69,7 @@ public class RegistrationFlow {
         try {
             participant = profileService.checkEduLogin(text);
         } catch (EduLoginCheckException e) {
-            metricsService.recordProcessingError("registration_flow", "edu_login_check_exception");
+            metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "edu_login_check_exception");
             ErrorResponseDTO error = e.getError();
             messageSender.sendMessage(chatId, "Ошибка проверки логина: " + error.getMessage(), null);
             messageSender.sendMessage(botProperties.admin(), "Ошибка проверки логина: " + error, null);
@@ -88,7 +92,7 @@ public class RegistrationFlow {
         try {
             profileDto = profileService.checkAndSetLogin(chatId, text);
         } catch (FeignException e) {
-            metricsService.recordProcessingError("registration_flow", "feign_exception");
+            metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, REASON_FEIGN_EXCEPTION);
             messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
             return;
@@ -99,12 +103,12 @@ public class RegistrationFlow {
             try {
                 rocketChatResponse = profileService.sendVerificationCode(text);
             } catch (RocketChatSendException e) {
-                metricsService.recordProcessingError("registration_flow", "rocketchat_send_exception");
+                metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "rocketchat_send_exception");
                 messageSender.sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
                 messageSender.sendMessage(botProperties.admin(), e.getMessage(), null);
                 return;
             } catch (FeignException e) {
-                metricsService.recordProcessingError("registration_flow", "feign_exception");
+                metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, REASON_FEIGN_EXCEPTION);
                 messageSender.sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
                 messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
                 return;
