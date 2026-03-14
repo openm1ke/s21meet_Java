@@ -180,6 +180,31 @@ proxy_service_for_mode() {
   esac
 }
 
+cleanup_inactive_proxy_containers() {
+  local inactive_services=()
+
+  case "$PROXY_MODE" in
+    vless) inactive_services=("ssh-socks-client") ;;
+    ssh) inactive_services=("xray-client") ;;
+    none) inactive_services=("xray-client" "ssh-socks-client") ;;
+  esac
+
+  for service in "${inactive_services[@]}"; do
+    local profile cid
+    case "$service" in
+      xray-client) profile="proxy-vless" ;;
+      ssh-socks-client) profile="proxy-ssh" ;;
+      *) continue ;;
+    esac
+
+    cid="$("${COMPOSE[@]}" --profile "$profile" --env-file "$COMPOSE_ENV_FILE" -f docker-compose.yml ps -q "$service" 2>/dev/null || true)"
+    if [[ -n "$cid" ]]; then
+      warn "Removing inactive proxy container: $service ($cid)"
+      docker rm -f "$cid" >/dev/null 2>&1 || true
+    fi
+  done
+}
+
 compose_cmd() {
   local profile_args=(--profile infra)
 
@@ -324,6 +349,7 @@ fi
 ensure_test_env
 resolve_proxy_mode
 info "Proxy mode: $PROXY_MODE"
+cleanup_inactive_proxy_containers
 
 if [[ "$DO_DOWN" -eq 1 ]]; then
   info "Stopping stack..."

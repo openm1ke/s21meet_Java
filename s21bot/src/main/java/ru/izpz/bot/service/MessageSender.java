@@ -56,6 +56,7 @@ public class MessageSender {
                 boolean delivered = telegramExecutorService.execute(msg).isPresent();
                 metricsService.recordNotifyDelivery(delivered ? "success" : "error");
             } catch (NumberFormatException e) {
+                metricsService.recordProcessingError("notify_delivery", "invalid_telegram_id");
                 log.warn("Некорректный telegramId для уведомления: {} (login={})", telegramId, change.login());
             }
         }

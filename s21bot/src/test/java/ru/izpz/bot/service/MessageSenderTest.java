@@ -74,6 +74,7 @@ class MessageSenderTest {
 
         verify(telegramExecutorService, times(1)).execute(any(SendMessage.class));
         verify(metricsService).recordNotifyDelivery("success");
+        verify(metricsService).recordProcessingError("notify_delivery", "invalid_telegram_id");
     }
 
     @Test

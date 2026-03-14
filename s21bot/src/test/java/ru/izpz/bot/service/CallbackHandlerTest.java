@@ -65,6 +65,7 @@ class CallbackHandlerTest {
 
         callbackHandler.handleCallbackMessage(chatId, "bad", 1, "cb");
 
+        verify(metricsService).recordProcessingError("callback_handler", "invalid_payload");
         verify(messageSender).sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
     }
 
@@ -122,6 +123,7 @@ class CallbackHandlerTest {
 
         callbackHandler.showEvents(chatId, 0, null);
 
+        verify(metricsService).recordProcessingError("show_events", "feign_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка обработки событий, попробуйте позже", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
     }
@@ -133,6 +135,7 @@ class CallbackHandlerTest {
 
         callbackHandler.showFriends(chatId, 0, null);
 
+        verify(metricsService).recordProcessingError("show_friends", "feign_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка обработки друзей, попробуйте позже", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
     }
@@ -307,6 +310,7 @@ class CallbackHandlerTest {
 
         callbackHandler.showProfile(chatId, "abc");
 
+        verify(metricsService).recordProcessingError("show_profile", "feign_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка поиска профиля, попробуйте позже", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
     }
@@ -318,6 +322,7 @@ class CallbackHandlerTest {
 
         callbackHandler.showProfile(chatId, "abc");
 
+        verify(metricsService).recordProcessingError("show_profile", "edu_login_check_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка проверки логина: bad", null);
         verify(messageSender).sendMessage(999L, "Ошибка проверки логина: " + err, null);
     }
