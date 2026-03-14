@@ -20,7 +20,7 @@
 - Перед сборкой выполняет тесты.
 - Использует `appVersion` из `gradle.properties` и создаёт git tag `vX.Y.Z`, если его ещё нет.
 - Публикует образы в `ghcr.io/<owner>/s21meet` с тегами `vX.Y.Z` и `latest`.
-- После успешной публикации автоматически синхронизирует `develop` из `master`.
+- После успешной публикации автоматически синхронизирует `develop` из `master` через fast-forward (`--ff-only`).
 
 - `Sonar Push` (`.github/workflows/sonar-push.yml`)
 - Запускается после merge PR в `master`.
