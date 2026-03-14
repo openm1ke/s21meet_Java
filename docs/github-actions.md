@@ -5,6 +5,7 @@
 - `Test Push` (`.github/workflows/test.yml`)
 - Запускается на `push` в `feature/**`.
 - Выполняет модульные тесты (`_tests-reusable.yml`).
+- Если для feature-ветки уже открыт PR в `develop` или `master`, push-проверки автоматически пропускаются (чтобы не дублировать `Test PR`).
 
 - `Test PR` (`.github/workflows/test-pr.yml`)
 - Запускается на PR в `develop` и `master`.
@@ -27,10 +28,12 @@
 - `Deploy Test` (`.github/workflows/deploy-test.yml`)
 - Ручной деплой в тестовое окружение.
 - Использует стратегию `recreate-all` и профиль `infra`.
+- После успешного деплоя автоматически синхронизирует `develop` из `master`.
 
 - `Deploy Prod` (`.github/workflows/deploy-prod.yml`)
 - Ручной деплой в production.
 - Использует стратегию `rolling`.
+- После успешного деплоя автоматически синхронизирует `develop` из `master`.
 
 ## Необходимые переменные и секреты GitHub
 
