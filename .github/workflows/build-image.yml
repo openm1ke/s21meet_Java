@@ -47,9 +47,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          app_version="$(grep -E '^appVersion=' gradle.properties | cut -d'=' -f2)"
+          app_version="$(grep -E '^appVersion=' gradle.properties | cut -d'=' -f2- | tr -d '\r' | xargs)"
           if [[ -z "$app_version" ]]; then
             echo "Failed to resolve appVersion from gradle.properties"
+            exit 1
+          fi
+          if [[ ! "$app_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9]+)?$ ]]; then
+            echo "Invalid appVersion for tag creation: '$app_version'"
             exit 1
           fi
 
@@ -71,7 +75,15 @@ jobs:
           set -euo pipefail
           OWNER_LC="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
           IMAGE_REPO="ghcr.io/${OWNER_LC}/s21meet"
-          APP_VERSION="$(grep -E '^appVersion=' gradle.properties | cut -d'=' -f2)"
+          APP_VERSION="$(grep -E '^appVersion=' gradle.properties | cut -d'=' -f2- | tr -d '\r' | xargs)"
+          if [[ -z "$APP_VERSION" ]]; then
+            echo "Failed to resolve appVersion from gradle.properties"
+            exit 1
+          fi
+          if [[ ! "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9]+)?$ ]]; then
+            echo "Invalid appVersion for image metadata: '$APP_VERSION'"
+            exit 1
+          fi
           VERSION_TAG="v${APP_VERSION}"
 
           TAG_OVERRIDE="${{ github.event.inputs.image_tag || '' }}"
