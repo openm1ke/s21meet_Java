@@ -109,4 +109,28 @@ class MetricsServiceTest {
                 .count();
         assertEquals(1.0, count, 0.001);
     }
+
+    @Test
+    void testRecordProcessingError() {
+        metricsService.recordProcessingError("message_processor", "feign_exception");
+
+        double count = meterRegistry.get("bot_processing_errors_total")
+                .tag("stage", "message_processor")
+                .tag("reason", "feign_exception")
+                .counter()
+                .count();
+        assertEquals(1.0, count, 0.001);
+    }
+
+    @Test
+    void testRecordProcessingErrorNormalizesUnknownTags() {
+        metricsService.recordProcessingError(" ", null);
+
+        double count = meterRegistry.get("bot_processing_errors_total")
+                .tag("stage", "unknown")
+                .tag("reason", "unknown")
+                .counter()
+                .count();
+        assertEquals(1.0, count, 0.001);
+    }
 }

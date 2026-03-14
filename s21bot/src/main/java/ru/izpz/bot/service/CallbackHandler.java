@@ -72,8 +72,13 @@ public class CallbackHandler {
                 default -> messageSender.sendMessage(chatId, "Неизвестная команда: " + data, null);
             }
         } catch (InvalidCallbackPayloadException e) {
+            metricsService.recordProcessingError("callback_handler", "invalid_payload");
             log.error("Получены некорректные данные в callback: {}", data, e);
             messageSender.sendMessage(chatId, "Некорректный формат данных. Попробуйте еще раз.", null);
+        } catch (Exception e) {
+            metricsService.recordProcessingError("callback_handler", "unexpected_exception");
+            log.error("Unexpected callback handling error: data={}", data, e);
+            messageSender.sendMessage(chatId, "Ошибка обработки команды, попробуйте позже", null);
         }
     }
 
@@ -99,6 +104,7 @@ public class CallbackHandler {
                 messageSender.sendMessage(chatId, "События\n\n" + eventsListText, keyboard);
             }
         } catch (FeignException e) {
+            metricsService.recordProcessingError("show_events", "feign_exception");
             messageSender.sendMessage(chatId, "Ошибка обработки событий, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
@@ -115,6 +121,7 @@ public class CallbackHandler {
                 messageSender.sendMessage(chatId, friendsListText, keyboard);
             }
         } catch (FeignException e) {
+            metricsService.recordProcessingError("show_friends", "feign_exception");
             messageSender.sendMessage(chatId, "Ошибка обработки друзей, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
@@ -132,9 +139,11 @@ public class CallbackHandler {
             ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
             messageSender.sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
         } catch (FeignException e) {
+            metricsService.recordProcessingError("show_profile", "feign_exception");
             messageSender.sendMessage(chatId, "Ошибка поиска профиля, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         } catch (EduLoginCheckException e) {
+            metricsService.recordProcessingError("show_profile", "edu_login_check_exception");
             messageSender.sendMessage(chatId, "Ошибка проверки логина: " + e.getError().getMessage(), null);
             messageSender.sendMessage(botProperties.admin(), "Ошибка проверки логина: " + e.getError(), null);
         }
@@ -145,6 +154,7 @@ public class CallbackHandler {
         try {
             profileService.setLastCommand(chatId, lastCommand);
         } catch (FeignException e) {
+            metricsService.recordProcessingError("set_last_command", "feign_exception");
             messageSender.sendMessage(chatId, "Ошибка установки lastCommand", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
@@ -155,6 +165,7 @@ public class CallbackHandler {
             messageSender.updateMessage(chatId, messageId, newText, null);
             profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
         } catch (FeignException e) {
+            metricsService.recordProcessingError("registration_update", "feign_exception");
             log.error("Ошибка обработки профиля", e);
         }
     }
