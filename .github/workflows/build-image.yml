@@ -1,9 +1,11 @@
 name: Build Images
 
 on:
-  push:
+  pull_request:
     branches:
       - master
+    types:
+      - closed
   workflow_dispatch:
     inputs:
       image_tag:
@@ -17,10 +19,12 @@ permissions:
 
 jobs:
   gradle-tests:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     uses: ./.github/workflows/_tests-reusable.yml
 
   publish:
     needs: gradle-tests
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,8 +42,8 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Ensure version tag exists on master push
-        if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+      - name: Ensure version tag exists after master merge
+        if: github.event_name != 'workflow_dispatch' && github.actor != 'github-actions[bot]'
         shell: bash
         run: |
           set -euo pipefail
