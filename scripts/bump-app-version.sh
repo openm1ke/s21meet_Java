@@ -9,7 +9,7 @@ if [[ ! -f "$FILE_PATH" ]]; then
   exit 1
 fi
 
-current_version="$(grep -E "^${PROPERTY_NAME}=" "$FILE_PATH" | head -n1 | cut -d'=' -f2- || true)"
+current_version="$(grep -E "^${PROPERTY_NAME}=" "$FILE_PATH" | head -n1 | cut -d'=' -f2- | sed -E 's/\r$//; s/^[[:space:]]+//; s/[[:space:]]+$//' || true)"
 if [[ -z "$current_version" ]]; then
   echo "Property '${PROPERTY_NAME}' not found in $FILE_PATH" >&2
   exit 1
