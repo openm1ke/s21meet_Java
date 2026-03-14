@@ -27,7 +27,7 @@
 
 - `Sync Master To Develop` (`.github/workflows/sync-master-to-develop.yml`)
 - Запускается после merge PR в `master` и вручную.
-- Автоматически создаёт (или переиспользует) PR `master -> develop`, чтобы синхронизация шла через обычный review flow.
+- Автоматически создаёт (или переиспользует) PR `master -> develop` и пытается влить его автоматически (сразу или через auto-merge).
 
 - `Deploy Test` (`.github/workflows/deploy-test.yml`)
 - Ручной деплой в тестовое окружение.
