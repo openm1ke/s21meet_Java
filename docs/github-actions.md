@@ -32,12 +32,10 @@
 - `Deploy Test` (`.github/workflows/deploy-test.yml`)
 - Ручной деплой в тестовое окружение.
 - Использует стратегию `recreate-all` и профиль `infra`.
-- После успешного деплоя автоматически синхронизирует `develop` из `master`.
 
 - `Deploy Prod` (`.github/workflows/deploy-prod.yml`)
 - Ручной деплой в production.
 - Использует стратегию `rolling`.
-- После успешного деплоя автоматически синхронизирует `develop` из `master`.
 
 ## Необходимые переменные и секреты GitHub
 
