@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 concurrency:
@@ -29,6 +29,7 @@ jobs:
             const repo = context.repo.repo;
             const head = `${owner}:master`;
             const base = "develop";
+            let pr;
 
             const { data: openPulls } = await github.rest.pulls.list({
               owner,
@@ -40,17 +41,52 @@ jobs:
             });
 
             if (openPulls.length > 0) {
-              core.info(`PR already exists: #${openPulls[0].number}`);
+              pr = openPulls[0];
+              core.info(`PR already exists: #${pr.number}`);
+            } else {
+              const created = await github.rest.pulls.create({
+                owner,
+                repo,
+                head: "master",
+                base: "develop",
+                title: "chore: sync master into develop",
+                body: "Auto-created after push to `master` to keep `develop` in sync with release commits.",
+              });
+              pr = created.data;
+              core.info(`Created PR #${pr.number}: ${pr.html_url}`);
+            }
+
+            const current = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: pr.number,
+            });
+            pr = current.data;
+
+            if (pr.mergeable && pr.mergeable_state === "clean") {
+              const merged = await github.rest.pulls.merge({
+                owner,
+                repo,
+                pull_number: pr.number,
+                merge_method: "merge",
+              });
+              core.info(`PR merged immediately: ${merged.data.sha}`);
               return;
             }
 
-            const { data: pr } = await github.rest.pulls.create({
-              owner,
-              repo,
-              head: "master",
-              base: "develop",
-              title: "chore: sync master into develop",
-              body: "Auto-created after push to `master` to keep `develop` in sync with release commits.",
-            });
-
-            core.info(`Created PR #${pr.number}: ${pr.html_url}`);
+            try {
+              await github.graphql(
+                `mutation EnableAutoMerge($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId
+                    mergeMethod: MERGE
+                  }) {
+                    pullRequest { number }
+                  }
+                }`,
+                { pullRequestId: pr.node_id }
+              );
+              core.info(`Auto-merge enabled for PR #${pr.number}`);
+            } catch (error) {
+              core.warning(`Could not enable auto-merge for PR #${pr.number}: ${error.message}`);
+            }
