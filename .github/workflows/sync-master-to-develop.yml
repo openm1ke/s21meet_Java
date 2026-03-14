@@ -63,30 +63,47 @@ jobs:
             });
             pr = current.data;
 
-            if (pr.mergeable && pr.mergeable_state === "clean") {
-              const merged = await github.rest.pulls.merge({
+            // GitHub may report mergeability asynchronously right after PR creation.
+            for (let attempt = 1; attempt <= 6; attempt++) {
+              const refreshed = await github.rest.pulls.get({
                 owner,
                 repo,
                 pull_number: pr.number,
-                merge_method: "merge",
               });
-              core.info(`PR merged immediately: ${merged.data.sha}`);
-              return;
+              pr = refreshed.data;
+
+              core.info(
+                `Attempt ${attempt}: mergeable=${String(pr.mergeable)}, mergeable_state=${pr.mergeable_state}`
+              );
+
+              if (pr.merged) {
+                core.info(`PR #${pr.number} already merged`);
+                return;
+              }
+
+              if (pr.mergeable === true && pr.mergeable_state === "clean") {
+                const merged = await github.rest.pulls.merge({
+                  owner,
+                  repo,
+                  pull_number: pr.number,
+                  merge_method: "merge",
+                });
+                core.info(`PR merged immediately: ${merged.data.sha}`);
+                return;
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, 3000));
             }
 
-            try {
-              await github.graphql(
-                `mutation EnableAutoMerge($pullRequestId: ID!) {
-                  enablePullRequestAutoMerge(input: {
-                    pullRequestId: $pullRequestId
-                    mergeMethod: MERGE
-                  }) {
-                    pullRequest { number }
-                  }
-                }`,
-                { pullRequestId: pr.node_id }
-              );
-              core.info(`Auto-merge enabled for PR #${pr.number}`);
-            } catch (error) {
-              core.warning(`Could not enable auto-merge for PR #${pr.number}: ${error.message}`);
-            }
+            await github.graphql(
+              `mutation EnableAutoMerge($pullRequestId: ID!) {
+                enablePullRequestAutoMerge(input: {
+                  pullRequestId: $pullRequestId
+                  mergeMethod: MERGE
+                }) {
+                  pullRequest { number }
+                }
+              }`,
+              { pullRequestId: pr.node_id }
+            );
+            core.info(`Auto-merge enabled for PR #${pr.number}`);
