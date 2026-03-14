@@ -1,0 +1,13 @@
+title = "s21meet gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Allow Sonar token variable used as curl basic auth in CI workflow"
+paths = [
+  '''^\.github/workflows/sonar-common\.yml$'''
+]
+regexes = [
+  '''\$\{SONAR_TOKEN\}:'''
+]
