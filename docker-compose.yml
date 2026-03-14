@@ -83,8 +83,6 @@ services:
         condition: service_healthy
       s21rocket:
         condition: service_healthy
-      xray-client:
-        condition: service_started
     env_file:
       - ./env/${APP_ENV:-test}/s21bot.env
     environment:
@@ -117,15 +115,46 @@ services:
       - s21meet-network
 
   xray-client:
+    profiles: ["proxy-vless"]
     image: ghcr.io/xtls/xray-core:latest
     restart: unless-stopped
     command: ["run", "-c", "/etc/xray/config.json"]
     volumes:
       - ${XRAY_CONFIG_FILE:-./env/test/xray/config.json.example}:/etc/xray/config.json:ro
+    networks:
+      s21meet-network:
+        aliases:
+          - telegram-proxy
     expose:
       - "1080"
+
+  ssh-socks-client:
+    profiles: ["proxy-ssh"]
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.20
+        RUN apk add --no-cache openssh-client autossh
+        COPY scripts/proxy/ssh-socks-entrypoint.sh /entrypoint.sh
+        RUN chmod +x /entrypoint.sh
+        ENTRYPOINT ["/entrypoint.sh"]
+    restart: unless-stopped
+    environment:
+      FR_HOST: ${SSH_TUNNEL_HOST:-}
+      FR_PORT: ${SSH_TUNNEL_PORT:-22}
+      FR_USER: ${SSH_TUNNEL_USER:-}
+      TUNNEL_SOCKS_PORT: ${SSH_TUNNEL_SOCKS_PORT:-1080}
+      SSH_KEY_PATH: /run/secrets/ssh_private_key
+      SSH_KNOWN_HOSTS_PATH: /run/secrets/ssh_known_hosts
+    volumes:
+      - ${SSH_TUNNEL_KEY_FILE:-./env/test/ssh/id_ed25519}:/run/secrets/ssh_private_key:ro
+      - ${SSH_TUNNEL_KNOWN_HOSTS_FILE:-./env/test/ssh/known_hosts}:/run/secrets/ssh_known_hosts:ro
+    expose:
+      - "${SSH_TUNNEL_SOCKS_PORT:-1080}"
     networks:
-      - s21meet-network
+      s21meet-network:
+        aliases:
+          - telegram-proxy
 
   prometheus:
     profiles: ["infra"]

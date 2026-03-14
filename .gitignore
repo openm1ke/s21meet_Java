@@ -43,3 +43,4 @@ env/*/*.env
 !env/*/compose.env.example
 env/*/xray/config.json
 !env/*/xray/config.json.example
+env/*/ssh/*

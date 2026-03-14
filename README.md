@@ -99,6 +99,7 @@ chmod +x gradlew dev.sh
 ```bash
 ./dev.sh infra                # только инфраструктура
 ./dev.sh s21edu s21bot        # запуск выбранных сервисов
+./dev.sh s21bot --proxy ssh   # bot + SOCKS5 через SSH-туннель
 ./dev.sh --full               # полный clean/recreate сценарий
 ./dev.sh --down               # остановка окружения
 ```
