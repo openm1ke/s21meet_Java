@@ -136,38 +136,3 @@ jobs:
             chmod +x scripts/deploy-compose.sh; \
             IMAGE_REPO='${{ steps.vars.outputs.image_repo }}' IMAGE_TAG='${{ inputs.image_tag }}' \
             scripts/deploy-compose.sh 'env/prod/compose.env' '' 'rolling'"
-
-  sync-develop:
-    needs: deploy-prod
-    if: needs.deploy-prod.result == 'success' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Merge master into develop
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git fetch origin master develop
-          git checkout develop
-          git pull --ff-only origin develop
-
-          if git merge --no-ff --no-edit origin/master; then
-            if [[ "$(git rev-list --count origin/develop..HEAD)" -eq 0 ]]; then
-              echo "develop is already up to date with master"
-              exit 0
-            fi
-            git push origin HEAD:develop
-            echo "master merged into develop successfully"
-          else
-            git merge --abort || true
-            echo "Automatic sync failed due to merge conflicts. Resolve by merging master into develop manually."
-            exit 1
-          fi

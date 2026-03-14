@@ -75,6 +75,24 @@ class BotConfigTest {
     }
 
     @Test
+    void telegramClient_proxyNull_usesDefaultClient() throws Exception {
+        BotConfig config = new BotConfig();
+        BotProperties properties = new BotProperties(
+                "test-token",
+                1L,
+                1L,
+                "https://example.org/invite",
+                null
+        );
+
+        OkHttpTelegramClient client = config.telegramClient(properties);
+        okhttp3.OkHttpClient rawClient = extractInternalClient(client);
+
+        assertNotNull(client);
+        assertSame(null, rawClient.proxy());
+    }
+
+    @Test
     void telegramClient_proxyEnabled_socksConfigApplied() throws Exception {
         BotConfig config = new BotConfig();
         BotProperties properties = new BotProperties(
@@ -95,6 +113,49 @@ class BotConfigTest {
         assertEquals(Proxy.Type.SOCKS, proxy.type());
         assertEquals("xray-client", address.getHostString());
         assertEquals(1080, address.getPort());
+    }
+
+    @Test
+    void telegramClient_proxyEnabled_httpConfigApplied() throws Exception {
+        BotConfig config = new BotConfig();
+        BotProperties properties = new BotProperties(
+                "test-token",
+                1L,
+                1L,
+                "https://example.org/invite",
+                new BotProperties.ProxyProperties(true, "HTTP", "xray-client", 3128)
+        );
+
+        OkHttpTelegramClient client = config.telegramClient(properties);
+        okhttp3.OkHttpClient rawClient = extractInternalClient(client);
+        Proxy proxy = rawClient.proxy();
+        InetSocketAddress address = assertInstanceOf(InetSocketAddress.class, proxy.address());
+
+        assertNotNull(client);
+        assertNotNull(proxy);
+        assertEquals(Proxy.Type.HTTP, proxy.type());
+        assertEquals("xray-client", address.getHostString());
+        assertEquals(3128, address.getPort());
+    }
+
+    @Test
+    void telegramClient_proxyEnabled_blankType_defaultsToSocks() throws Exception {
+        BotConfig config = new BotConfig();
+        BotProperties properties = new BotProperties(
+                "test-token",
+                1L,
+                1L,
+                "https://example.org/invite",
+                new BotProperties.ProxyProperties(true, "", "xray-client", 1080)
+        );
+
+        OkHttpTelegramClient client = config.telegramClient(properties);
+        okhttp3.OkHttpClient rawClient = extractInternalClient(client);
+        Proxy proxy = rawClient.proxy();
+
+        assertNotNull(client);
+        assertNotNull(proxy);
+        assertEquals(Proxy.Type.SOCKS, proxy.type());
     }
 
     @Test
