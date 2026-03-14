@@ -8,11 +8,47 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: test-push-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  detect-open-pr:
+    runs-on: ubuntu-latest
+    outputs:
+      has_open_pr: ${{ steps.check.outputs.has_open_pr }}
+    steps:
+      - name: Check open PR for branch
+        id: check
+        uses: actions/github-script@v8
+        with:
+          script: |
+            if (context.eventName !== "push") {
+              core.setOutput("has_open_pr", "false");
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const head = `${owner}:${context.ref.replace("refs/heads/", "")}`;
+
+            const { data: pulls } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              head,
+              per_page: 100,
+            });
+
+            const hasOpenPrToMainBranches = pulls.some((pr) =>
+              pr.base.ref === "develop" || pr.base.ref === "master"
+            );
+
+            core.setOutput("has_open_pr", hasOpenPrToMainBranches ? "true" : "false");
+
   gradle-tests:
+    needs: detect-open-pr
+    if: github.event_name == 'workflow_dispatch' || needs.detect-open-pr.outputs.has_open_pr != 'true'
     uses: ./.github/workflows/_tests-reusable.yml
