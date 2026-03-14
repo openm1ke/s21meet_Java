@@ -67,6 +67,9 @@ Runtime env-файлы должны существовать на сервере
 
 - `env/test/compose.env`, `env/test/*.env` для test
 - `env/prod/compose.env`, `env/prod/*.env` для prod
+- `XRAY_CONFIG_FILE` из `compose.env` должен указывать на существующий `xray` config
+  (например `env/test/xray/config.json` или `env/prod/xray/config.json`).
+  Можно начать с `env/*/xray/config.json.example` и заменить на рабочий конфиг.
 
 ## Типовой процесс релиза
 
