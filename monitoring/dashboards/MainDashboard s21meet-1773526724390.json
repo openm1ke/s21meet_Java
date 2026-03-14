@@ -80,6 +80,200 @@
             ]
           }
         },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(bot_telegram_api_requests_total{job=\"s21bot\",method=\"getUpdates\",outcome=\"error\"}[15m]))",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Longpolling errors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "default": true,
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "sum by (stage, reason) (increase(bot_processing_errors_total{job=\"s21bot\"}[15m]))",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Bot processing errors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "default": true,
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
         "overrides": [
           {
             "__systemRef": "hideSeriesFrom",
@@ -109,9 +303,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 10,
+        "w": 12,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "id": 30,
       "options": {
@@ -207,9 +401,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 14,
-        "x": 10,
-        "y": 0
+        "w": 12,
+        "x": 12,
+        "y": 8
       },
       "id": 29,
       "options": {
@@ -307,7 +501,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 16
       },
       "id": 22,
       "options": {
@@ -405,7 +599,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 16
       },
       "id": 24,
       "options": {
@@ -506,7 +700,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 15
+        "y": 23
       },
       "id": 25,
       "options": {
@@ -605,7 +799,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 15
+        "y": 23
       },
       "id": 13,
       "options": {
@@ -706,7 +900,7 @@
         "h": 8,
         "w": 9,
         "x": 0,
-        "y": 23
+        "y": 31
       },
       "id": 12,
       "options": {
@@ -771,7 +965,7 @@
         "h": 8,
         "w": 7,
         "x": 9,
-        "y": 23
+        "y": 31
       },
       "id": 21,
       "options": {
@@ -836,7 +1030,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 23
+        "y": 31
       },
       "id": 20,
       "options": {
@@ -937,10 +1131,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 10,
-        "w": 24,
+        "h": 7,
+        "w": 20,
         "x": 0,
-        "y": 31
+        "y": 39
       },
       "id": 11,
       "options": {
@@ -981,33 +1175,38 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 7,
-        "x": 0,
-        "y": 41
+        "h": 7,
+        "w": 4,
+        "x": 20,
+        "y": 39
       },
-      "id": 10,
+      "id": 9,
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "right",
-          "showLegend": true
-        },
-        "pieType": "pie",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1015,11 +1214,11 @@
           "fields": "",
           "values": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "11.2.0",
       "targets": [
         {
           "datasource": {
@@ -1027,15 +1226,15 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum by (user_id) (bot_button_press_total)",
+          "expr": "sum(bot_button_press_total)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Most Active Users",
-      "type": "piechart"
+      "title": "Total Pressed",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -1061,9 +1260,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 6,
-        "x": 7,
-        "y": 41
+        "w": 7,
+        "x": 0,
+        "y": 46
       },
       "id": 7,
       "options": {
@@ -1127,9 +1326,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 6,
-        "x": 13,
-        "y": 41
+        "w": 7,
+        "x": 7,
+        "y": 46
       },
       "id": 8,
       "options": {
@@ -1167,174 +1366,6 @@
       ],
       "title": "Buttons by type",
       "type": "piechart"
-    },
-    {
-      "datasource": {
-        "default": true,
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 5,
-        "x": 19,
-        "y": 41
-      },
-      "id": 9,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.2.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum(bot_button_press_total)",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Total Pressed",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "default": true,
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "displayName": "${__field.labels.scheduler} | ${__field.labels.result}",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 49
-      },
-      "id": 18,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "edu_events_saved_last{scheduler=\"event_parser\"}",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Events parser",
-      "type": "timeseries"
     },
     {
       "datasource": {
@@ -1400,9 +1431,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 49
+        "w": 10,
+        "x": 14,
+        "y": 46
       },
       "id": 19,
       "options": {
@@ -1491,6 +1522,7 @@
               "mode": "off"
             }
           },
+          "displayName": "${__field.labels.scheduler} | ${__field.labels.result}",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1512,9 +1544,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 57
+        "y": 54
       },
-      "id": 6,
+      "id": 18,
       "options": {
         "legend": {
           "calcs": [],
@@ -1534,14 +1566,14 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum by (button) (increase(bot_button_press_total[5m]))",
+          "expr": "edu_events_saved_last{scheduler=\"event_parser\"}",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Buttons",
+      "title": "Events parser",
       "type": "timeseries"
     },
     {
@@ -1613,7 +1645,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 57
+        "y": 54
       },
       "id": 3,
       "options": {
@@ -1673,7 +1705,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1689,7 +1721,6 @@
               "mode": "off"
             }
           },
-          "displayName": "${__field.labels.method} | ${__field.labels.uri}",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1711,9 +1742,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 62
       },
-      "id": 5,
+      "id": 6,
       "options": {
         "legend": {
           "calcs": [],
@@ -1733,14 +1764,14 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21bot\", uri!~\".*/actuator/.*\"}[5m])) \n  by (uri, method)\n)",
+          "expr": "sum by (button) (increase(bot_button_press_total[5m]))",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "s21bot endpoints",
+      "title": "Buttons",
       "type": "timeseries"
     },
     {
@@ -1812,7 +1843,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 65
+        "y": 62
       },
       "id": 1,
       "options": {
@@ -1873,7 +1904,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1911,9 +1942,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 73
+        "y": 70
       },
-      "id": 4,
+      "id": 5,
       "options": {
         "legend": {
           "calcs": [],
@@ -1933,14 +1964,14 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21edu\", uri!~\".*/actuator/.*\"}[5m])) \n  by (uri, method)\n)",
+          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21bot\", uri!~\".*/actuator/.*\"}[5m])) \n  by (uri, method)\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "s21edu endpoints",
+      "title": "s21bot endpoints",
       "type": "timeseries"
     },
     {
@@ -2009,7 +2040,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 73
+        "y": 70
       },
       "id": 2,
       "options": {
@@ -2040,9 +2071,107 @@
       ],
       "title": "JVM Heap",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "default": true,
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "displayName": "${__field.labels.method} | ${__field.labels.uri}",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 78
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "topk(10, \n  sum(rate(http_server_requests_seconds_count{job=\"s21edu\", uri!~\".*/actuator/.*\"}[5m])) \n  by (uri, method)\n)",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "s21edu endpoints",
+      "type": "timeseries"
     }
   ],
-  "refresh": "10s",
+  "refresh": "30s",
   "schemaVersion": 39,
   "tags": [],
   "templating": {
@@ -2119,6 +2248,6 @@
   "timezone": "browser",
   "title": "MainDashboard s21meet",
   "uid": "bfe1j8anhfn5sd",
-  "version": 19,
+  "version": 5,
   "weekStart": ""
 }
