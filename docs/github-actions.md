@@ -5,6 +5,7 @@
 - `Test Push` (`.github/workflows/test.yml`)
 - Запускается на `push` в `feature/**`.
 - Выполняет модульные тесты (`_tests-reusable.yml`).
+- Если для feature-ветки уже открыт PR в `develop` или `master`, push-проверки автоматически пропускаются (чтобы не дублировать `Test PR`).
 
 - `Test PR` (`.github/workflows/test-pr.yml`)
 - Запускается на PR в `develop` и `master`.
