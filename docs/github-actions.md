@@ -18,7 +18,7 @@
 - `Build Images` (`.github/workflows/build-image.yml`)
 - Запускается на `push` в `master` и вручную.
 - Перед сборкой выполняет тесты.
-- Автоматически повышает `appVersion` (patch), создаёт git tag `vX.Y.Z`.
+- Использует `appVersion` из `gradle.properties` и создаёт git tag `vX.Y.Z`, если его ещё нет.
 - Публикует образы в `ghcr.io/<owner>/s21meet` с тегами `vX.Y.Z` и `latest`.
 
 - `Sonar Push` (`.github/workflows/sonar-push.yml`)
