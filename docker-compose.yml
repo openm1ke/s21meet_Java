@@ -83,6 +83,8 @@ services:
         condition: service_healthy
       s21rocket:
         condition: service_healthy
+      xray-client:
+        condition: service_started
     env_file:
       - ./env/${APP_ENV:-test}/s21bot.env
     environment:
@@ -111,6 +113,17 @@ services:
       retries: 30
     ports:
       - "${S21ROCKET_BIND_ADDR:-127.0.0.1}:8084:8084"
+    networks:
+      - s21meet-network
+
+  xray-client:
+    image: ghcr.io/xtls/xray-core:latest
+    restart: unless-stopped
+    command: ["run", "-c", "/etc/xray/config.json"]
+    volumes:
+      - ${XRAY_CONFIG_FILE:-./env/test/xray/config.json.example}:/etc/xray/config.json:ro
+    expose:
+      - "1080"
     networks:
       - s21meet-network
 
