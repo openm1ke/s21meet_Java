@@ -57,6 +57,9 @@ jobs:
             exit 1
           fi
 
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
           version_tag="v${app_version}"
           if git ls-remote --tags --refs origin "refs/tags/${version_tag}" | grep -q .; then
             echo "Tag ${version_tag} already exists, skip tag creation"
