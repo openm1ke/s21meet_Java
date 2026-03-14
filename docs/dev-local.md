@@ -60,6 +60,20 @@
 ./dev.sh s21edu --no-build
 ```
 
+### Выбор прокси для Telegram (`s21bot`)
+
+По умолчанию используется `vless` (`xray-client`).
+
+```bash
+./dev.sh s21bot --proxy vless
+./dev.sh s21bot --proxy ssh
+./dev.sh s21bot --proxy none
+```
+
+Для режима `ssh` заполни параметры в `env/test/compose.env`:
+- `SSH_TUNNEL_HOST`, `SSH_TUNNEL_PORT`, `SSH_TUNNEL_USER`
+- `SSH_TUNNEL_KEY_FILE`, `SSH_TUNNEL_KNOWN_HOSTS_FILE`
+
 ### Полный «чистый» цикл (медленнее, но максимально предсказуемо)
 
 ```bash
@@ -78,6 +92,7 @@
 - `--clean` — добавить `clean` перед Gradle-сборкой выбранных модулей.
 - `--recreate` — запуск `compose up` с `--force-recreate`.
 - `--with-deps` — пересоздавать сервисы вместе с зависимостями (без `--no-deps`).
+- `--proxy vless|ssh|none` — выбрать контейнер прокси для `s21bot`.
 - `--ps` — показать `docker compose ps` в конце.
 - `--down` — остановить стек (`compose down --remove-orphans`).
 - `-h|--help` — показать справку.
@@ -111,6 +126,6 @@
 
 ## Что важно знать
 
-- Скрипт использует профиль `infra` в `docker-compose`.
+- Скрипт использует профиль `infra` и профиль прокси (`proxy-vless`/`proxy-ssh`) в `docker-compose`.
 - Если меняешь только Java-код одного модуля, не нужно пересобирать весь проект.
 - Файлы `env/test/*.env` локальные и не должны попадать в git.

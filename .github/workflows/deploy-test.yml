@@ -113,6 +113,7 @@ jobs:
 
           test -f ./docker-compose.yml
           test -f ./scripts/deploy-compose.sh
+          test -f ./scripts/proxy/ssh-socks-entrypoint.sh
           test -f ./monitoring/prometheus/prometheus.yml
           test -d ./monitoring/grafana/provisioning
 
@@ -122,12 +123,14 @@ jobs:
             mkdir -p \
               \"$APP_DIR\" \
               \"$APP_DIR/scripts\" \
+              \"$APP_DIR/scripts/proxy\" \
               \"$APP_DIR/env/test\" \
               \"$APP_DIR/monitoring/prometheus\" \
               \"$APP_DIR/monitoring/grafana\"
 
             rm -f \"$APP_DIR/docker-compose.yml\"
             rm -f \"$APP_DIR/scripts/deploy-compose.sh\"
+            rm -f \"$APP_DIR/scripts/proxy/ssh-socks-entrypoint.sh\"
             rm -f \"$APP_DIR/monitoring/prometheus/prometheus.yml\"
             rm -rf \"$APP_DIR/monitoring/grafana/provisioning\"
           "
@@ -137,6 +140,9 @@ jobs:
 
           scp "${SSH_OPTS[@]}" -P "$PORT" ./scripts/deploy-compose.sh \
             "$REMOTE:$APP_DIR/scripts/deploy-compose.sh"
+
+          scp "${SSH_OPTS[@]}" -P "$PORT" ./scripts/proxy/ssh-socks-entrypoint.sh \
+            "$REMOTE:$APP_DIR/scripts/proxy/ssh-socks-entrypoint.sh"
 
           scp "${SSH_OPTS[@]}" -P "$PORT" ./monitoring/prometheus/prometheus.yml \
             "$REMOTE:$APP_DIR/monitoring/prometheus/prometheus.yml"
@@ -148,10 +154,12 @@ jobs:
             set -euo pipefail
 
             chmod +x \"$APP_DIR/scripts/deploy-compose.sh\"
+            chmod +x \"$APP_DIR/scripts/proxy/ssh-socks-entrypoint.sh\"
 
             echo 'Remote files after copy:'
             ls -la \"$APP_DIR\"
             ls -la \"$APP_DIR/scripts\"
+            ls -la \"$APP_DIR/scripts/proxy\"
             ls -la \"$APP_DIR/monitoring/prometheus\"
             ls -la \"$APP_DIR/monitoring/grafana\"
             ls -la \"$APP_DIR/monitoring/grafana/provisioning\"
