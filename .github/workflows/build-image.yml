@@ -1,9 +1,11 @@
 name: Build Images
 
 on:
-  push:
+  pull_request:
     branches:
       - master
+    types:
+      - closed
   workflow_dispatch:
     inputs:
       image_tag:
@@ -17,12 +19,12 @@ permissions:
 
 jobs:
   gradle-tests:
-    if: github.actor != 'github-actions[bot]'
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     uses: ./.github/workflows/_tests-reusable.yml
 
   publish:
     needs: gradle-tests
-    if: github.actor != 'github-actions[bot]'
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,37 +42,28 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Bump appVersion on master push
-        if: github.event_name == 'push'
+      - name: Ensure version tag exists after master merge
+        if: github.event_name != 'workflow_dispatch' && github.actor != 'github-actions[bot]'
         shell: bash
         run: |
           set -euo pipefail
-          out="$(bash scripts/bump-app-version.sh gradle.properties appVersion)"
-          echo "$out"
-          next_version="$(echo "$out" | awk -F= '/^next_version=/{print $2}')"
-          next_version="$(echo "$next_version" | tr -d '\r' | xargs)"
-          if [[ -z "$next_version" ]]; then
-            echo "Failed to resolve next version"
+          app_version="$(grep -E '^appVersion=' gradle.properties | cut -d'=' -f2- | tr -d '\r' | xargs)"
+          if [[ -z "$app_version" ]]; then
+            echo "Failed to resolve appVersion from gradle.properties"
             exit 1
           fi
-          if [[ ! "$next_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9]+)?$ ]]; then
-            echo "Invalid next_version for tag creation: '$next_version'"
+          if [[ ! "$app_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9]+)?$ ]]; then
+            echo "Invalid appVersion for tag creation: '$app_version'"
             exit 1
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add gradle.properties
-          git commit -m "ci: bump appVersion to ${next_version}"
-
-          version_tag="v${next_version}"
-          if git rev-parse -q --verify "refs/tags/${version_tag}" >/dev/null; then
+          version_tag="v${app_version}"
+          if git ls-remote --tags --refs origin "refs/tags/${version_tag}" | grep -q .; then
             echo "Tag ${version_tag} already exists, skip tag creation"
           else
             git tag -a "${version_tag}" -m "Release ${version_tag}"
+            git push origin "refs/tags/${version_tag}"
           fi
-          git push --follow-tags
 
       - name: Build jars
         run: ./gradlew :s21auth:bootJar :s21edu:bootJar :s21bot:bootJar :s21rocket:bootJar
@@ -173,38 +166,3 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.image_repo }}/s21rocket:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_repo }}/s21rocket:latest
-
-  sync-develop:
-    needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Merge master into develop
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git fetch origin master develop
-          git checkout develop
-          git pull --ff-only origin develop
-
-          if git merge --no-ff --no-edit origin/master; then
-            if [[ "$(git rev-list --count origin/develop..HEAD)" -eq 0 ]]; then
-              echo "develop is already up to date with master"
-              exit 0
-            fi
-            git push origin HEAD:develop
-            echo "master merged into develop successfully"
-          else
-            git merge --abort || true
-            echo "Automatic sync failed due to merge conflicts. Resolve by merging master into develop manually."
-            exit 1
-          fi

@@ -16,15 +16,18 @@
 - Ищет утечки секретов (`gitleaks`).
 
 - `Build Images` (`.github/workflows/build-image.yml`)
-- Запускается на `push` в `master` и вручную.
+- Запускается после merge PR в `master` и вручную.
 - Перед сборкой выполняет тесты.
-- На `push` в `master` автоматически повышает `appVersion`, создаёт commit и git tag `vX.Y.Z`.
+- Использует `appVersion` из `gradle.properties` и создаёт git tag `vX.Y.Z`, если его ещё нет.
 - Публикует образы в `ghcr.io/<owner>/s21meet` с тегами `vX.Y.Z` и `latest`.
-- После успешной публикации автоматически синхронизирует `develop` из `master`.
 
 - `Sonar Push` (`.github/workflows/sonar-push.yml`)
 - Запускается после merge PR в `master`.
 - Выполняет Sonar-анализ для основной ветки.
+
+- `Sync Master To Develop` (`.github/workflows/sync-master-to-develop.yml`)
+- Запускается после merge PR в `master` и вручную.
+- Автоматически создаёт (или переиспользует) PR `master -> develop`, чтобы синхронизация шла через обычный review flow.
 
 - `Deploy Test` (`.github/workflows/deploy-test.yml`)
 - Ручной деплой в тестовое окружение.
@@ -73,6 +76,7 @@ Runtime env-файлы должны существовать на сервере
 
 1. Разработка в `feature/*` -> автотесты (`Test Push`).
 2. PR в `develop`/`master` -> `Test PR` + `Secret Scan PR`.
-3. Merge PR в `master` -> `Build Images` (bump версии, tag, публикация образов в GHCR, sync `master -> develop`).
-4. Ручной запуск `Deploy Test` с нужным `image_tag`.
-5. После проверки — `Deploy Prod` с тем же `image_tag`.
+3. Merge PR в `master` -> `Build Images` и публикация образов в GHCR.
+4. После merge PR в `master` автоматически создаётся PR `master -> develop` (`Sync Master To Develop`).
+5. Ручной запуск `Deploy Test` с нужным `image_tag`.
+6. После проверки — `Deploy Prod` с тем же `image_tag`.
