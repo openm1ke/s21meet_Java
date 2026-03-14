@@ -40,6 +40,9 @@ class MessageProcessorTest {
     @Mock
     private ConfirmedFlow confirmedFlow;
 
+    @Mock
+    private MetricsService metricsService;
+
     @InjectMocks
     private MessageProcessor messageProcessor;
 
@@ -122,8 +125,22 @@ class MessageProcessorTest {
 
         messageProcessor.handleTextMessage(msg);
 
+        verify(metricsService).recordProcessingError("message_processor", "feign_exception");
         verify(messageSender).sendMessage(1L, "Ошибка обработки профиля, попробуйте позже", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
+    }
+
+    @Test
+    void handleTextMessage_whenUnexpectedException_recordsMetricAndSendsGenericError() {
+        Message msg = mock(Message.class);
+        when(msg.getChatId()).thenReturn(1L);
+        when(msg.getText()).thenReturn("hi");
+        when(profileService.getProfile(1L)).thenThrow(new RuntimeException("boom"));
+
+        messageProcessor.handleTextMessage(msg);
+
+        verify(metricsService).recordProcessingError("message_processor", "unexpected_exception");
+        verify(messageSender).sendMessage(1L, "Произошла внутренняя ошибка, попробуйте позже", null);
     }
 
     private FeignException createFeignException(int status, String message) {

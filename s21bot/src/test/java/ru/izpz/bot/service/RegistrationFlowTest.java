@@ -50,6 +50,9 @@ class RegistrationFlowTest {
     @Mock
     private TelegramKeyboardFactory telegramKeyboardFactory;
 
+    @Mock
+    private MetricsService metricsService;
+
     @InjectMocks
     private RegistrationFlow registrationFlow;
 
@@ -102,6 +105,19 @@ class RegistrationFlowTest {
     }
 
     @Test
+    void startValidation_whenFeignException_recordsMetricAndNotifiesUserAndAdmin() {
+        ProfileDto profile = new ProfileDto(chatId.toString(), "login", ProfileStatus.VALIDATION, null);
+        FeignException ex = createFeignException(500, "boom");
+        when(profileService.getVerificationCode("login")).thenThrow(ex);
+
+        registrationFlow.startValidation(chatId, profile, "123");
+
+        verify(metricsService).recordProcessingError("registration_validation", "feign_exception");
+        verify(messageSender).sendMessage(chatId, "Ошибка валидации, попробуйте позже", null);
+        verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
+    }
+
+    @Test
     void startRegistration_invalidLogin_sendsError() {
         registrationFlow.startRegistration(chatId, "12");
 
@@ -116,6 +132,7 @@ class RegistrationFlowTest {
 
         registrationFlow.startRegistration(chatId, "abc");
 
+        verify(metricsService).recordProcessingError("registration_flow", "edu_login_check_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка проверки логина: bad", null);
         verify(messageSender).sendMessage(999L, "Ошибка проверки логина: " + error, null);
     }
@@ -170,6 +187,7 @@ class RegistrationFlowTest {
 
         registrationFlow.startRegistration(chatId, "abc");
 
+        verify(metricsService).recordProcessingError("registration_flow", "feign_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
     }
@@ -225,6 +243,7 @@ class RegistrationFlowTest {
 
         registrationFlow.startRegistration(chatId, "abc");
 
+        verify(metricsService).recordProcessingError("registration_flow", "rocketchat_send_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
         verify(messageSender).sendMessage(eq(999L), contains("fail"), eq(null));
         verify(profileService, never()).updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
@@ -245,6 +264,7 @@ class RegistrationFlowTest {
 
         registrationFlow.startRegistration(chatId, "abc");
 
+        verify(metricsService).recordProcessingError("registration_flow", "feign_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
         verify(messageSender).sendMessage(999L, ex.contentUTF8(), null);
         verify(profileService, never()).updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());

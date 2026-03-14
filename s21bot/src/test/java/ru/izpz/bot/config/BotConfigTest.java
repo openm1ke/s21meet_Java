@@ -10,6 +10,7 @@ import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import ru.izpz.bot.bot.SimpleBot;
 import ru.izpz.bot.property.BotProperties;
 import ru.izpz.bot.service.MessageProcessor;
+import ru.izpz.bot.service.MetricsService;
 
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
@@ -35,6 +36,9 @@ class BotConfigTest {
     @Mock
     private BotSession botSession;
 
+    @Mock
+    private MetricsService metricsService;
+
     @Test
     void botSession_registersBotAndReturnsSession() throws Exception {
         BotConfig config = new BotConfig();
@@ -54,6 +58,13 @@ class BotConfigTest {
     void simpleBot_createsInstance() {
         BotConfig config = new BotConfig();
         assertNotNull(config.simpleBot(messageProcessor));
+    }
+
+    @Test
+    void botsApplication_createsInstance() {
+        BotConfig config = new BotConfig();
+        BotProperties properties = new BotProperties("test-token", 1L, 1L, "https://example.org/invite", null);
+        assertNotNull(config.botsApplication(metricsService, properties));
     }
 
     @Test

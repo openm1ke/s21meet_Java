@@ -33,6 +33,14 @@ public class MetricsService {
         ).increment();
     }
 
+    public void recordProcessingError(String stage, String reason) {
+        meterRegistry.counter(
+                "bot_processing_errors_total",
+                "stage", normalize(stage),
+                "reason", normalize(reason)
+        ).increment();
+    }
+
     private String normalize(String value) {
         return (value == null || value.isBlank()) ? "unknown" : value;
     }
