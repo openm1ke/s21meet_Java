@@ -32,6 +32,12 @@ public class CallbackHandler {
     private static final int ROW_SIZE = 3;
     private static final int PAGE_SIZE = 2;
     private static final String LOGIN = "login";
+    private static final String REASON_FEIGN_EXCEPTION = "feign_exception";
+    private static final String STAGE_SHOW_EVENTS = "show_events";
+    private static final String STAGE_SHOW_FRIENDS = "show_friends";
+    private static final String STAGE_SHOW_PROFILE = "show_profile";
+    private static final String STAGE_SET_LAST_COMMAND = "set_last_command";
+    private static final String STAGE_REGISTRATION_UPDATE = "registration_update";
 
     public void handleCallbackMessage(Long chatId, String data, Integer messageId, String callbackId) {
         try {
@@ -104,7 +110,7 @@ public class CallbackHandler {
                 messageSender.sendMessage(chatId, "События\n\n" + eventsListText, keyboard);
             }
         } catch (FeignException e) {
-            metricsService.recordProcessingError("show_events", "feign_exception");
+            metricsService.recordProcessingError(STAGE_SHOW_EVENTS, REASON_FEIGN_EXCEPTION);
             messageSender.sendMessage(chatId, "Ошибка обработки событий, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
@@ -121,7 +127,7 @@ public class CallbackHandler {
                 messageSender.sendMessage(chatId, friendsListText, keyboard);
             }
         } catch (FeignException e) {
-            metricsService.recordProcessingError("show_friends", "feign_exception");
+            metricsService.recordProcessingError(STAGE_SHOW_FRIENDS, REASON_FEIGN_EXCEPTION);
             messageSender.sendMessage(chatId, "Ошибка обработки друзей, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
@@ -139,11 +145,11 @@ public class CallbackHandler {
             ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
             messageSender.sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
         } catch (FeignException e) {
-            metricsService.recordProcessingError("show_profile", "feign_exception");
+            metricsService.recordProcessingError(STAGE_SHOW_PROFILE, REASON_FEIGN_EXCEPTION);
             messageSender.sendMessage(chatId, "Ошибка поиска профиля, попробуйте позже", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         } catch (EduLoginCheckException e) {
-            metricsService.recordProcessingError("show_profile", "edu_login_check_exception");
+            metricsService.recordProcessingError(STAGE_SHOW_PROFILE, "edu_login_check_exception");
             messageSender.sendMessage(chatId, "Ошибка проверки логина: " + e.getError().getMessage(), null);
             messageSender.sendMessage(botProperties.admin(), "Ошибка проверки логина: " + e.getError(), null);
         }
@@ -154,7 +160,7 @@ public class CallbackHandler {
         try {
             profileService.setLastCommand(chatId, lastCommand);
         } catch (FeignException e) {
-            metricsService.recordProcessingError("set_last_command", "feign_exception");
+            metricsService.recordProcessingError(STAGE_SET_LAST_COMMAND, REASON_FEIGN_EXCEPTION);
             messageSender.sendMessage(chatId, "Ошибка установки lastCommand", null);
             messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
         }
@@ -165,7 +171,7 @@ public class CallbackHandler {
             messageSender.updateMessage(chatId, messageId, newText, null);
             profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
         } catch (FeignException e) {
-            metricsService.recordProcessingError("registration_update", "feign_exception");
+            metricsService.recordProcessingError(STAGE_REGISTRATION_UPDATE, REASON_FEIGN_EXCEPTION);
             log.error("Ошибка обработки профиля", e);
         }
     }
