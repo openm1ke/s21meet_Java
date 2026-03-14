@@ -41,3 +41,5 @@ out/
 env/*/*.env
 !env/*/*.env.example
 !env/*/compose.env.example
+env/*/xray/config.json
+!env/*/xray/config.json.example

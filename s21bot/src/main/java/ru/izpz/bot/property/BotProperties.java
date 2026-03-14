@@ -7,6 +7,14 @@ public record BotProperties(
         String token,
         Long admin,
         Long group,
-        String groupInviteLink
+        String groupInviteLink,
+        ProxyProperties proxy
 ) {
+    public record ProxyProperties(
+            Boolean enabled,
+            String type,
+            String host,
+            Integer port
+    ) {
+    }
 }
