@@ -25,7 +25,6 @@
 - `Sonar Push` (`.github/workflows/sonar-push.yml`)
 - Запускается после merge PR в `master`.
 - Выполняет Sonar-анализ для основной ветки.
-
 - `Deploy Test` (`.github/workflows/deploy-test.yml`)
 - Ручной деплой в тестовое окружение.
 - Использует стратегию `recreate-all` и профиль `infra`.
