@@ -64,7 +64,8 @@ class BotConfigTest {
     void botsApplication_createsInstance() {
         BotConfig config = new BotConfig();
         BotProperties properties = new BotProperties("test-token", 1L, 1L, "https://example.org/invite", null);
-        assertNotNull(config.botsApplication(metricsService, properties));
+        okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
+        assertNotNull(config.botsApplication(metricsService, okHttpClient));
     }
 
     @Test
@@ -78,10 +79,12 @@ class BotConfigTest {
                 new BotProperties.ProxyProperties(false, "SOCKS", "xray-client", 1080)
         );
 
-        OkHttpTelegramClient client = config.telegramClient(properties);
+        okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
+        OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
         okhttp3.OkHttpClient rawClient = extractInternalClient(client);
 
         assertNotNull(client);
+        assertSame(okHttpClient, rawClient);
         assertSame(null, rawClient.proxy());
     }
 
@@ -96,7 +99,8 @@ class BotConfigTest {
                 null
         );
 
-        OkHttpTelegramClient client = config.telegramClient(properties);
+        okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
+        OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
         okhttp3.OkHttpClient rawClient = extractInternalClient(client);
 
         assertNotNull(client);
@@ -114,7 +118,8 @@ class BotConfigTest {
                 new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", 1080)
         );
 
-        OkHttpTelegramClient client = config.telegramClient(properties);
+        okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
+        OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
         okhttp3.OkHttpClient rawClient = extractInternalClient(client);
         Proxy proxy = rawClient.proxy();
         InetSocketAddress address = assertInstanceOf(InetSocketAddress.class, proxy.address());
@@ -137,7 +142,8 @@ class BotConfigTest {
                 new BotProperties.ProxyProperties(true, "HTTP", "xray-client", 3128)
         );
 
-        OkHttpTelegramClient client = config.telegramClient(properties);
+        okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
+        OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
         okhttp3.OkHttpClient rawClient = extractInternalClient(client);
         Proxy proxy = rawClient.proxy();
         InetSocketAddress address = assertInstanceOf(InetSocketAddress.class, proxy.address());
@@ -160,7 +166,8 @@ class BotConfigTest {
                 new BotProperties.ProxyProperties(true, "", "xray-client", 1080)
         );
 
-        OkHttpTelegramClient client = config.telegramClient(properties);
+        okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
+        OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
         okhttp3.OkHttpClient rawClient = extractInternalClient(client);
         Proxy proxy = rawClient.proxy();
 
@@ -180,7 +187,7 @@ class BotConfigTest {
                 new BotProperties.ProxyProperties(true, "SOCKS", "", 0)
         );
 
-        assertThrows(IllegalStateException.class, () -> config.telegramClient(properties));
+        assertThrows(IllegalStateException.class, () -> config.telegramOkHttpClient(properties));
     }
 
     @Test
@@ -194,7 +201,7 @@ class BotConfigTest {
                 new BotProperties.ProxyProperties(true, "INVALID", "xray-client", 1080)
         );
 
-        assertThrows(IllegalStateException.class, () -> config.telegramClient(properties));
+        assertThrows(IllegalStateException.class, () -> config.telegramOkHttpClient(properties));
     }
 
     private okhttp3.OkHttpClient extractInternalClient(OkHttpTelegramClient telegramClient) throws Exception {
