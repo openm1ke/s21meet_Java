@@ -19,25 +19,46 @@ class TelegramExecutorServiceTest {
     @Test
     void execute_success_returnsOptionalWithValue() throws TelegramApiException {
         TelegramClientProxy telegramClientProxy = mock(TelegramClientProxy.class);
-        TelegramExecutorService executorService = new TelegramExecutorService(telegramClientProxy);
+        MetricsService metricsService = mock(MetricsService.class);
+        TelegramExecutorService executorService = new TelegramExecutorService(telegramClientProxy, metricsService);
         Message msg = mock(Message.class);
+        SendMessage method = SendMessage.builder().chatId("1").text("t").build();
         when(telegramClientProxy.execute(any(SendMessage.class))).thenReturn(msg);
 
-        Optional<Message> result = executorService.execute(SendMessage.builder().chatId("1").text("t").build());
+        Optional<Message> result = executorService.execute(method);
 
         assertTrue(result.isPresent());
         assertEquals(msg, result.get());
+        verify(metricsService).recordTelegramApiRequest(method.getMethod(), "success");
     }
 
     @Test
     void execute_telegramException_returnsEmptyOptional() throws TelegramApiException {
         TelegramClientProxy telegramClientProxy = mock(TelegramClientProxy.class);
-        TelegramExecutorService executorService = new TelegramExecutorService(telegramClientProxy);
+        MetricsService metricsService = mock(MetricsService.class);
+        TelegramExecutorService executorService = new TelegramExecutorService(telegramClientProxy, metricsService);
+        SendMessage method = SendMessage.builder().chatId("1").text("t").build();
         when(telegramClientProxy.execute(any(SendMessage.class))).thenThrow(new TelegramApiException("err"));
 
-        Optional<Message> result = executorService.execute(SendMessage.builder().chatId("1").text("t").build());
+        Optional<Message> result = executorService.execute(method);
 
         assertTrue(result.isEmpty());
         verify(telegramClientProxy).execute(any(SendMessage.class));
+        verify(metricsService).recordTelegramApiRequest(method.getMethod(), "error");
+    }
+
+    @Test
+    void execute_runtimeException_returnsEmptyOptionalAndRecordsErrorMetric() throws TelegramApiException {
+        TelegramClientProxy telegramClientProxy = mock(TelegramClientProxy.class);
+        MetricsService metricsService = mock(MetricsService.class);
+        TelegramExecutorService executorService = new TelegramExecutorService(telegramClientProxy, metricsService);
+        SendMessage method = SendMessage.builder().chatId("1").text("t").build();
+        when(telegramClientProxy.execute(any(SendMessage.class))).thenThrow(new IllegalStateException("boom"));
+
+        Optional<Message> result = executorService.execute(method);
+
+        assertTrue(result.isEmpty());
+        verify(telegramClientProxy).execute(any(SendMessage.class));
+        verify(metricsService).recordTelegramApiRequest(method.getMethod(), "error");
     }
 }

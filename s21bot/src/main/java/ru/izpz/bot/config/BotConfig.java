@@ -27,9 +27,13 @@ import java.util.Locale;
 public class BotConfig {
 
     @Bean
-    public OkHttpTelegramClient telegramClient(BotProperties botProperties) {
-        OkHttpClient okHttpClient = createTelegramOkHttpClient(botProperties);
-        return new OkHttpTelegramClient(okHttpClient, botProperties.token());
+    public OkHttpClient telegramOkHttpClient(BotProperties botProperties) {
+        return createTelegramOkHttpClient(botProperties);
+    }
+
+    @Bean
+    public OkHttpTelegramClient telegramClient(OkHttpClient telegramOkHttpClient, BotProperties botProperties) {
+        return new OkHttpTelegramClient(telegramOkHttpClient, botProperties.token());
     }
 
     private OkHttpClient createTelegramOkHttpClient(BotProperties botProperties) {
@@ -66,11 +70,10 @@ public class BotConfig {
     }
 
     @Bean
-    public TelegramBotsLongPollingApplication botsApplication(MetricsService metricsService, BotProperties botProperties) {
-        OkHttpClient pollingClient = createTelegramOkHttpClient(botProperties);
+    public TelegramBotsLongPollingApplication botsApplication(MetricsService metricsService, OkHttpClient telegramOkHttpClient) {
         return new TelegramBotsLongPollingApplication(
                 com.fasterxml.jackson.databind.ObjectMapper::new,
-                () -> pollingClient,
+                () -> telegramOkHttpClient,
                 Executors::newSingleThreadScheduledExecutor,
                 () -> new MetricsBackOff(new ExponentialBackOff(), metricsService)
         );
