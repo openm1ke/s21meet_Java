@@ -17,19 +17,20 @@ public class TelegramExecutorService {
 
     private final TelegramClientProxy telegramClient;
     private final MetricsService metricsService;
+    private static final String ERROR_OUTCOME = "error";
 
     public <T extends Serializable> Optional<T> execute(BotApiMethod<T> method) {
         String methodName = resolveMethodName(method);
         try {
             Optional<T> result = Optional.ofNullable(telegramClient.execute(method));
-            metricsService.recordTelegramApiRequest(methodName, result.isPresent() ? "success" : "error");
+            metricsService.recordTelegramApiRequest(methodName, result.isPresent() ? "success" : ERROR_OUTCOME);
             return result;
         } catch (TelegramApiException e) {
-            metricsService.recordTelegramApiRequest(methodName, "error");
+            metricsService.recordTelegramApiRequest(methodName, ERROR_OUTCOME);
             log.error("Ошибка вызова Telegram API метода {}: {}", methodName, e.getMessage(), e);
             return Optional.empty();
         } catch (RuntimeException e) {
-            metricsService.recordTelegramApiRequest(methodName, "error");
+            metricsService.recordTelegramApiRequest(methodName, ERROR_OUTCOME);
             log.error("Неожиданная ошибка вызова Telegram API метода {}: {}", methodName, e.getMessage(), e);
             return Optional.empty();
         }
