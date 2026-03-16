@@ -5,7 +5,6 @@ on:
     branches:
       - develop
       - master
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,14 +17,20 @@ concurrency:
 
 jobs:
   gitleaks:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
+          # gitleaks-action builds a git range (base^..head) for pull_request events.
+          # Full history is required so both commits always exist locally.
           fetch-depth: 0
 
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Force base commit from current PR metadata.
+          # This avoids stale "first commit in PR" SHAs after history rewrites.
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
