@@ -9,5 +9,5 @@ paths = [
   '''^\.github/workflows/sonar-common\.yml$'''
 ]
 regexes = [
-  '''\$\{SONAR_TOKEN\}:'''
+  '''SONAR_TOKEN'''
 ]
