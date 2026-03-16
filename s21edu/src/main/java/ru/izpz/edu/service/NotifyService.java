@@ -2,7 +2,6 @@ package ru.izpz.edu.service;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.StatusChange;
@@ -19,7 +18,6 @@ import java.util.Optional;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "notify.service.enabled", havingValue = "true")
 public class NotifyService {
 
     private final FriendsRepository friendsRepository;

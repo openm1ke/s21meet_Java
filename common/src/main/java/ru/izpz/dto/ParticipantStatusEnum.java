@@ -4,12 +4,12 @@ import lombok.Getter;
 
 @Getter
 public enum ParticipantStatusEnum {
-    ACTIVE("✅"),
-    TEMPORARY_BLOCKING("\uD83D\uDC4A"),
-    EXPELLED("⛔"),
+    ACTIVE("⚡"),
+    TEMPORARY_BLOCKING("⚠\uFE0F"),
+    EXPELLED("❌"),
     BLOCKED("🚫"),
-    FROZEN("\uD83E\uDD76"),
-    STUDY_COMPLETED("\uD83C\uDFC6");
+    FROZEN("❄\uFE0F"),
+    STUDY_COMPLETED("🎓");
 
     private final String emoji;
 

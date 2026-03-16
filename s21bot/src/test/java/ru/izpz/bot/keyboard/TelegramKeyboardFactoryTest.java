@@ -56,6 +56,19 @@ class TelegramKeyboardFactoryTest {
     }
 
     @Test
+    void createUrlKeyboard_exactRowSize_hasNoTrailingRow() {
+        LinkedHashMap<String, String> buttons = new LinkedHashMap<>();
+        buttons.put("t1", "u1");
+        buttons.put("t2", "u2");
+
+        InlineKeyboardMarkup kb = factory.createUrlKeyboard(buttons, 2);
+
+        assertNotNull(kb);
+        assertEquals(1, kb.getKeyboard().size());
+        assertEquals(2, kb.getKeyboard().getFirst().size());
+    }
+
+    @Test
     void createInlineKeyboardMarkup_createsButtonsWithCallbackData() {
         LinkedHashMap<String, String> buttons = new LinkedHashMap<>();
         buttons.put("t1", "d1");

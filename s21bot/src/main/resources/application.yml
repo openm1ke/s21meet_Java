@@ -23,8 +23,9 @@ bot:
     port: ${BOT_PROXY_PORT:0}
   session:
     enabled: true
+  page-size: 10
   notify:
-    enabled: true
+    enabled: false
 
 resilience4j:
   ratelimiter:

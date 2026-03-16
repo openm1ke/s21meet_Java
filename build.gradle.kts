@@ -82,6 +82,8 @@ subprojects {
                         exclude("**/model/**")
                         exclude("**/entity/**")
                         exclude("**/generated/**")
+                        exclude("**/*MapperImpl.class")
+                        exclude("**/*MapperImpl$*.class")
                         exclude("**/openapi/**")
                         exclude("**/common/**")
                     }

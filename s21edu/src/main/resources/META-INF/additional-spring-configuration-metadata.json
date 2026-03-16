@@ -65,9 +65,10 @@
       "description": "Description for event.scheduler.enabled."
     },
     {
-      "name": "notify.service.enabled",
+      "name": "notify.delivery.enabled",
       "type": "java.lang.Boolean",
-      "description": "Description for notify.service.enabled."
+      "defaultValue": true,
+      "description": "Enable or disable sending notifications to bot while keeping online status polling active."
     },
     {
       "name": "graphql.api.enabled",

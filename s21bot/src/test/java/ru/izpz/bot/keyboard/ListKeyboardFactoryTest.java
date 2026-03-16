@@ -93,15 +93,39 @@ class ListKeyboardFactoryTest {
     }
 
     @Test
+    void friendsListText_ignoresBlankName() {
+        FriendDto f = FriendDto.builder()
+                .login("abc")
+                .name("   ")
+                .isFavorite(false)
+                .isSubscribe(false)
+                .status(ParticipantStatusEnum.ACTIVE)
+                .isOnline(false)
+                .build();
+
+        FriendsSliceDto slice = new FriendsSliceDto(List.of(f), 0, 2, false);
+
+        String text = factory.friendsListText(slice);
+
+        assertTrue(text.contains("abc"));
+        assertFalse(text.contains("(   )"));
+        assertTrue(text.contains(ParticipantStatusEnum.ACTIVE.getEmoji()));
+    }
+
+    @Test
     void friendsListKeyboard_addsPrevAndNextButtonsAccordingToPageAndHasNext() {
         FriendDto f = FriendDto.builder().login("abc").build();
-        FriendsSliceDto slice = new FriendsSliceDto(List.of(f), 1, 2, true);
+        FriendsSliceDto slice = new FriendsSliceDto(List.of(f), 1, 10, true);
 
         when(serializer.serialize(any(CallbackPayload.class))).thenReturn("cb");
 
         InlineKeyboardMarkup kb = factory.friendsListKeyboard(slice, 2, 1);
 
         assertNotNull(kb);
+        assertEquals(2, kb.getKeyboard().size());
+        assertEquals("◀ Назад", kb.getKeyboard().get(0).get(0).getText());
+        assertEquals("Вперёд ▶", kb.getKeyboard().get(0).get(1).getText());
+        assertEquals("1", kb.getKeyboard().get(1).getFirst().getText());
 
         verify(serializer, atLeastOnce()).serialize(any(CallbackPayload.class));
 
@@ -115,5 +139,50 @@ class ListKeyboardFactoryTest {
 
         assertTrue(hasPrev);
         assertTrue(hasNext);
+    }
+
+    @Test
+    void friendsListKeyboard_withoutNavigation_showsOnlyItemButtons() {
+        FriendDto f1 = FriendDto.builder().login("a").build();
+        FriendDto f2 = FriendDto.builder().login("b").build();
+        FriendsSliceDto slice = new FriendsSliceDto(List.of(f1, f2), 0, 10, false);
+
+        when(serializer.serialize(any(CallbackPayload.class))).thenReturn("cb");
+
+        InlineKeyboardMarkup kb = factory.friendsListKeyboard(slice, 5, 0);
+
+        assertNotNull(kb);
+        assertEquals(1, kb.getKeyboard().size());
+        assertEquals(2, kb.getKeyboard().getFirst().size());
+        assertEquals("1", kb.getKeyboard().getFirst().getFirst().getText());
+        assertEquals("2", kb.getKeyboard().getFirst().get(1).getText());
+    }
+
+    @Test
+    void friendsListKeyboard_firstPage_hasOnlyNextNavigationRow() {
+        FriendDto f = FriendDto.builder().login("a").build();
+        FriendsSliceDto slice = new FriendsSliceDto(List.of(f), 0, 10, true);
+        when(serializer.serialize(any(CallbackPayload.class))).thenReturn("cb");
+
+        InlineKeyboardMarkup kb = factory.friendsListKeyboard(slice, 5, 0);
+
+        assertNotNull(kb);
+        assertEquals(2, kb.getKeyboard().size());
+        assertEquals(1, kb.getKeyboard().getFirst().size());
+        assertEquals("Вперёд ▶", kb.getKeyboard().getFirst().getFirst().getText());
+    }
+
+    @Test
+    void friendsListKeyboard_lastPage_hasOnlyPrevNavigationRow() {
+        FriendDto f = FriendDto.builder().login("a").build();
+        FriendsSliceDto slice = new FriendsSliceDto(List.of(f), 3, 10, false);
+        when(serializer.serialize(any(CallbackPayload.class))).thenReturn("cb");
+
+        InlineKeyboardMarkup kb = factory.friendsListKeyboard(slice, 5, 3);
+
+        assertNotNull(kb);
+        assertEquals(2, kb.getKeyboard().size());
+        assertEquals(1, kb.getKeyboard().getFirst().size());
+        assertEquals("◀ Назад", kb.getKeyboard().getFirst().getFirst().getText());
     }
 }

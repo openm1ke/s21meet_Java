@@ -2,6 +2,8 @@ package ru.izpz.rocket.controller;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -10,7 +12,10 @@ import ru.izpz.dto.RocketChatSendRequest;
 import ru.izpz.dto.RocketChatSendResponse;
 import ru.izpz.rocket.service.RocketChatService;
 
+import java.util.stream.Stream;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -106,5 +111,26 @@ class RocketChatControllerTest {
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals(errorResponse, response.getBody());
         verify(rocketChatService, times(1)).generateQrCode();
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidSendMessageRequests")
+    void sendMessage_shouldReturnBadRequest_whenRequestHasInvalidFields(String username, String message) {
+        RocketChatSendRequest request = new RocketChatSendRequest(username, message);
+        ResponseEntity<RocketChatSendResponse> response = rocketChatController.sendMessage(request);
+
+        assertTrue(response.getStatusCode().is4xxClientError());
+        assertNotNull(response.getBody());
+        assertFalse(response.getBody().isSuccess());
+        verify(rocketChatService, never()).sendVerificationCode(any(), any());
+    }
+
+    private static Stream<org.junit.jupiter.params.provider.Arguments> invalidSendMessageRequests() {
+        return Stream.of(
+                arguments("   ", "msg"),
+                arguments("user", "   "),
+                arguments(null, "msg"),
+                arguments("user", null)
+        );
     }
 }

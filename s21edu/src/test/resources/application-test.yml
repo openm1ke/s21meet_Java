@@ -31,7 +31,7 @@ participant.api.enabled: false
 profile.service.enabled: false
 profile.api.enabled: false
 graphql.api.enabled: false
-notify.service.enabled: false
+notify.delivery.enabled: false
 notify.scheduler.enabled: false
 cluster.api.enabled: false
 api.client.enabled: false
