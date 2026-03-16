@@ -3,6 +3,7 @@ package ru.izpz.bot.keyboard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.dto.EventDto;
@@ -10,7 +11,6 @@ import ru.izpz.dto.EventsSliceDto;
 import ru.izpz.dto.FriendsSliceDto;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -29,20 +29,30 @@ public class ListKeyboardFactory {
             Function<T, Map.Entry<String, String>> itemMapper,
             String pageCallbackType
     ) {
-        Map<String, String> buttons = new LinkedHashMap<>();
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        InlineKeyboardRow navigationRow = createNavigationRow(page, hasNext, pageCallbackType);
+        if (!navigationRow.isEmpty()) {
+            rows.add(navigationRow);
+        }
 
-        // Добавляем элементы списка
+        InlineKeyboardRow itemRow = new InlineKeyboardRow();
         for (int i = 0; i < items.size(); i++) {
             T item = items.get(i);
             int ordinal = i + 1;
             Map.Entry<String, String> buttonData = itemMapper.apply(item);
-            buttons.put(String.valueOf(ordinal), buttonData.getValue());
+            itemRow.add(createInlineButton(String.valueOf(ordinal), buttonData.getValue()));
+            if (itemRow.size() == rowSize) {
+                rows.add(itemRow);
+                itemRow = new InlineKeyboardRow();
+            }
+        }
+        if (!itemRow.isEmpty()) {
+            rows.add(itemRow);
         }
 
-        // Добавляем навигацию
-        addNavigationButtons(buttons, page, hasNext, pageCallbackType);
-
-        return createInlineKeyboardMarkup(buttons, rowSize);
+        return InlineKeyboardMarkup.builder()
+                .keyboard(rows)
+                .build();
     }
 
     public <T> String createListText(
@@ -69,56 +79,31 @@ public class ListKeyboardFactory {
         return sb.toString();
     }
 
-    private void addNavigationButtons(
-            Map<String, String> buttons,
-            int page,
-            boolean hasNext,
-            String callbackType
-    ) {
-        // Кнопка "Назад"
+    private InlineKeyboardRow createNavigationRow(int page, boolean hasNext, String callbackType) {
+        InlineKeyboardRow navigationRow = new InlineKeyboardRow();
         if (page > 0) {
-            buttons.put(
-                    "◀ Назад",
-                    serializer.serialize(
-                            new CallbackPayload(callbackType, Map.of("page", String.valueOf(page - 1)))
+            navigationRow.add(
+                    createInlineButton(
+                            "◀ Назад",
+                            serializer.serialize(new CallbackPayload(callbackType, Map.of("page", String.valueOf(page - 1))))
                     )
             );
         }
-
-        // Кнопка "Вперёд"
         if (hasNext) {
-            buttons.put(
-                    "Вперёд ▶",
-                    serializer.serialize(
-                            new CallbackPayload(callbackType, Map.of("page", String.valueOf(page + 1)))
+            navigationRow.add(
+                    createInlineButton(
+                            "Вперёд ▶",
+                            serializer.serialize(new CallbackPayload(callbackType, Map.of("page", String.valueOf(page + 1))))
                     )
             );
         }
+        return navigationRow;
     }
 
-    private InlineKeyboardMarkup createInlineKeyboardMarkup(Map<String, String> buttons, int rowSize) {
-        List<InlineKeyboardRow> rows = new ArrayList<>();
-        InlineKeyboardRow currentRow = new InlineKeyboardRow();
-
-        for (Map.Entry<String, String> entry : buttons.entrySet()) {
-            var button = org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton.builder()
-                    .text(entry.getKey())
-                    .callbackData(entry.getValue())
-                    .build();
-            currentRow.add(button);
-
-            if (currentRow.size() == rowSize) {
-                rows.add(currentRow);
-                currentRow = new InlineKeyboardRow();
-            }
-        }
-
-        if (!currentRow.isEmpty()) {
-            rows.add(currentRow);
-        }
-
-        return InlineKeyboardMarkup.builder()
-                .keyboard(rows)
+    private InlineKeyboardButton createInlineButton(String text, String callbackData) {
+        return InlineKeyboardButton.builder()
+                .text(text)
+                .callbackData(callbackData)
                 .build();
     }
 

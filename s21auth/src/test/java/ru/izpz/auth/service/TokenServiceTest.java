@@ -112,6 +112,14 @@ class TokenServiceTest {
     }
 
     @Test
+    void getDefaultAccessToken_shouldReturnNullIfDefaultLoginIsBlank() {
+        ReflectionTestUtils.setField(tokenService, "defaultLogin", "   ");
+        String result = tokenService.getDefaultAccessToken();
+        assertNull(result, "Должен вернуть null если defaultLogin пустой");
+        verify(tokenPersistenceService, never()).findById(anyString());
+    }
+
+    @Test
     void getDefaultAccessToken_shouldReturnTokenIfDefaultLoginExists() {
         ReflectionTestUtils.setField(tokenService, "defaultLogin", TEST_LOGIN);
         

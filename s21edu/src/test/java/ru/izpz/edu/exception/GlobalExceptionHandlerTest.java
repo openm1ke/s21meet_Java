@@ -6,10 +6,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.model.ErrorResponseDTO;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class GlobalExceptionHandlerTest {
 
@@ -62,5 +67,39 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<String> response = handler.handleAllExceptions(new RuntimeException("boom"));
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertEquals("Произошла внутренняя ошибка", response.getBody());
+    }
+
+    @Test
+    void handleValidationException_shouldReturn400WithFieldErrors() {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(
+                new FieldError("request", "username", "must not be blank"),
+                new FieldError("request", "message", "must not be blank")
+        ));
+
+        ResponseEntity<Object> response = handler.handleValidationException(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertInstanceOf(Map.class, response.getBody());
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+        assertEquals(HttpStatus.BAD_REQUEST.value(), body.get("status"));
+        assertEquals("Ошибка валидации", body.get("message"));
+        assertInstanceOf(Map.class, body.get("errors"));
+
+        Map<?, ?> errors = (Map<?, ?>) body.get("errors");
+        assertEquals("must not be blank", errors.get("username"));
+        assertEquals("must not be blank", errors.get("message"));
+    }
+
+    @Test
+    void handleIllegalStateException_shouldReturn400() {
+        ResponseEntity<String> response = handler.handleIllegalStateException(
+                new IllegalStateException("bad state")
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("bad state", response.getBody());
     }
 }
