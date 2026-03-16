@@ -64,6 +64,31 @@ class TokenClientTest {
     }
 
     @Test
+    void requestNewToken_shouldThrowException_whenResponseHasNoBody() {
+        ResponseEntity<TokenResponse> responseEntity = ResponseEntity.noContent().build();
+        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+                .thenReturn(responseEntity);
+
+        assertThrows(TokenResponseException.class, () ->
+                tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)
+        );
+    }
+
+    @Test
+    void requestNewToken_shouldThrowException_whenHasBodyTrueButBodyNull() {
+        @SuppressWarnings("unchecked")
+        ResponseEntity<TokenResponse> responseEntity = mock(ResponseEntity.class);
+        when(responseEntity.hasBody()).thenReturn(true);
+        when(responseEntity.getBody()).thenReturn(null);
+        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+                .thenReturn(responseEntity);
+
+        assertThrows(TokenResponseException.class, () ->
+                tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)
+        );
+    }
+
+    @Test
     void requestNewToken_shouldThrowException_whenAccessTokenIsNull() {
         TokenResponse tokenResponse = new TokenResponse();
         tokenResponse.setAccessToken(null);

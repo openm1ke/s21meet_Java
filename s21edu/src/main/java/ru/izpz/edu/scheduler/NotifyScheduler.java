@@ -3,6 +3,7 @@ package ru.izpz.edu.scheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.izpz.edu.client.BotClient;
@@ -26,6 +27,8 @@ public class NotifyScheduler {
     private final NotifyService notifyService;
     private final BotClient botClient;
     private final SchedulerMetricsService schedulerMetricsService;
+    @Value("${notify.delivery.enabled:true}")
+    private boolean notifyDeliveryEnabled = true;
 
     @Scheduled(fixedDelayString = "${notify.scheduler.fixed-delay:PT30S}")
     @TrackSchedulerMetrics(scheduler = SCHEDULER_NAME, phase = "notify")
@@ -52,6 +55,11 @@ public class NotifyScheduler {
 
         log.info("Notify poller: recipients uniqueUsers={}, deliveries={}", uniqueUsers, deliveries);
         schedulerMetricsService.recordNotifyRecipients(SCHEDULER_NAME, uniqueUsers, deliveries);
+
+        if (!notifyDeliveryEnabled) {
+            log.info("Notify delivery disabled by 'notify.delivery.enabled=false'; skip bot notifications");
+            return;
+        }
 
         var request = NotifyRequest.builder()
                 .changes(changes)

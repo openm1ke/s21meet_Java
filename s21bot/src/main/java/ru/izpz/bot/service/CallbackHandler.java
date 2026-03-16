@@ -3,6 +3,7 @@ package ru.izpz.bot.service;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import ru.izpz.bot.dto.CallbackPayload;
@@ -28,9 +29,10 @@ public class CallbackHandler {
     private final CallbackPayloadSerializer callbackPayloadSerializer;
     private final MessageSender messageSender;
     private final MetricsService metricsService;
+    @Value("${bot.page-size:10}")
+    private int pageSize = 10;
 
-    private static final int ROW_SIZE = 3;
-    private static final int PAGE_SIZE = 2;
+    private static final int ROW_SIZE = 5;
     private static final String LOGIN = "login";
     private static final String REASON_FEIGN_EXCEPTION = "feign_exception";
     private static final String STAGE_SHOW_EVENTS = "show_events";
@@ -101,7 +103,7 @@ public class CallbackHandler {
 
     public void showEvents(Long chatId, int page, Integer messageId) {
         try {
-            var events = profileService.getEvents(chatId, page, PAGE_SIZE);
+            var events = profileService.getEvents(chatId, page, pageSize);
             var keyboard = telegramKeyboardFactory.eventsListKeyboard(events, ROW_SIZE, page);
             var eventsListText = telegramKeyboardFactory.eventsListText(events);
             if (messageId != null) {
@@ -118,7 +120,7 @@ public class CallbackHandler {
 
     public void showFriends(Long chatId, int page, Integer messageId) {
         try {
-            var list = profileService.getFriends(chatId, page, PAGE_SIZE);
+            var list = profileService.getFriends(chatId, page, pageSize);
             var keyboard = telegramKeyboardFactory.friendsListKeyboard(list, ROW_SIZE, page);
             String friendsListText = telegramKeyboardFactory.friendsListText(list);
             if (messageId != null) {

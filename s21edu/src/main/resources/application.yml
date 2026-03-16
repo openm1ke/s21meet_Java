@@ -61,7 +61,8 @@ event:
     enabled: true
     fixed-delay: PT1M
 notify:
-  service.enabled: true
+  delivery:
+    enabled: false
   scheduler:
     enabled: true
     fixed-delay: PT30S

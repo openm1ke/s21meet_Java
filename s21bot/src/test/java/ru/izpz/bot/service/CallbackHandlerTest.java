@@ -73,8 +73,8 @@ class CallbackHandlerTest {
     void handleCallbackMessage_friendsPage_callsShowFriends() {
         when(callbackPayloadSerializer.deserialize("data")).thenReturn(new CallbackPayload("friends_page", Map.of("page", "2")));
 
-        FriendsSliceDto slice = new FriendsSliceDto(java.util.Collections.emptyList(), 2, 2, false);
-        when(profileService.getFriends(chatId, 2, 2)).thenReturn(slice);
+        FriendsSliceDto slice = new FriendsSliceDto(java.util.Collections.emptyList(), 2, 10, false);
+        when(profileService.getFriends(chatId, 2, 10)).thenReturn(slice);
         when(telegramKeyboardFactory.friendsListKeyboard(eq(slice), anyInt(), eq(2))).thenReturn(mock(InlineKeyboardMarkup.class));
         when(telegramKeyboardFactory.friendsListText(slice)).thenReturn("text");
 
@@ -87,8 +87,8 @@ class CallbackHandlerTest {
     void handleCallbackMessage_eventsPage_callsShowEvents() {
         when(callbackPayloadSerializer.deserialize("data")).thenReturn(new CallbackPayload("events_page", Map.of("page", "1")));
 
-        EventsSliceDto slice = new EventsSliceDto(java.util.Collections.emptyList(), 1, 2, false);
-        when(profileService.getEvents(chatId, 1, 2)).thenReturn(slice);
+        EventsSliceDto slice = new EventsSliceDto(java.util.Collections.emptyList(), 1, 10, false);
+        when(profileService.getEvents(chatId, 1, 10)).thenReturn(slice);
         when(telegramKeyboardFactory.eventsListKeyboard(eq(slice), anyInt(), eq(1))).thenReturn(mock(InlineKeyboardMarkup.class));
         when(telegramKeyboardFactory.eventsListText(slice)).thenReturn("events");
 
@@ -119,7 +119,7 @@ class CallbackHandlerTest {
     @Test
     void showEvents_feignException_sendsUserAndAdmin() {
         FeignException ex = createFeignException(500, "boom");
-        when(profileService.getEvents(chatId, 0, 2)).thenThrow(ex);
+        when(profileService.getEvents(chatId, 0, 10)).thenThrow(ex);
 
         callbackHandler.showEvents(chatId, 0, null);
 
@@ -131,7 +131,7 @@ class CallbackHandlerTest {
     @Test
     void showFriends_feignException_sendsUserAndAdmin() {
         FeignException ex = createFeignException(500, "boom");
-        when(profileService.getFriends(chatId, 0, 2)).thenThrow(ex);
+        when(profileService.getFriends(chatId, 0, 10)).thenThrow(ex);
 
         callbackHandler.showFriends(chatId, 0, null);
 
@@ -214,8 +214,8 @@ class CallbackHandlerTest {
 
     @Test
     void showFriends_success_messageIdNull_sendsMessage() {
-        FriendsSliceDto slice = new FriendsSliceDto(java.util.Collections.emptyList(), 0, 2, false);
-        when(profileService.getFriends(chatId, 0, 2)).thenReturn(slice);
+        FriendsSliceDto slice = new FriendsSliceDto(java.util.Collections.emptyList(), 0, 10, false);
+        when(profileService.getFriends(chatId, 0, 10)).thenReturn(slice);
         InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
         when(telegramKeyboardFactory.friendsListKeyboard(eq(slice), anyInt(), eq(0))).thenReturn(kb);
         when(telegramKeyboardFactory.friendsListText(slice)).thenReturn("friends");
@@ -227,8 +227,8 @@ class CallbackHandlerTest {
 
     @Test
     void showEvents_success_messageIdNull_sendsMessageWithTitle() {
-        EventsSliceDto slice = new EventsSliceDto(java.util.Collections.emptyList(), 0, 2, false);
-        when(profileService.getEvents(chatId, 0, 2)).thenReturn(slice);
+        EventsSliceDto slice = new EventsSliceDto(java.util.Collections.emptyList(), 0, 10, false);
+        when(profileService.getEvents(chatId, 0, 10)).thenReturn(slice);
         InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
         when(telegramKeyboardFactory.eventsListKeyboard(eq(slice), anyInt(), eq(0))).thenReturn(kb);
         when(telegramKeyboardFactory.eventsListText(slice)).thenReturn("events");

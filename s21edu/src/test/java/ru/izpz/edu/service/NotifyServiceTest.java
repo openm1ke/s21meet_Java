@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import ru.izpz.edu.BaseTestH2;
 import ru.izpz.dto.StatusChange;
@@ -24,9 +23,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Sql({"/friends_import.sql", "/online_import.sql", "/workplace_import.sql"})
 @Import({NotifyService.class})
-@TestPropertySource(properties = {
-        "notify.service.enabled=true"
-})
 class NotifyServiceTest extends BaseTestH2 {
 
     @Autowired
