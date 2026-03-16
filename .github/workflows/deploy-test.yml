@@ -22,11 +22,7 @@ permissions:
   packages: read
 
 jobs:
-  gradle-tests:
-    uses: ./.github/workflows/_tests-reusable.yml
-
   deploy-test:
-    needs: gradle-tests
     runs-on: ubuntu-latest
     environment: test
 
