@@ -16,7 +16,10 @@ import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.service.provider.WorkplaceProvider;
 
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -41,6 +44,16 @@ public class CampusService {
                 .floor(cluster.getFloor())
                 .build())
             .toList();
+    }
+
+    public Map<String, Long> getProgramStatsByCampusId(String campusId) {
+        return workplaceRepository.countParticipantsByCampusIdAndStageGroupName(campusId).stream()
+            .sorted(Comparator.comparing(row -> normalizeProgramName(row.getStageGroupName())))
+            .collect(
+                LinkedHashMap::new,
+                (result, row) -> result.put(normalizeProgramName(row.getStageGroupName()), row.getCount()),
+                Map::putAll
+            );
     }
 
     public void replaceClustersByCampusId(String campusId, List<ClusterV1DTO> clustersDto) {
@@ -109,5 +122,12 @@ public class CampusService {
             return 0;
         }
         return value;
+    }
+
+    private String normalizeProgramName(String stageGroupName) {
+        if (stageGroupName == null || stageGroupName.isBlank()) {
+            return "No data";
+        }
+        return stageGroupName;
     }
 }

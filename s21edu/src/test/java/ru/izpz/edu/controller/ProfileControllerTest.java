@@ -161,16 +161,19 @@ class ProfileControllerTest {
         CampusDto campus = new CampusDto("Campus", "uuid");
         when(profileService.getCampus("123456")).thenReturn(campus);
         when(campusService.getClusters(campus)).thenReturn(List.of());
+        when(campusService.getProgramStatsByCampusId("uuid")).thenReturn(java.util.Map.of("No data", 1L));
 
         mockMvc.perform(post("/profile/campus")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.campusName").value("Campus"))
-                .andExpect(jsonPath("$.clusters").isArray());
+                .andExpect(jsonPath("$.clusters").isArray())
+                .andExpect(jsonPath("$.programStats['No data']").value(1));
 
         verify(profileService).getCampus("123456");
         verify(campusService).getClusters(campus);
+        verify(campusService).getProgramStatsByCampusId("uuid");
     }
 
     @Test
