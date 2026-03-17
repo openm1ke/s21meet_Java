@@ -487,4 +487,49 @@ class ProfileServiceTest {
         assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
         verifyNoInteractions(participantApi);
     }
+
+    @Test
+    void getParticipant_shouldMapAndPersistParticipantAndCampus() throws ApiException {
+        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
+        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
+        ParticipantCampus campusEntity = new ParticipantCampus();
+        campusEntity.setId("campus-id");
+        campusEntity.setCampusName("Moscow");
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+        ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
+
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
+        when(participantDto.getCampus()).thenReturn(campusDto);
+        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
+        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
+
+        ParticipantDto result = profileService.getParticipant("testuser");
+
+        assertNotNull(result);
+        assertEquals("testuser", result.getLogin());
+        verify(participantCampusRepository).save(campusEntity);
+        verify(participantRepository).save(participantEntity);
+        assertSame(campusEntity, participantEntity.getCampus());
+    }
+
+    @Test
+    void getCampus_shouldUseDefaultName_whenStoredCampusNameBlank() {
+        ParticipantCampus campus = new ParticipantCampus();
+        campus.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
+        campus.setCampusName("  ");
+        Participant participant = new Participant();
+        participant.setLogin("testuser");
+        participant.setCampus(campus);
+
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(participant));
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Moscow", result.getName());
+        assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
+    }
 }

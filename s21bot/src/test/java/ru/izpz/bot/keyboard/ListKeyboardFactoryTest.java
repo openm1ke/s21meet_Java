@@ -185,4 +185,36 @@ class ListKeyboardFactoryTest {
         assertEquals(1, kb.getKeyboard().getFirst().size());
         assertEquals("◀ Назад", kb.getKeyboard().getFirst().getFirst().getText());
     }
+
+    @Test
+    void eventsListKeyboard_buildsButtonsAndNavigation() {
+        EventDto e1 = new EventDto(11L, "talk", "Event 1", null, null, OffsetDateTime.now(), null, List.of(), 10, 2);
+        EventDto e2 = new EventDto(12L, "talk", "Event 2", null, null, OffsetDateTime.now(), null, List.of(), 10, 3);
+        EventsSliceDto slice = new EventsSliceDto(List.of(e1, e2), 1, 10, true);
+
+        when(serializer.serialize(any(CallbackPayload.class))).thenReturn("cb");
+
+        InlineKeyboardMarkup kb = factory.eventsListKeyboard(slice, 5, 1);
+
+        assertNotNull(kb);
+        assertEquals(2, kb.getKeyboard().size());
+        assertEquals("◀ Назад", kb.getKeyboard().get(0).get(0).getText());
+        assertEquals("Вперёд ▶", kb.getKeyboard().get(0).get(1).getText());
+        assertEquals("1", kb.getKeyboard().get(1).get(0).getText());
+        assertEquals("2", kb.getKeyboard().get(1).get(1).getText());
+    }
+
+    @Test
+    void eventsListKeyboard_withoutNavigation_hasOnlyItemButtons() {
+        EventDto e1 = new EventDto(11L, "talk", "Event 1", null, null, OffsetDateTime.now(), null, List.of(), 10, 2);
+        EventsSliceDto slice = new EventsSliceDto(List.of(e1), 0, 10, false);
+
+        when(serializer.serialize(any(CallbackPayload.class))).thenReturn("cb");
+
+        InlineKeyboardMarkup kb = factory.eventsListKeyboard(slice, 5, 0);
+
+        assertNotNull(kb);
+        assertEquals(1, kb.getKeyboard().size());
+        assertEquals("1", kb.getKeyboard().getFirst().getFirst().getText());
+    }
 }

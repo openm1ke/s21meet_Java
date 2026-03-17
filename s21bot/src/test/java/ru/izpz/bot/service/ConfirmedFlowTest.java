@@ -250,6 +250,50 @@ class ConfirmedFlowTest {
     }
 
     @Test
+    void startConfirmed_menuCampus_whenClustersAndProgramsMissing_showsHeaderOnly() {
+        ChatMember member = member("member");
+        when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+        CampusResponse campus = new CampusResponse();
+        campus.setCampusName("Kazan");
+        campus.setClusters(null);
+        campus.setProgramStats(null);
+        when(profileService.showCampusMap(chatId)).thenReturn(campus);
+
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
+
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("🏕️ Kazan campus 🎪")
+                        && message.contains("🪑 Busy 0 / Free 0 / All 0")
+                        && !message.contains("Floor")
+        ), eq(null));
+    }
+
+    @Test
+    void startConfirmed_menuCampus_formatsAllFloorDigitsAndNullClusterValues() {
+        ChatMember member = member("member");
+        when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+        CampusResponse campus = new CampusResponse();
+        campus.setCampusName("Kazan");
+        campus.setClusters(List.of(
+                new Clusters(null, null, -1, 1234567890)
+        ));
+        campus.setProgramStats(Map.of("Parallel 99", 2L));
+        when(profileService.showCampusMap(chatId)).thenReturn(campus);
+
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
+
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣ Floor")
+                        && message.contains("🔸  - 0 / 0 / 0")
+                        && message.contains("⚡ Parallel 99: 2")
+        ), eq(null));
+    }
+
+    @Test
     void startConfirmed_menuProjects_whenEmpty_sendsNoActiveProjects() {
         ChatMember member = member("member");
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
