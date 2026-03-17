@@ -13,6 +13,12 @@ import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
 import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.*;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -78,12 +84,12 @@ public class ConfirmedFlow {
             case FRIENDS -> callbackHandler.showFriends(chatId, 0, null);
             case PROFILE -> {
                 ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
-                messageSender.sendMessage(chatId, "Профиль\n" + showProfile, null);
+                messageSender.sendMessage(chatId, ParticipantMessageFormatter.format(showProfile), null);
             }
             case EVENTS -> callbackHandler.showEvents(chatId, 0, null);
             case CAMPUS -> {
                 var campusMap = showCampusMap(chatId);
-                messageSender.sendMessage(chatId, "Кампус " + campusMap.getCampusName() + "\n" + campusMap, null);
+                messageSender.sendMessage(chatId, formatCampusMessage(campusMap), null);
             }
             case PROJECTS -> {
                 var projectsByLogin = getProjectsByLogin(profile.s21login());
@@ -142,5 +148,146 @@ public class ConfirmedFlow {
 
     private CampusResponse showCampusMap(Long chatId) {
         return profileService.showCampusMap(chatId);
+    }
+
+    private String formatCampusMessage(CampusResponse campusMap) {
+        List<Clusters> clusters = campusMap.getClusters() == null ? List.of() : campusMap.getClusters();
+        int busy = calculateBusy(clusters);
+        int free = calculateFree(clusters);
+        int all = calculateAll(clusters);
+
+        StringBuilder text = new StringBuilder();
+        text.append("🏕️ ").append(safeString(campusMap.getCampusName())).append(" campus 🎪\n");
+        text.append("🪑 Busy ").append(busy).append(" / Free ").append(free).append(" / All ").append(all);
+
+        appendFloorsSection(text, clusters);
+        appendProgramStatsSection(text, campusMap.getProgramStats());
+
+        return text.toString().trim();
+    }
+
+    private int calculateBusy(List<Clusters> clusters) {
+        return clusters.stream()
+                .mapToInt(cluster -> toNonNegative(cluster.getCapacity()) - toNonNegative(cluster.getAvailableCapacity()))
+                .sum();
+    }
+
+    private int calculateFree(List<Clusters> clusters) {
+        return clusters.stream()
+                .mapToInt(cluster -> toNonNegative(cluster.getAvailableCapacity()))
+                .sum();
+    }
+
+    private int calculateAll(List<Clusters> clusters) {
+        return clusters.stream()
+                .mapToInt(cluster -> toNonNegative(cluster.getCapacity()))
+                .sum();
+    }
+
+    private void appendFloorsSection(StringBuilder text, List<Clusters> clusters) {
+        Map<Integer, List<Clusters>> clustersByFloor = groupClustersByFloor(clusters);
+        if (clustersByFloor.isEmpty()) {
+            return;
+        }
+        text.append("\n\n");
+        for (Map.Entry<Integer, List<Clusters>> entry : clustersByFloor.entrySet()) {
+            appendFloor(text, entry.getKey(), entry.getValue());
+        }
+    }
+
+    private Map<Integer, List<Clusters>> groupClustersByFloor(List<Clusters> clusters) {
+        Map<Integer, List<Clusters>> clustersByFloor = new TreeMap<>();
+        for (Clusters cluster : clusters) {
+            int floor = cluster.getFloor() == null ? 0 : cluster.getFloor();
+            clustersByFloor.computeIfAbsent(floor, key -> new ArrayList<>()).add(cluster);
+        }
+        return clustersByFloor;
+    }
+
+    private void appendFloor(StringBuilder text, int floor, List<Clusters> floorClusters) {
+        text.append(getFloorEmoji(floor)).append(" Floor\n");
+        String clusterIcon = floor % 2 == 0 ? "🔸" : "🔹";
+        floorClusters.stream()
+                .sorted(Comparator.comparing(cluster -> safeString(cluster.getName())))
+                .forEach(cluster -> appendClusterLine(text, clusterIcon, cluster));
+    }
+
+    private void appendClusterLine(StringBuilder text, String clusterIcon, Clusters cluster) {
+        int clusterAll = toNonNegative(cluster.getCapacity());
+        int clusterFree = toNonNegative(cluster.getAvailableCapacity());
+        int clusterBusy = Math.max(clusterAll - clusterFree, 0);
+        text.append(clusterIcon)
+                .append(" ")
+                .append(safeString(cluster.getName()))
+                .append(" - ")
+                .append(clusterBusy)
+                .append(" / ")
+                .append(clusterFree)
+                .append(" / ")
+                .append(clusterAll)
+                .append("\n");
+    }
+
+    private void appendProgramStatsSection(StringBuilder text, Map<String, Long> programStats) {
+        if (programStats == null || programStats.isEmpty()) {
+            return;
+        }
+        text.append("\n");
+        programStats.entrySet().stream()
+                .sorted(Comparator.<Map.Entry<String, Long>>comparingLong(entry -> entry.getValue() == null ? 0L : entry.getValue())
+                        .reversed()
+                        .thenComparing(Map.Entry::getKey))
+                .forEach(entry -> text
+                        .append(formatProgramLabel(entry.getKey()))
+                        .append(": ")
+                        .append(entry.getValue() == null ? 0L : entry.getValue())
+                        .append("\n"));
+    }
+
+    private int toNonNegative(Integer value) {
+        if (value == null || value < 0) {
+            return 0;
+        }
+        return value;
+    }
+
+    private String safeString(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value;
+    }
+
+    private String getFloorEmoji(int floorNumber) {
+        String floor = String.valueOf(floorNumber);
+        StringBuilder result = new StringBuilder();
+        for (char ch : floor.toCharArray()) {
+            result.append(switch (ch) {
+                case '0' -> "0️⃣";
+                case '1' -> "1️⃣";
+                case '2' -> "2️⃣";
+                case '3' -> "3️⃣";
+                case '4' -> "4️⃣";
+                case '5' -> "5️⃣";
+                case '6' -> "6️⃣";
+                case '7' -> "7️⃣";
+                case '8' -> "8️⃣";
+                case '9' -> "9️⃣";
+                default -> String.valueOf(ch);
+            });
+        }
+        return result.toString();
+    }
+
+    private String formatProgramLabel(String programName) {
+        String normalized = programName == null ? "" : programName.trim();
+        String lower = normalized.toLowerCase();
+        if (lower.equals("no data")) {
+            return "👽 No data";
+        }
+        if (lower.contains("intensive") || lower.contains("parallel")) {
+            return "⚡ " + normalized;
+        }
+        return "🧢 " + normalized;
     }
 }
