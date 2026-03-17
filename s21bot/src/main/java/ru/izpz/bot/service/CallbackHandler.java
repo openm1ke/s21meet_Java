@@ -145,7 +145,7 @@ public class CallbackHandler {
             FriendDto friend = profileService.applyFriend(chatId, login, FriendRequest.Action.NONE, null);
             InlineKeyboardMarkup keyboard = telegramKeyboardFactory.getFriendInlineKeyboard(login, friend);
             ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
-            messageSender.sendMessage(chatId, "Профиль\n" + showProfile, keyboard);
+            messageSender.sendMessage(chatId, ParticipantMessageFormatter.format(showProfile), keyboard);
         } catch (FeignException e) {
             metricsService.recordProcessingError(STAGE_SHOW_PROFILE, REASON_FEIGN_EXCEPTION);
             messageSender.sendMessage(chatId, "Ошибка поиска профиля, попробуйте позже", null);

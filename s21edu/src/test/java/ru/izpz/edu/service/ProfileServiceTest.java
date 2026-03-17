@@ -9,9 +9,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.*;
 import ru.izpz.dto.api.ParticipantApi;
+import ru.izpz.dto.model.ParticipantCampusV1DTO;
+import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.exception.EntityNotFoundException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
+import ru.izpz.edu.model.Participant;
+import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.model.Profile;
 import ru.izpz.edu.model.ProfileValidation;
 import ru.izpz.edu.repository.ParticipantCampusRepository;
@@ -20,6 +24,7 @@ import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,6 +54,9 @@ class ProfileServiceTest {
     
     @Mock
     private ParticipantCampusRepository participantCampusRepository;
+    
+    @Mock
+    private CampusCatalog campusCatalog;
 
     @InjectMocks
     private ProfileService profileService;
@@ -75,6 +83,13 @@ class ProfileServiceTest {
             Profile p = inv.getArgument(0);
             return new ProfileDto(p.getTelegramId(), p.getS21login(), p.getStatus(), p.getLastCommand());
         });
+        lenient().when(campusCatalog.targetCampusIds()).thenReturn(java.util.List.of(
+                "6bfe3c56-0211-4fe1-9e59-51616caac4dd",
+                "7c293c9c-f28c-4b10-be29-560e4b000a34"
+        ));
+        lenient().when(campusCatalog.campusName("6bfe3c56-0211-4fe1-9e59-51616caac4dd")).thenReturn("MSK");
+        lenient().when(campusCatalog.campusName("7c293c9c-f28c-4b10-be29-560e4b000a34")).thenReturn("KZN");
+        lenient().when(participantRepository.findByLogin(anyString())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -408,5 +423,68 @@ class ProfileServiceTest {
         assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
         verify(profileRepository).findByTelegramId("123456");
         verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void getCampus_shouldReturnParticipantCampus_whenApiReturnsCampus() throws ApiException {
+        UUID campusId = UUID.fromString("7c293c9c-f28c-4b10-be29-560e4b000a34");
+        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
+        ParticipantV1DTO participant = mock(ParticipantV1DTO.class);
+        ParticipantCampus campusEntity = new ParticipantCampus();
+        campusEntity.setId(campusId.toString());
+        campusEntity.setCampusName("Kazan");
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.empty());
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participant);
+        when(participant.getCampus()).thenReturn(campusDto);
+        when(campusDto.getId()).thenReturn(campusId);
+        when(campusDto.getShortName()).thenReturn("Kazan");
+        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
+        when(profileMapper.toEntity(participant)).thenReturn(participantEntity);
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Kazan", result.getName());
+        assertEquals(campusId.toString(), result.getUuid());
+        verify(participantCampusRepository).save(campusEntity);
+        verify(participantRepository).save(participantEntity);
+    }
+
+    @Test
+    void getCampus_shouldFallbackToDefaultMoscow_whenApiThrows() throws ApiException {
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.empty());
+        when(participantApi.getParticipantByLogin("testuser")).thenThrow(mock(ApiException.class));
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Moscow", result.getName());
+        assertEquals("6bfe3c56-0211-4fe1-9e59-51616caac4dd", result.getUuid());
+    }
+
+    @Test
+    void getCampus_shouldUseDatabaseFirst_whenParticipantExists() {
+        ParticipantCampus campus = new ParticipantCampus();
+        campus.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
+        campus.setCampusName("Kazan");
+
+        Participant participant = new Participant();
+        participant.setLogin("testuser");
+        participant.setCampus(campus);
+
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(participant));
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Kazan", result.getName());
+        assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
+        verifyNoInteractions(participantApi);
     }
 }

@@ -108,12 +108,18 @@ class CallbackHandlerTest {
         InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
         when(telegramKeyboardFactory.getFriendInlineKeyboard("abc", friend)).thenReturn(kb);
 
-        ParticipantDto participant = mock(ParticipantDto.class);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setLogin("abc");
+        participant.setClassName("22_10_MSK");
+        participant.setExpValue(100);
+        participant.setLevel(5);
+        participant.setParallelName("AP4");
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
 
         callbackHandler.handleCallbackMessage(chatId, "data", 5, "cb");
 
-        verify(messageSender).sendMessage(eq(chatId), startsWith("Профиль\n"), eq(kb));
+        verify(messageSender).sendMessage(eq(chatId), startsWith("✅ abc"), eq(kb));
     }
 
     @Test
@@ -245,12 +251,18 @@ class CallbackHandlerTest {
         when(profileService.applyFriend(chatId, "abc", FriendRequest.Action.NONE, null)).thenReturn(friend);
         InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
         when(telegramKeyboardFactory.getFriendInlineKeyboard("abc", friend)).thenReturn(kb);
-        ParticipantDto participant = mock(ParticipantDto.class);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setLogin("abc");
+        participant.setClassName("22_10_MSK");
+        participant.setExpValue(100);
+        participant.setLevel(5);
+        participant.setParallelName("AP4");
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
 
         callbackHandler.showProfile(chatId, "abc");
 
-        verify(messageSender).sendMessage(eq(chatId), startsWith("Профиль\n"), eq(kb));
+        verify(messageSender).sendMessage(eq(chatId), startsWith("✅ abc"), eq(kb));
     }
 
     @Test

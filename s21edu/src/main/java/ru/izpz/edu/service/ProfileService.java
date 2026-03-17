@@ -32,6 +32,8 @@ import java.time.OffsetDateTime;
 public class ProfileService {
 
     private static final String PROFILE_NOT_FOUND_MESSAGE = "Профиль не найден для telegramId = ";
+    private static final String DEFAULT_CAMPUS_ID = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
+    private static final String DEFAULT_CAMPUS_NAME = "Moscow";
 
     private final ProfileMapper profileMapper;
     private final ProfileVerificationMapper profileVerificationMapper;
@@ -141,13 +143,57 @@ public class ProfileService {
         return participantApi.getParticipantByLogin(login);
     }
 
-    public CampusDto getCampus(String telegramId) throws ApiException {
+    public CampusDto getCampus(String telegramId) {
         log.info("Получен запрос на получение кампуса для telegramId = {}", telegramId);
         var profile = profileRepository.findByTelegramId(telegramId);
         if (profile.isEmpty()) {
             throw new EntityNotFoundException("Не найден логин для данного телеграм айди");
         }
-        var participant = checkEduLogin(profile.get().getS21login());
-        return new CampusDto(participant.getCampus().getShortName(), participant.getCampus().getId().toString());
+        String s21login = profile.get().getS21login();
+        if (s21login == null || s21login.isBlank()) {
+            log.warn("Не найден s21login для telegramId = {}, используем кампус по умолчанию {}", telegramId, DEFAULT_CAMPUS_NAME);
+            return defaultCampus();
+        }
+
+        var storedParticipant = participantRepository.findByLogin(s21login);
+        if (storedParticipant.isPresent() && storedParticipant.get().getCampus() != null) {
+            return toCampusDto(storedParticipant.get().getCampus().getCampusName(), storedParticipant.get().getCampus().getId());
+        }
+
+        try {
+            var participant = checkEduLogin(s21login);
+            if (participant != null
+                && participant.getCampus() != null
+                && participant.getCampus().getId() != null) {
+                saveParticipantWithCampus(participant);
+                return toCampusDto(participant.getCampus().getShortName(), participant.getCampus().getId().toString());
+            }
+            log.warn("Не удалось определить кампус пользователя {}, используем кампус по умолчанию {}", s21login, DEFAULT_CAMPUS_NAME);
+            return defaultCampus();
+        } catch (ApiException e) {
+            log.warn("Ошибка получения кампуса для {}, используем кампус по умолчанию {}", s21login, DEFAULT_CAMPUS_NAME, e);
+            return defaultCampus();
+        }
+    }
+
+    private CampusDto defaultCampus() {
+        return new CampusDto(DEFAULT_CAMPUS_NAME, DEFAULT_CAMPUS_ID);
+    }
+
+    private CampusDto toCampusDto(String campusName, String campusId) {
+        String normalizedName = campusName;
+        if (normalizedName == null || normalizedName.isBlank()) {
+            normalizedName = DEFAULT_CAMPUS_NAME;
+        }
+        return new CampusDto(normalizedName, campusId);
+    }
+
+    private void saveParticipantWithCampus(ParticipantV1DTO participantDto) {
+        ParticipantCampus campus = profileMapper.toEntity(participantDto.getCampus());
+        participantCampusRepository.save(campus);
+
+        Participant participant = profileMapper.toEntity(participantDto);
+        participant.setCampus(campus);
+        participantRepository.save(participant);
     }
 }
