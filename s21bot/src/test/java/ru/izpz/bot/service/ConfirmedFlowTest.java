@@ -17,6 +17,7 @@ import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
 import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -175,14 +176,25 @@ class ConfirmedFlowTest {
         ChatMember member = member("member");
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
-        ParticipantDto participant = mock(ParticipantDto.class);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setLogin("abc");
+        participant.setClassName("22_10_MSK");
+        participant.setExpValue(21617);
+        participant.setLevel(12);
+        participant.setParallelName("AP4");
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
 
         ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
         confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.PROFILE.getCommand());
 
         verify(profileService).showParticipant(chatId.toString(), "abc");
-        verify(messageSender).sendMessage(eq(chatId), startsWith("Профиль\n"), eq(null));
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("✅ abc")
+                        && message.contains("🌊22_10_MSK")
+                        && message.contains("✨21617 XP (level 12)")
+                        && message.contains("👨‍💻AP4")
+        ), eq(null));
     }
 
     @Test
@@ -202,14 +214,83 @@ class ConfirmedFlowTest {
         when(messageSender.execute(any())).thenReturn(Optional.of(member));
 
         CampusResponse campus = new CampusResponse();
-        campus.setCampusName("X");
+        campus.setCampusName("Moscow");
+        campus.setClusters(List.of(
+                new Clusters("Illusion", 59, 20, 2),
+                new Clusters("Mirage", 138, 125, 2),
+                new Clusters("Supernova", 54, 53, 3),
+                new Clusters("Pegasus", 10, 5, 17)
+        ));
+        campus.setProgramStats(Map.of(
+                "Data Science", 39L,
+                "👽 Intensive Parallel 76", 13L,
+                "No data", 1L
+        ));
         when(profileService.showCampusMap(chatId)).thenReturn(campus);
 
         ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
         confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
 
         verify(profileService).showCampusMap(chatId);
-        verify(messageSender).sendMessage(eq(chatId), contains("Кампус X"), eq(null));
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("🏕️ Moscow campus 🎪")
+                        && message.contains("🪑 Busy 58 / Free 203 / All 261")
+                        && message.contains("2️⃣ Floor")
+                        && message.contains("🔸 Illusion - 39 / 20 / 59")
+                        && message.contains("3️⃣ Floor")
+                        && message.contains("🔹 Supernova - 1 / 53 / 54")
+                        && message.contains("1️⃣7️⃣ Floor")
+                        && message.contains("🔹 Pegasus - 5 / 5 / 10")
+                        && message.contains("🧢 Data Science: 39")
+                        && message.contains("⚡ 👽 Intensive Parallel 76: 13")
+                        && message.contains("👽 No data: 1")
+                        && message.indexOf("🧢 Data Science: 39") < message.indexOf("⚡ 👽 Intensive Parallel 76: 13")
+                        && message.indexOf("⚡ 👽 Intensive Parallel 76: 13") < message.indexOf("👽 No data: 1")
+        ), eq(null));
+    }
+
+    @Test
+    void startConfirmed_menuCampus_whenClustersAndProgramsMissing_showsHeaderOnly() {
+        ChatMember member = member("member");
+        when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+        CampusResponse campus = new CampusResponse();
+        campus.setCampusName("Kazan");
+        campus.setClusters(null);
+        campus.setProgramStats(null);
+        when(profileService.showCampusMap(chatId)).thenReturn(campus);
+
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
+
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("🏕️ Kazan campus 🎪")
+                        && message.contains("🪑 Busy 0 / Free 0 / All 0")
+                        && !message.contains("Floor")
+        ), eq(null));
+    }
+
+    @Test
+    void startConfirmed_menuCampus_formatsAllFloorDigitsAndNullClusterValues() {
+        ChatMember member = member("member");
+        when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+        CampusResponse campus = new CampusResponse();
+        campus.setCampusName("Kazan");
+        campus.setClusters(List.of(
+                new Clusters(null, null, -1, 1234567890)
+        ));
+        campus.setProgramStats(Map.of("Parallel 99", 2L));
+        when(profileService.showCampusMap(chatId)).thenReturn(campus);
+
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
+
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣ Floor")
+                        && message.contains("🔸  - 0 / 0 / 0")
+                        && message.contains("⚡ Parallel 99: 2")
+        ), eq(null));
     }
 
     @Test

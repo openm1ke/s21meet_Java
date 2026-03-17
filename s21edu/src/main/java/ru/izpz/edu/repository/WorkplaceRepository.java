@@ -1,6 +1,7 @@
 package ru.izpz.edu.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import ru.izpz.edu.model.Workplace;
@@ -49,6 +50,15 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
         """)
     List<CampusStageNameCountView> countParticipantsByCampusAndStageName();
 
+    @Query("""
+        select w.stageGroupName as stageGroupName, count(w) as count
+        from Workplace w
+        join Cluster c on c.clusterId = w.id.clusterId
+        where c.campusId = :campusId
+        group by w.stageGroupName
+        """)
+    List<StageGroupCountView> countParticipantsByCampusIdAndStageGroupName(@Param("campusId") String campusId);
+
     interface CampusCountView {
         String getCampusId();
         long getCount();
@@ -63,6 +73,11 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
     interface CampusStageNameCountView {
         String getCampusId();
         String getStageName();
+        long getCount();
+    }
+
+    interface StageGroupCountView {
+        String getStageGroupName();
         long getCount();
     }
 }

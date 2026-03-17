@@ -11,10 +11,12 @@ import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.mapper.CampusMapper;
 import ru.izpz.edu.mapper.ProjectsMapper;
 import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.service.provider.WorkplaceProvider;
 import ru.izpz.edu.dto.GraphQLStudentProject;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,6 +46,9 @@ class CampusServiceTest {
 
     @Mock
     private SchedulerMetricsService schedulerMetricsService;
+    
+    @Mock
+    private WorkplaceRepository workplaceRepository;
 
     private static final UUID CAMPUS_ID = UUID.fromString("6bfe3c56-0211-4fe1-9e59-51616caac4dd");
     private static final Long CLUSTER_ID = 123L;
@@ -146,5 +151,53 @@ class CampusServiceTest {
         // Assert
         assertEquals(1, result.size());
         org.junit.jupiter.api.Assertions.assertSame(dto, result.getFirst());
+    }
+
+    @Test
+    void getProgramStatsByCampusId_shouldNormalizeAndSort() {
+        WorkplaceRepository.StageGroupCountView ds = mock(WorkplaceRepository.StageGroupCountView.class);
+        when(ds.getStageGroupName()).thenReturn("Data Science");
+        when(ds.getCount()).thenReturn(39L);
+
+        WorkplaceRepository.StageGroupCountView noData = mock(WorkplaceRepository.StageGroupCountView.class);
+        when(noData.getStageGroupName()).thenReturn(" ");
+        when(noData.getCount()).thenReturn(1L);
+
+        when(workplaceRepository.countParticipantsByCampusIdAndStageGroupName("campus-1"))
+                .thenReturn(List.of(noData, ds));
+
+        Map<String, Long> result = campusService.getProgramStatsByCampusId("campus-1");
+
+        assertEquals(2, result.size());
+        assertEquals(39L, result.get("Data Science"));
+        assertEquals(1L, result.get("No data"));
+    }
+
+    @Test
+    void refreshParticipantMetrics_shouldDelegateAllRepositoryCounters() {
+        WorkplaceRepository.CampusCountView campusRow = mock(WorkplaceRepository.CampusCountView.class);
+        when(campusRow.getCampusId()).thenReturn("campus-1");
+        when(campusRow.getCount()).thenReturn(7L);
+
+        WorkplaceRepository.CampusStageGroupCountView groupRow = mock(WorkplaceRepository.CampusStageGroupCountView.class);
+        when(groupRow.getCampusId()).thenReturn("campus-1");
+        when(groupRow.getStageGroupName()).thenReturn("Data Science");
+        when(groupRow.getCount()).thenReturn(5L);
+
+        WorkplaceRepository.CampusStageNameCountView stageRow = mock(WorkplaceRepository.CampusStageNameCountView.class);
+        when(stageRow.getCampusId()).thenReturn("campus-1");
+        when(stageRow.getStageName()).thenReturn("AP4");
+        when(stageRow.getCount()).thenReturn(2L);
+
+        when(workplaceRepository.countParticipantsByCampus()).thenReturn(List.of(campusRow));
+        when(workplaceRepository.countParticipantsByCampusAndStageGroup()).thenReturn(List.of(groupRow));
+        when(workplaceRepository.countParticipantsByCampusAndStageName()).thenReturn(List.of(stageRow));
+
+        campusService.refreshParticipantMetrics();
+
+        verify(schedulerMetricsService).resetParticipantMetrics();
+        verify(schedulerMetricsService).recordParticipantsByCampus("campus-1", 7L);
+        verify(schedulerMetricsService).recordParticipantsByCampusAndStageGroup("campus-1", "Data Science", 5L);
+        verify(schedulerMetricsService).recordParticipantsByCampusAndStageName("campus-1", "AP4", 2L);
     }
 }

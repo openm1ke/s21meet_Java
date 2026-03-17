@@ -414,7 +414,8 @@ class ProfileServiceTest {
     private CampusResponse createTestCampusResponse() {
         return new CampusResponse(
                 "Test Campus",
-                Collections.emptyList()
+                Collections.emptyList(),
+                Collections.emptyMap()
         );
     }
 

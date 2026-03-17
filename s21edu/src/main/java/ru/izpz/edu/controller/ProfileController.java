@@ -74,13 +74,15 @@ public class ProfileController {
     }
 
     @PostMapping("/campus")
-    ResponseEntity<CampusResponse> getCampus(@Valid @RequestBody CampusRequest request) throws ApiException {
+    ResponseEntity<CampusResponse> getCampus(@Valid @RequestBody CampusRequest request) {
         log.info("Получен запрос на вывод карты кампуса для {}", request.getTelegramId());
         CampusDto campus = profileService.getCampus(request.getTelegramId());
         var clusters = campusService.getClusters(campus);
+        var programStats = campusService.getProgramStatsByCampusId(campus.getUuid());
         var response = CampusResponse.builder()
                 .campusName(campus.name)
                 .clusters(clusters)
+                .programStats(programStats)
                 .build();
         return ResponseEntity.ok(response);
     }
