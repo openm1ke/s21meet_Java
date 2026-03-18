@@ -11,9 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -31,9 +28,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,7 +40,7 @@ import static org.mockito.Mockito.when;
     properties = {
         "resilience4j.ratelimiter.instances.testApi.limitForPeriod=2",
         "resilience4j.ratelimiter.instances.testApi.limitRefreshPeriod=1s",
-        "resilience4j.ratelimiter.instances.testApi.timeoutDuration=0"
+        "resilience4j.ratelimiter.instances.testApi.timeoutDuration=0s"
     }
 )
 @ActiveProfiles("test")
@@ -120,22 +118,32 @@ class ApiClientRateLimiterTest {
 
     @Test
     void refreshes_after_window() throws Exception {
-        apiClient.execute(mockOkCall200(), null);
-        apiClient.execute(mockOkCall200(), null);
-        Call blockedCall = mockOkCall200();
-        assertThrows(RequestNotPermitted.class, () -> apiClient.execute(blockedCall, null));
+        saturateRateLimiter();
 
-        // Wait for rate limit window to refresh
-        CountDownLatch latch = new CountDownLatch(1);
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.schedule(latch::countDown, 1100, TimeUnit.MILLISECONDS);
-        assertTrue(latch.await(3, TimeUnit.SECONDS), "Should wait for rate limit window to refresh");
-        scheduler.shutdown();
-        
+        var rateLimiter = rateLimiterRegistry.rateLimiter(RL_NAME);
+        Duration refreshPeriod = rateLimiter.getRateLimiterConfig().getLimitRefreshPeriod();
+        int limitForPeriod = rateLimiter.getRateLimiterConfig().getLimitForPeriod();
+
+        await()
+                .atMost(refreshPeriod.plusSeconds(1))
+                .until(() -> rateLimiter.getMetrics().getAvailablePermissions() == limitForPeriod);
+
         ApiResponse<Void> a = apiClient.execute(mockOkCall200(), null);
         ApiResponse<Void> b = apiClient.execute(mockOkCall200(), null);
         assertEquals(200, a.getStatusCode());
         assertEquals(200, b.getStatusCode());
+    }
+
+    private void saturateRateLimiter() throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+        while (System.nanoTime() < deadline) {
+            try {
+                apiClient.execute(mockOkCall200(), null);
+            } catch (RequestNotPermitted ignored) {
+                return;
+            }
+        }
+        fail("Rate limiter should deny requests after limit is reached");
     }
 
     private static Call mockOkCall200() throws IOException {

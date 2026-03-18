@@ -13,10 +13,14 @@ import ru.izpz.dto.RocketChatSendResponse;
 import ru.izpz.rocket.client.RocketChatWebSocketClient;
 import ru.izpz.rocket.property.RocketChatProperties;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -238,6 +242,63 @@ class RocketChatServiceTest {
         assertEquals("qr-failed", result.getMessage());
     }
 
+    @Test
+    void awaitQr_shouldReturnErrorResponse_whenFutureIsNull() {
+        RocketChatSendResponse result = invokeAwaitQr(null);
+
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertEquals("Unexpected empty response", result.getMessage());
+    }
+
+    @Test
+    void awaitQr_shouldReturnTimeoutResponse_whenFutureDoesNotComplete() {
+        properties.setQrTimeout(0L);
+
+        RocketChatSendResponse result = invokeAwaitQr(new CompletableFuture<>());
+
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertEquals("Timeout waiting for QR code generation", result.getMessage());
+    }
+
+    @Test
+    void awaitQr_shouldRestoreInterruptFlag_whenInterrupted() throws Exception {
+        CompletableFuture<RocketChatSendResponse> future = new CompletableFuture<>();
+        AtomicBoolean interruptedFlag = new AtomicBoolean(false);
+        CountDownLatch started = new CountDownLatch(1);
+
+        Thread thread = new Thread(() -> {
+            started.countDown();
+            RocketChatSendResponse result = invokeAwaitQr(future);
+            assertNotNull(result);
+            assertFalse(result.isSuccess());
+            assertEquals("QR code generation was interrupted", result.getMessage());
+            interruptedFlag.set(Thread.currentThread().isInterrupted());
+        });
+
+        thread.start();
+        assertTrue(started.await(1, TimeUnit.SECONDS), "awaitQr() thread should start");
+        thread.interrupt();
+        thread.join(2000);
+
+        assertFalse(thread.isAlive(), "awaitQr() thread should finish after interruption");
+        assertTrue(interruptedFlag.get(), "Interrupt flag should be restored");
+    }
+
+    @Test
+    void awaitQr_shouldReturnFailureResponse_whenFutureCompletesExceptionally() {
+        CompletableFuture<RocketChatSendResponse> future = new CompletableFuture<>();
+        future.completeExceptionally(new IllegalStateException("boom"));
+
+        RocketChatSendResponse result = invokeAwaitQr(future);
+
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertTrue(result.getMessage().startsWith("Failed to generate QR code: "));
+        assertTrue(result.getMessage().contains("boom"));
+    }
+
     @ParameterizedTest
     @MethodSource("sendVerificationCodeInvalidArguments")
     void sendVerificationCode_shouldReturnErrorResponse_whenArgumentsInvalid(String username, String message, String expectedErrorMessage) {
@@ -340,5 +401,17 @@ class RocketChatServiceTest {
         assertNotNull(result);
         assertFalse(result.isSuccess());
         assertEquals("Target username cannot be null or empty", result.getMessage());
+    }
+
+    private RocketChatSendResponse invokeAwaitQr(CompletableFuture<RocketChatSendResponse> future) {
+        try {
+            Method method = RocketChatService.class.getDeclaredMethod("awaitQr", CompletableFuture.class);
+            method.setAccessible(true);
+            return (RocketChatSendResponse) method.invoke(rocketChatService, future);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e.getTargetException());
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
