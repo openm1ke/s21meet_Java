@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -39,7 +40,7 @@ import static org.mockito.Mockito.when;
     properties = {
         "resilience4j.ratelimiter.instances.testApi.limitForPeriod=2",
         "resilience4j.ratelimiter.instances.testApi.limitRefreshPeriod=1s",
-        "resilience4j.ratelimiter.instances.testApi.timeoutDuration=0"
+        "resilience4j.ratelimiter.instances.testApi.timeoutDuration=0s"
     }
 )
 @ActiveProfiles("test")
@@ -119,11 +120,13 @@ class ApiClientRateLimiterTest {
     void refreshes_after_window() throws Exception {
         saturateRateLimiter();
 
-        Duration refreshPeriod = rateLimiterRegistry
-                .rateLimiter(RL_NAME)
-                .getRateLimiterConfig()
-                .getLimitRefreshPeriod();
-        Thread.sleep(refreshPeriod.plusMillis(200).toMillis());
+        var rateLimiter = rateLimiterRegistry.rateLimiter(RL_NAME);
+        Duration refreshPeriod = rateLimiter.getRateLimiterConfig().getLimitRefreshPeriod();
+        int limitForPeriod = rateLimiter.getRateLimiterConfig().getLimitForPeriod();
+
+        await()
+                .atMost(refreshPeriod.plusSeconds(1))
+                .until(() -> rateLimiter.getMetrics().getAvailablePermissions() == limitForPeriod);
 
         ApiResponse<Void> a = apiClient.execute(mockOkCall200(), null);
         ApiResponse<Void> b = apiClient.execute(mockOkCall200(), null);
