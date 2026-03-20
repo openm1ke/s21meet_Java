@@ -12,6 +12,7 @@ import org.springframework.data.domain.SliceImpl;
 import ru.izpz.dto.FriendDto;
 import ru.izpz.dto.FriendRequest;
 import ru.izpz.dto.FriendsSliceDto;
+import ru.izpz.dto.ParticipantStatusEnum;
 import ru.izpz.edu.mapper.FriendsMapper;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Friends;
@@ -20,6 +21,7 @@ import ru.izpz.edu.model.WorkplaceId;
 import ru.izpz.edu.repository.ClusterRepository;
 import ru.izpz.edu.repository.FriendsRepository;
 import ru.izpz.edu.repository.ParticipantRepository;
+import ru.izpz.edu.repository.ParticipantView;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -163,6 +165,22 @@ class FriendServiceTest {
     }
 
     @Test
+    void applyFriend_shouldToggleFlagsFromNullValues() {
+        String telegramId = "123456";
+        String login = "testuser";
+        testFriend.setIsFavorite(null);
+        testFriend.setIsSubscribe(null);
+        when(friendsRepository.findFirstByTelegramIdAndLogin(telegramId, login))
+                .thenReturn(Optional.of(testFriend));
+
+        FriendDto favorite = friendService.applyFriend(telegramId, login, FriendRequest.Action.TOGGLE_FAVORITE, null);
+        FriendDto subscribe = friendService.applyFriend(telegramId, login, FriendRequest.Action.TOGGLE_SUBSCRIBE, null);
+
+        assertTrue(favorite.getIsFavorite());
+        assertTrue(subscribe.getIsSubscribe());
+    }
+
+    @Test
     void applyFriend_shouldToggleSubscribe_whenActionIsToggleSubscribe() {
         // Given
         String telegramId = "123456";
@@ -179,6 +197,22 @@ class FriendServiceTest {
         // Then
         assertTrue(result.getIsSubscribe());
         verify(friendsRepository).save(testFriend);
+    }
+
+    @Test
+    void applyFriend_shouldToggleFavoriteAndSubscribeToFalse_whenAlreadyTrue() {
+        String telegramId = "123456";
+        String login = "testuser";
+        testFriend.setIsFavorite(true);
+        testFriend.setIsSubscribe(true);
+        when(friendsRepository.findFirstByTelegramIdAndLogin(telegramId, login))
+                .thenReturn(Optional.of(testFriend));
+
+        FriendDto favorite = friendService.applyFriend(telegramId, login, FriendRequest.Action.TOGGLE_FAVORITE, null);
+        FriendDto subscribe = friendService.applyFriend(telegramId, login, FriendRequest.Action.TOGGLE_SUBSCRIBE, null);
+
+        assertFalse(favorite.getIsFavorite());
+        assertFalse(subscribe.getIsSubscribe());
     }
 
     @Test
@@ -216,6 +250,21 @@ class FriendServiceTest {
 
         // Then
         assertEquals("New Name", result.getName());
+        verify(friendsRepository).save(testFriend);
+    }
+
+    @Test
+    void applyFriend_shouldSetEmptyName_whenActionIsSetNameAndNameNull() {
+        String telegramId = "123456";
+        String login = "testuser";
+        FriendRequest.Action action = FriendRequest.Action.SET_NAME;
+
+        when(friendsRepository.findFirstByTelegramIdAndLogin(telegramId, login))
+                .thenReturn(Optional.of(testFriend));
+
+        FriendDto result = friendService.applyFriend(telegramId, login, action, null);
+
+        assertEquals("", result.getName());
         verify(friendsRepository).save(testFriend);
     }
 
@@ -306,5 +355,30 @@ class FriendServiceTest {
         verify(workplaceService).findAllByLoginIn(List.of());
         verify(clusterRepository).findAllByClusterIdIn(Set.of());
         verify(participantRepository).findAllViewByLoginIn(List.of());
+    }
+
+    @Test
+    void getFriends_shouldUseFirstStatus_whenParticipantViewsContainDuplicates() {
+        String telegramId = "123456";
+        int page = 0;
+        int size = 10;
+
+        Slice<Friends> slice = new SliceImpl<>(List.of(testFriend), PageRequest.of(page, size), false);
+        when(friendsRepository.findAllOrdered(telegramId, PageRequest.of(page, size))).thenReturn(slice);
+        when(workplaceService.findAllByLoginIn(List.of("testuser"))).thenReturn(List.of());
+        when(clusterRepository.findAllByClusterIdIn(Set.of())).thenReturn(List.of());
+
+        ParticipantView first = mock(ParticipantView.class);
+        when(first.getLogin()).thenReturn("testuser");
+        when(first.getStatus()).thenReturn(ParticipantStatusEnum.ACTIVE);
+        ParticipantView second = mock(ParticipantView.class);
+        when(second.getLogin()).thenReturn("testuser");
+        when(second.getStatus()).thenReturn(ParticipantStatusEnum.BLOCKED);
+        when(participantRepository.findAllViewByLoginIn(List.of("testuser"))).thenReturn(List.of(first, second));
+
+        FriendsSliceDto result = friendService.getFriends(telegramId, page, size);
+
+        assertEquals(1, result.content().size());
+        assertEquals(ParticipantStatusEnum.ACTIVE, result.content().getFirst().getStatus());
     }
 }

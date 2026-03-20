@@ -60,6 +60,7 @@ class CampusPersistenceServiceTest {
     void replaceClusters_shouldDeleteAndSaveClusters() {
         // Given
         List<Cluster> clusters = List.of(testCluster);
+        when(clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId)).thenReturn(List.of());
         
         // When
         campusPersistenceService.replaceClusters(campusId, clusters);
@@ -67,6 +68,21 @@ class CampusPersistenceServiceTest {
         // Then
         verify(clusterRepository).deleteAllByCampusId(campusId);
         verify(clusterRepository).saveAll(clusters);
+    }
+
+    @Test
+    void replaceClusters_shouldDeleteOldParticipants_whenExistingClustersPresent() {
+        // Given
+        Cluster existing = new Cluster();
+        existing.setClusterId(42L);
+        when(clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId)).thenReturn(List.of(existing));
+
+        // When
+        campusPersistenceService.replaceClusters(campusId, List.of());
+
+        // Then
+        verify(workplaceRepository).deleteByIdClusterIdIn(java.util.Set.of(42L));
+        verify(clusterRepository).deleteAllByCampusId(campusId);
     }
 
     @Test

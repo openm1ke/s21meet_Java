@@ -47,11 +47,11 @@ public class CampusService {
     }
 
     public Map<String, Long> getProgramStatsByCampusId(String campusId) {
-        return workplaceRepository.countParticipantsByCampusIdAndStageGroupName(campusId).stream()
-            .sorted(Comparator.comparing(row -> normalizeProgramName(row.getStageGroupName())))
+        return workplaceRepository.countParticipantsByCampusIdAndStageName(campusId).stream()
+            .sorted(Comparator.comparing(row -> normalizeProgramName(row.getStageName())))
             .collect(
                 LinkedHashMap::new,
-                (result, row) -> result.put(normalizeProgramName(row.getStageGroupName()), row.getCount()),
+                (result, row) -> result.put(normalizeProgramName(row.getStageName()), row.getCount()),
                 Map::putAll
             );
     }

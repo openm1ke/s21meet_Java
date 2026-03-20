@@ -1,6 +1,7 @@
 package ru.izpz.edu.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +55,16 @@ class GraphQLApiClientTest {
     }
 
     @Test
+    void execute_shouldThrow_whenResponseBodyNull() {
+        when(tokenService.getToken()).thenReturn("tok");
+        when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok().body(null));
+
+        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
+                () -> client.execute("op", Map.of(), "query", String.class));
+    }
+
+    @Test
     void execute_shouldThrow_whenJsonParseFails() throws Exception {
         when(tokenService.getToken()).thenReturn("tok");
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
@@ -69,11 +80,42 @@ class GraphQLApiClientTest {
         when(tokenService.getToken()).thenReturn("tok");
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenReturn(ResponseEntity.ok("{\"errors\":[{\"message\":\"boom\"}]}"));
-        when(objectMapper.readTree(anyString()))
-                .thenReturn(new ObjectMapper().createObjectNode().set("errors", new ObjectMapper().createArrayNode().add(new ObjectMapper().createObjectNode().put("message", "boom"))));
+        ObjectMapper om = new ObjectMapper();
+        JsonNode errorNode = om.readTree("{\"errors\":[{\"message\":\"boom\"}]}");
+        when(objectMapper.readTree(anyString())).thenReturn(errorNode);
 
         assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
                 () -> client.execute("op", Map.of(), "query", String.class));
+    }
+
+    @Test
+    void execute_shouldIgnoreEmptyErrorsArray_andReturnData() throws Exception {
+        when(tokenService.getToken()).thenReturn("tok");
+        when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok("{\"errors\":[],\"data\":{\"field\":\"value\"}}"));
+        ObjectMapper om = new ObjectMapper();
+        JsonNode root = om.readTree("{\"errors\":[],\"data\":{\"field\":\"value\"}}");
+        when(objectMapper.readTree(anyString())).thenReturn(root);
+        when(objectMapper.convertValue(any(), eq(String.class))).thenReturn("value");
+
+        String result = client.execute("op", Map.of(), "query", String.class);
+
+        assertEquals("value", result);
+    }
+
+    @Test
+    void execute_shouldIgnoreNonArrayErrors_andReturnData() throws Exception {
+        when(tokenService.getToken()).thenReturn("tok");
+        when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok("{\"errors\":{},\"data\":{\"field\":\"value\"}}"));
+        ObjectMapper om = new ObjectMapper();
+        JsonNode root = om.readTree("{\"errors\":{},\"data\":{\"field\":\"value\"}}");
+        when(objectMapper.readTree(anyString())).thenReturn(root);
+        when(objectMapper.convertValue(any(), eq(String.class))).thenReturn("value");
+
+        String result = client.execute("op", Map.of(), "query", String.class);
+
+        assertEquals("value", result);
     }
 
     @Test
@@ -83,6 +125,18 @@ class GraphQLApiClientTest {
                 .thenReturn(ResponseEntity.ok("{\"data\":null}"));
         when(objectMapper.readTree(anyString()))
                 .thenReturn(new ObjectMapper().createObjectNode().set("data", new ObjectMapper().nullNode()));
+
+        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
+                () -> client.execute("op", Map.of(), "query", String.class));
+    }
+
+    @Test
+    void execute_shouldThrow_whenDataFieldAbsent() throws Exception {
+        when(tokenService.getToken()).thenReturn("tok");
+        when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok("{\"meta\":1}"));
+        when(objectMapper.readTree(anyString()))
+                .thenReturn(new ObjectMapper().createObjectNode().put("meta", 1));
 
         assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
                 () -> client.execute("op", Map.of(), "query", String.class));

@@ -162,9 +162,7 @@ public class ProfileService {
 
         try {
             var participant = checkEduLogin(s21login);
-            if (participant != null
-                && participant.getCampus() != null
-                && participant.getCampus().getId() != null) {
+            if (participant != null) {
                 saveParticipantWithCampus(participant);
                 return toCampusDto(participant.getCampus().getShortName(), participant.getCampus().getId().toString());
             }
