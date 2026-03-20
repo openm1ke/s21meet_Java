@@ -22,6 +22,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -139,6 +140,14 @@ class RocketChatServiceTest {
         assertDoesNotThrow(() -> rocketChatService.validateConfiguration());
     }
 
+    @Test
+    void validateConfiguration_shouldPass_whenWebsocketUsesWss() {
+        properties.setWebsocketUri("wss://chat.example/ws");
+        rocketChatService = new RocketChatService(properties);
+
+        assertDoesNotThrow(() -> rocketChatService.validateConfiguration());
+    }
+
     @ParameterizedTest
     @MethodSource("validateConfigurationTestCases")
     void validateConfiguration_shouldThrowException_whenPropertiesInvalid(String propertyToModify, Object newValue, String expectedErrorMessage) {
@@ -240,6 +249,20 @@ class RocketChatServiceTest {
         assertNotNull(result);
         assertFalse(result.isSuccess());
         assertEquals("qr-failed", result.getMessage());
+    }
+
+    @Test
+    void generateQrCode_shouldAwaitExistingInFlightFuture() throws Exception {
+        CompletableFuture<RocketChatSendResponse> inFlight = CompletableFuture.completedFuture(
+                new RocketChatSendResponse(true, "already-ready")
+        );
+        setInFlightFuture(inFlight);
+
+        RocketChatSendResponse result = rocketChatService.generateQrCode();
+
+        assertNotNull(result);
+        assertTrue(result.isSuccess());
+        assertEquals("already-ready", result.getMessage());
     }
 
     @Test
@@ -413,5 +436,14 @@ class RocketChatServiceTest {
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void setInFlightFuture(CompletableFuture<RocketChatSendResponse> future) throws Exception {
+        java.lang.reflect.Field field = RocketChatService.class.getDeclaredField("qrInFlight");
+        field.setAccessible(true);
+        AtomicReference<CompletableFuture<RocketChatSendResponse>> ref =
+                (AtomicReference<CompletableFuture<RocketChatSendResponse>>) field.get(rocketChatService);
+        ref.set(future);
     }
 }

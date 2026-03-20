@@ -217,4 +217,23 @@ class ListKeyboardFactoryTest {
         assertEquals(1, kb.getKeyboard().size());
         assertEquals("1", kb.getKeyboard().getFirst().getFirst().getText());
     }
+
+    @Test
+    void createListKeyboard_whenItemsFitRowsExactly_leavesNoTrailingRow() {
+        InlineKeyboardMarkup kb = factory.createListKeyboard(
+                List.of("a", "b"),
+                1,
+                0,
+                false,
+                item -> java.util.Map.entry(item, "id-" + item),
+                "custom_page"
+        );
+
+        assertNotNull(kb);
+        assertEquals(2, kb.getKeyboard().size());
+        assertEquals(1, kb.getKeyboard().get(0).size());
+        assertEquals(1, kb.getKeyboard().get(1).size());
+        assertEquals("1", kb.getKeyboard().get(0).get(0).getText());
+        assertEquals("2", kb.getKeyboard().get(1).get(0).getText());
+    }
 }

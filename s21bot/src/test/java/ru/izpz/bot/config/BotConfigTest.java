@@ -191,6 +191,34 @@ class BotConfigTest {
     }
 
     @Test
+    void telegramClient_proxyEnabled_nullPort_throwsException() {
+        BotConfig config = new BotConfig();
+        BotProperties properties = new BotProperties(
+                "test-token",
+                1L,
+                1L,
+                "https://example.org/invite",
+                new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", null)
+        );
+
+        assertThrows(IllegalStateException.class, () -> config.telegramOkHttpClient(properties));
+    }
+
+    @Test
+    void telegramClient_proxyEnabled_negativePort_throwsException() {
+        BotConfig config = new BotConfig();
+        BotProperties properties = new BotProperties(
+                "test-token",
+                1L,
+                1L,
+                "https://example.org/invite",
+                new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", -1)
+        );
+
+        assertThrows(IllegalStateException.class, () -> config.telegramOkHttpClient(properties));
+    }
+
+    @Test
     void telegramClient_proxyEnabled_unsupportedType_throwsException() {
         BotConfig config = new BotConfig();
         BotProperties properties = new BotProperties(

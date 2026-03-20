@@ -70,6 +70,17 @@ class CallbackHandlerTest {
     }
 
     @Test
+    void handleCallbackMessage_unexpectedException_sendsGenericErrorMessage() {
+        when(callbackPayloadSerializer.deserialize("data")).thenReturn(new CallbackPayload("unknown", null));
+        doThrow(new RuntimeException("boom")).when(metricsService).recordButtonPress("unknown", ButtonMetricType.INLINE);
+
+        callbackHandler.handleCallbackMessage(chatId, "data", 1, "cb");
+
+        verify(metricsService).recordProcessingError("callback_handler", "unexpected_exception");
+        verify(messageSender).sendMessage(chatId, "Ошибка обработки команды, попробуйте позже", null);
+    }
+
+    @Test
     void handleCallbackMessage_friendsPage_callsShowFriends() {
         when(callbackPayloadSerializer.deserialize("data")).thenReturn(new CallbackPayload("friends_page", Map.of("page", "2")));
 

@@ -85,6 +85,20 @@ class CampusServiceTest {
     }
 
     @Test
+    void replaceClustersByCampusId_shouldNormalizeNullAndNegativeCapacities() {
+        List<ClusterV1DTO> clustersDto = List.of(new ClusterV1DTO());
+        Cluster expectedCluster = new Cluster();
+        expectedCluster.setName("cluster-2");
+        expectedCluster.setCapacity(null);
+        expectedCluster.setAvailableCapacity(-1);
+        when(campusMapper.toClusterEntity(any(ClusterV1DTO.class), anyString())).thenReturn(expectedCluster);
+
+        campusService.replaceClustersByCampusId(CAMPUS_ID.toString(), clustersDto);
+
+        verify(schedulerMetricsService).recordClusterPlaces(CAMPUS_ID.toString(), "cluster-2", 0, 0);
+    }
+
+    @Test
     void replaceClustersByCampusId_shouldHandleEmptyList() {
         // Arrange
         List<ClusterV1DTO> emptyClustersDto = List.of();
@@ -155,22 +169,42 @@ class CampusServiceTest {
 
     @Test
     void getProgramStatsByCampusId_shouldNormalizeAndSort() {
-        WorkplaceRepository.StageGroupCountView ds = mock(WorkplaceRepository.StageGroupCountView.class);
-        when(ds.getStageGroupName()).thenReturn("Data Science");
-        when(ds.getCount()).thenReturn(39L);
+        WorkplaceRepository.StageNameCountView ap4 = mock(WorkplaceRepository.StageNameCountView.class);
+        when(ap4.getStageName()).thenReturn("AP4");
+        when(ap4.getCount()).thenReturn(39L);
 
-        WorkplaceRepository.StageGroupCountView noData = mock(WorkplaceRepository.StageGroupCountView.class);
-        when(noData.getStageGroupName()).thenReturn(" ");
+        WorkplaceRepository.StageNameCountView intensive = mock(WorkplaceRepository.StageNameCountView.class);
+        when(intensive.getStageName()).thenReturn("👽 Intensive Parallel 76");
+        when(intensive.getCount()).thenReturn(13L);
+
+        WorkplaceRepository.StageNameCountView noData = mock(WorkplaceRepository.StageNameCountView.class);
+        when(noData.getStageName()).thenReturn(" ");
         when(noData.getCount()).thenReturn(1L);
 
-        when(workplaceRepository.countParticipantsByCampusIdAndStageGroupName("campus-1"))
-                .thenReturn(List.of(noData, ds));
+        when(workplaceRepository.countParticipantsByCampusIdAndStageName("campus-1"))
+                .thenReturn(List.of(noData, ap4, intensive));
 
         Map<String, Long> result = campusService.getProgramStatsByCampusId("campus-1");
 
-        assertEquals(2, result.size());
-        assertEquals(39L, result.get("Data Science"));
+        assertEquals(3, result.size());
+        assertEquals(39L, result.get("AP4"));
+        assertEquals(13L, result.get("👽 Intensive Parallel 76"));
         assertEquals(1L, result.get("No data"));
+    }
+
+    @Test
+    void getProgramStatsByCampusId_shouldNormalizeNullStageName() {
+        WorkplaceRepository.StageNameCountView nullName = mock(WorkplaceRepository.StageNameCountView.class);
+        when(nullName.getStageName()).thenReturn(null);
+        when(nullName.getCount()).thenReturn(2L);
+
+        when(workplaceRepository.countParticipantsByCampusIdAndStageName("campus-2"))
+                .thenReturn(List.of(nullName));
+
+        Map<String, Long> result = campusService.getProgramStatsByCampusId("campus-2");
+
+        assertEquals(1, result.size());
+        assertEquals(2L, result.get("No data"));
     }
 
     @Test
