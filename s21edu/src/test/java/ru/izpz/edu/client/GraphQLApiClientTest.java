@@ -3,9 +3,10 @@ package ru.izpz.edu.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.*;
@@ -31,8 +32,14 @@ class GraphQLApiClientTest {
     @Mock
     private ObjectMapper objectMapper;
 
-    @InjectMocks
     private GraphQLApiClient client;
+    private SimpleMeterRegistry meterRegistry;
+
+    @BeforeEach
+    void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        client = new GraphQLApiClient(restTemplate, tokenService, objectMapper, meterRegistry);
+    }
 
     @Test
     void execute_shouldThrow_whenRestTemplateThrowsHttpError() {
@@ -42,6 +49,12 @@ class GraphQLApiClientTest {
 
         assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
                 () -> client.execute("op", Map.of(), "query", String.class));
+        assertEquals(1.0, meterRegistry.find("edu_graphql_requests_total")
+                .tag("domain", "platform")
+                .tag("operation", "op")
+                .tag("outcome", "error")
+                .counter()
+                .count());
     }
 
     @Test
@@ -154,5 +167,16 @@ class GraphQLApiClientTest {
         String result = client.execute("op", Map.of(), "query", String.class);
 
         assertEquals("value", result);
+        assertEquals(1.0, meterRegistry.find("edu_graphql_requests_total")
+                .tag("domain", "platform")
+                .tag("operation", "op")
+                .tag("outcome", "success")
+                .counter()
+                .count());
+        assertNotNull(meterRegistry.find("edu_graphql_request_duration_seconds")
+                .tag("domain", "platform")
+                .tag("operation", "op")
+                .tag("outcome", "success")
+                .timer());
     }
 }

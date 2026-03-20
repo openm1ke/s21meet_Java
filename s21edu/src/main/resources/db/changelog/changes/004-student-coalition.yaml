@@ -1,0 +1,48 @@
+databaseChangeLog:
+  - changeSet:
+      id: 019-create-student-coalition
+      author: openmike
+      changes:
+        - createTable:
+            tableName: student_coalition
+            columns:
+              - column:
+                  name: login
+                  type: VARCHAR(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: VARCHAR(255)
+              - column:
+                  name: coalition_name
+                  type: VARCHAR(255)
+              - column:
+                  name: member_count
+                  type: INTEGER
+              - column:
+                  name: rank
+                  type: INTEGER
+
+  - changeSet:
+      id: 020-index-student-coalition-user-id
+      author: openmike
+      changes:
+        - createIndex:
+            tableName: student_coalition
+            indexName: idx_student_coalition_user_id
+            columns:
+              - column:
+                  name: user_id
+
+  - changeSet:
+      id: 021-student-coalition-updated-at
+      author: openmike
+      changes:
+        - addColumn:
+            tableName: student_coalition
+            columns:
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE

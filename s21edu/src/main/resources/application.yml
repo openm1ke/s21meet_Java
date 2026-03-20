@@ -56,6 +56,9 @@ profile:
   service.enabled: true
 participant.api.enabled: true
 graphql.api.enabled: true
+graphql:
+  coalition:
+    refresh-ttl: ${GRAPHQL_COALITION_REFRESH_TTL:PT15M}
 event:
   scheduler:
     enabled: true

@@ -2,6 +2,7 @@ package ru.izpz.bot.service;
 
 import org.junit.jupiter.api.Test;
 import ru.izpz.dto.ParticipantCampusDto;
+import ru.izpz.dto.ParticipantCoalitionDto;
 import ru.izpz.dto.ParticipantDto;
 import ru.izpz.dto.ParticipantStatusEnum;
 
@@ -26,6 +27,23 @@ class ParticipantMessageFormatterTest {
         assertTrue(message.contains("🌊22_10_MSK"));
         assertTrue(message.contains("✨21617 XP (level 12)"));
         assertTrue(message.contains("📍Moscow"));
+    }
+
+    @Test
+    void format_shouldIncludeCoalition_whenPresent() {
+        ParticipantDto participant = new ParticipantDto();
+        participant.setLogin("quarkron");
+        participant.setClassName("22_10_MSK");
+        participant.setExpValue(21617);
+        participant.setLevel(12);
+        participant.setParallelName("AP4_Info21");
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
+        participant.setCoalition(new ParticipantCoalitionDto("Capybaras", 1085, 271));
+        participant.setCampus(new ParticipantCampusDto("id", "Moscow"));
+
+        String message = ParticipantMessageFormatter.format(participant);
+
+        assertTrue(message.contains("🦙Capybaras 271 / 1085"));
     }
 
     @Test

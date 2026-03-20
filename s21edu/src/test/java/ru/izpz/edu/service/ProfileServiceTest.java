@@ -18,10 +18,12 @@ import ru.izpz.edu.model.Participant;
 import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.model.Profile;
 import ru.izpz.edu.model.ProfileValidation;
+import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.repository.ParticipantCampusRepository;
 import ru.izpz.edu.repository.ParticipantRepository;
 import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
+import ru.izpz.edu.repository.StudentCoalitionRepository;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -57,6 +59,10 @@ class ProfileServiceTest {
     
     @Mock
     private CampusCatalog campusCatalog;
+    @Mock
+    private StudentCoalitionRepository studentCoalitionRepository;
+    @Mock
+    private GraphQLService graphQLService;
 
     @InjectMocks
     private ProfileService profileService;
@@ -106,6 +112,7 @@ class ProfileServiceTest {
         assertNotNull(result);
         assertEquals(testProfileDto, result);
         verify(profileRepository).findByTelegramId("123456");
+        verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
         verify(profileRepository, never()).save(any());
     }
 
@@ -124,8 +131,23 @@ class ProfileServiceTest {
         assertNotNull(result);
         assertEquals(testProfileDto, result);
         verify(profileRepository).findByTelegramId("123456");
+        verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
         verify(profileRepository).save(any(Profile.class));
         assertEquals(ProfileStatus.CREATED, testProfile.getStatus());
+    }
+
+    @Test
+    void getOrCreateProfile_shouldNotRefreshCoalition_whenLoginIsMissing() {
+        Profile profile = new Profile();
+        profile.setTelegramId("123456");
+        profile.setS21login(null);
+        profile.setStatus(ProfileStatus.CREATED);
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(profile));
+
+        ProfileDto result = profileService.getOrCreateProfile("123456");
+
+        assertNotNull(result);
+        verify(graphQLService, never()).refreshStudentCoalitionByLogin(anyString());
     }
 
     @Test
@@ -616,14 +638,47 @@ class ProfileServiceTest {
         when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
         when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
         when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
+        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.empty());
 
         ParticipantDto result = profileService.getParticipant("testuser");
 
         assertNotNull(result);
         assertEquals("testuser", result.getLogin());
+        verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
         verify(participantCampusRepository).save(campusEntity);
         verify(participantRepository).save(participantEntity);
         assertSame(campusEntity, participantEntity.getCampus());
+    }
+
+    @Test
+    void getParticipant_shouldIncludeCoalition_whenCoalitionExists() throws ApiException {
+        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
+        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
+        ParticipantCampus campusEntity = new ParticipantCampus();
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+        ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
+        StudentCoalition coalition = new StudentCoalition();
+        coalition.setLogin("testuser");
+        coalition.setCoalitionName("Capybaras");
+        coalition.setMemberCount(1085);
+        coalition.setRank(271);
+
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
+        when(participantDto.getCampus()).thenReturn(campusDto);
+        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
+        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
+        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.of(coalition));
+
+        ParticipantDto result = profileService.getParticipant("testuser");
+
+        assertNotNull(result);
+        verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
+        assertNotNull(result.getCoalition());
+        assertEquals("Capybaras", result.getCoalition().getName());
+        assertEquals(Integer.valueOf(1085), result.getCoalition().getMemberCount());
+        assertEquals(Integer.valueOf(271), result.getCoalition().getRank());
     }
 
     @Test
