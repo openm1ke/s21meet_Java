@@ -1,0 +1,88 @@
+package ru.izpz.edu.service;
+
+import org.junit.jupiter.api.Test;
+import ru.izpz.dto.StatusChange;
+import ru.izpz.edu.model.Online;
+import ru.izpz.edu.repository.FriendsRepository;
+import ru.izpz.edu.repository.OnlineRepository;
+import ru.izpz.edu.repository.WorkplaceRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
+
+class NotifyServiceUnitTest {
+
+    @Test
+    void computeAndPersistChanges_returnsEmpty_whenNoTrackedLogins() {
+        FriendsRepository friendsRepository = mock(FriendsRepository.class);
+        WorkplaceRepository workplaceRepository = mock(WorkplaceRepository.class);
+        OnlineRepository onlineRepository = mock(OnlineRepository.class);
+        NotifyService service = new NotifyService(friendsRepository, workplaceRepository, onlineRepository);
+
+        when(friendsRepository.findDistinctLogins()).thenReturn(List.of());
+
+        List<StatusChange> result = service.computeAndPersistChanges();
+
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(workplaceRepository, onlineRepository);
+    }
+
+    @Test
+    void computeAndPersistChanges_doesNotEmitChange_whenNoSubscribers() {
+        FriendsRepository friendsRepository = mock(FriendsRepository.class);
+        WorkplaceRepository workplaceRepository = mock(WorkplaceRepository.class);
+        OnlineRepository onlineRepository = mock(OnlineRepository.class);
+        NotifyService service = new NotifyService(friendsRepository, workplaceRepository, onlineRepository);
+
+        when(friendsRepository.findDistinctLogins()).thenReturn(List.of("alice"));
+        when(workplaceRepository.existsByLogin("alice")).thenReturn(true);
+        when(onlineRepository.findByLogin("alice")).thenReturn(Optional.empty());
+        when(friendsRepository.findByLoginAndIsSubscribeTrue("alice")).thenReturn(List.of());
+
+        List<StatusChange> result = service.computeAndPersistChanges();
+
+        assertTrue(result.isEmpty());
+        verify(onlineRepository).save(any(Online.class));
+    }
+
+    @Test
+    void computeAndPersistChanges_doesNotUpdate_whenOfflineRecordAlreadyFalse() {
+        FriendsRepository friendsRepository = mock(FriendsRepository.class);
+        WorkplaceRepository workplaceRepository = mock(WorkplaceRepository.class);
+        OnlineRepository onlineRepository = mock(OnlineRepository.class);
+        NotifyService service = new NotifyService(friendsRepository, workplaceRepository, onlineRepository);
+
+        Online existing = new Online();
+        existing.setLogin("bob");
+        existing.setIsOnline(false);
+
+        when(friendsRepository.findDistinctLogins()).thenReturn(List.of("bob"));
+        when(workplaceRepository.existsByLogin("bob")).thenReturn(false);
+        when(onlineRepository.findByLogin("bob")).thenReturn(Optional.of(existing));
+
+        List<StatusChange> result = service.computeAndPersistChanges();
+
+        assertTrue(result.isEmpty());
+        verify(onlineRepository, never()).save(any(Online.class));
+    }
+
+    @Test
+    void computeAndPersistChanges_doesNothing_whenOfflineAndNoOnlineRecord() {
+        FriendsRepository friendsRepository = mock(FriendsRepository.class);
+        WorkplaceRepository workplaceRepository = mock(WorkplaceRepository.class);
+        OnlineRepository onlineRepository = mock(OnlineRepository.class);
+        NotifyService service = new NotifyService(friendsRepository, workplaceRepository, onlineRepository);
+
+        when(friendsRepository.findDistinctLogins()).thenReturn(List.of("eve"));
+        when(workplaceRepository.existsByLogin("eve")).thenReturn(false);
+        when(onlineRepository.findByLogin("eve")).thenReturn(Optional.empty());
+
+        List<StatusChange> result = service.computeAndPersistChanges();
+
+        assertTrue(result.isEmpty());
+        verify(onlineRepository, never()).save(any(Online.class));
+    }
+}

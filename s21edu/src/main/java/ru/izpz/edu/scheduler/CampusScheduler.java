@@ -53,7 +53,7 @@ public class CampusScheduler {
         StopWatch stopWatch = new StopWatch("campus");
 
         Timer.Sample clustersSample = schedulerMetricsService.startPhaseTimer();
-        PhaseOutcome clustersOutcome = new PhaseOutcome(false, true);
+        PhaseOutcome clustersOutcome;
         try {
             clustersOutcome = processClusters(campuses, stopWatch);
         } finally {
@@ -66,7 +66,7 @@ public class CampusScheduler {
         }
 
         Timer.Sample participantsSample = schedulerMetricsService.startPhaseTimer();
-        PhaseOutcome participantsOutcome = new PhaseOutcome(false, true);
+        PhaseOutcome participantsOutcome;
         try {
             participantsOutcome = processParticipants(stopWatch);
         } finally {

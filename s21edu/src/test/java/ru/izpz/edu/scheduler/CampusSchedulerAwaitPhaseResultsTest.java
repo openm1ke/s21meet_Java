@@ -131,6 +131,17 @@ class CampusSchedulerAwaitPhaseResultsTest {
         assertTrue(future.isCancelled());
     }
 
+    @Test
+    void cancelPendingFutures_doesNothingForCompletedFuture() throws Exception {
+        CompletableFuture<Object> future = CompletableFuture.completedFuture("done");
+        Method cancelMethod = CampusScheduler.class.getDeclaredMethod("cancelPendingFutures", List.class);
+        cancelMethod.setAccessible(true);
+        cancelMethod.invoke(scheduler, List.of(future));
+
+        assertTrue(future.isDone());
+        assertTrue(!future.isCancelled());
+    }
+
     private void invokeAwaitPhase(String phase, Duration timeout, List<CompletableFuture<Object>> futures) throws Exception {
         Method awaitMethod = CampusScheduler.class.getDeclaredMethod("awaitPhaseResults", String.class, Duration.class, List.class);
         awaitMethod.setAccessible(true);

@@ -99,4 +99,16 @@ class EventSchedulerTest {
         verify(schedulerMetricsService, never()).recordExternalApiError(eq("event_parser"), eq("event_api"), eq("get_events"), any());
         verify(schedulerMetricsService, never()).recordEventsSaved(anyString(), anyLong(), anyLong());
     }
+
+    @Test
+    void scheduleEvents_shouldNotRecordSavedMetrics_whenSaveStatsIsNull() throws Exception {
+        List<EventV1DTO> events = List.of(new EventV1DTO());
+        when(eventClient.getEvents(any(), any(), any(), anyLong(), anyLong())).thenReturn(events);
+        when(eventService.saveEvents(events)).thenReturn(null);
+
+        scheduler.scheduleEvents();
+
+        verify(schedulerMetricsService).recordExternalApiSuccess("event_parser", "event_api", "get_events");
+        verify(schedulerMetricsService, never()).recordEventsSaved(anyString(), anyLong(), anyLong());
+    }
 }

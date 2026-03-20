@@ -433,6 +433,93 @@ class ConfirmedFlowTest {
         verify(callbackHandler).setLastCommand(chatId, null, null);
     }
 
+    @Test
+    void startConfirmed_lastCommandNone_recordsMetricAndOnlyClearsLastCommand() {
+        ChatMember member = member("member");
+        when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+        LastCommandState state = new LastCommandState(LastCommandType.NONE, Map.of("login", "abc"));
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, state);
+
+        confirmedFlow.startConfirmed(chatId, profile, "any");
+
+        verify(metricsService).recordButtonPress(LastCommandType.NONE.name(), ButtonMetricType.LAST_COMMAND);
+        verify(callbackHandler).setLastCommand(chatId, null, null);
+        verify(profileService, never()).applyFriend(anyLong(), anyString(), any(), anyString());
+        verify(callbackHandler, never()).showProfile(anyLong(), anyString());
+    }
+
+    @Test
+    void startConfirmed_menuCampus_handlesNegativeFloorBlankCampusAndNullProgramValues() {
+        ChatMember member = member("member");
+        when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+        CampusResponse campus = new CampusResponse();
+        campus.setCampusName(" ");
+        campus.setClusters(List.of(
+                new Clusters("  ", 2, 5, -1)
+        ));
+        java.util.LinkedHashMap<String, Long> stats = new java.util.LinkedHashMap<>();
+        stats.put(null, null);
+        campus.setProgramStats(stats);
+        when(profileService.showCampusMap(chatId)).thenReturn(campus);
+
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
+
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("🏕️  campus 🎪")
+                        && message.contains("🪑 Busy -3 / Free 5 / All 2")
+                        && message.contains("-1️⃣ Floor")
+                        && message.contains("🔹  - 0 / 5 / 2")
+                        && message.contains("🧢 : 0")
+        ), eq(null));
+    }
+
+    @Test
+    void startConfirmed_menuCampus_handlesNullFloorAndEmptyProgramStats() {
+        ChatMember member = member("member");
+        when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+        CampusResponse campus = new CampusResponse();
+        campus.setCampusName("Kazan");
+        campus.setClusters(List.of(new Clusters("A", 1, 1, null)));
+        campus.setProgramStats(Map.of());
+        when(profileService.showCampusMap(chatId)).thenReturn(campus);
+
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
+
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("0️⃣ Floor")
+                        && message.contains("🔸 A - 0 / 1 / 1")
+                        && !message.contains(": 0\n")
+        ), eq(null));
+    }
+
+    @Test
+    void startConfirmed_menuCampus_sortsProgramStatsWithNullAndNonNullValues() {
+        ChatMember member = member("member");
+        when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+        CampusResponse campus = new CampusResponse();
+        campus.setCampusName("Kazan");
+        campus.setClusters(List.of());
+        java.util.LinkedHashMap<String, Long> stats = new java.util.LinkedHashMap<>();
+        stats.put("Parallel 99", null);
+        stats.put("Data Science", 1L);
+        campus.setProgramStats(stats);
+        when(profileService.showCampusMap(chatId)).thenReturn(campus);
+
+        ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+        confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.CAMPUS.getCommand());
+
+        verify(messageSender).sendMessage(eq(chatId), argThat(message ->
+                message.contains("⚡ Parallel 99: 0")
+                        && message.contains("🧢 Data Science: 1")
+        ), eq(null));
+    }
+
     private ChatMember member(String status) {
         ChatMember m = mock(ChatMember.class);
         doReturn(status).when(m).getStatus();

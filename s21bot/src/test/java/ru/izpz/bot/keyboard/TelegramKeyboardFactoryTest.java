@@ -43,6 +43,16 @@ class TelegramKeyboardFactoryTest {
     }
 
     @Test
+    void createReplyKeyboard_exactRowSize_hasNoTrailingRow() {
+        ReplyKeyboardMarkup kb = factory.createReplyKeyboard(List.of("a", "b", "c", "d"), 2);
+
+        assertNotNull(kb);
+        assertEquals(2, kb.getKeyboard().size());
+        assertEquals(2, kb.getKeyboard().get(0).size());
+        assertEquals(2, kb.getKeyboard().get(1).size());
+    }
+
+    @Test
     void createUrlKeyboard_createsButtonsWithUrls() {
         LinkedHashMap<String, String> buttons = new LinkedHashMap<>();
         buttons.put("t1", "u1");
@@ -66,6 +76,21 @@ class TelegramKeyboardFactoryTest {
         assertNotNull(kb);
         assertEquals(1, kb.getKeyboard().size());
         assertEquals(2, kb.getKeyboard().getFirst().size());
+    }
+
+    @Test
+    void createUrlKeyboard_nonExactRowSize_addsTrailingRow() {
+        LinkedHashMap<String, String> buttons = new LinkedHashMap<>();
+        buttons.put("t1", "u1");
+        buttons.put("t2", "u2");
+        buttons.put("t3", "u3");
+
+        InlineKeyboardMarkup kb = factory.createUrlKeyboard(buttons, 2);
+
+        assertNotNull(kb);
+        assertEquals(2, kb.getKeyboard().size());
+        assertEquals(2, kb.getKeyboard().get(0).size());
+        assertEquals(1, kb.getKeyboard().get(1).size());
     }
 
     @Test

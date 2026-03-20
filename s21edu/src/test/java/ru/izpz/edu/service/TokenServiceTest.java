@@ -8,12 +8,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 import ru.izpz.exception.TokenResponseException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest(classes = {TokenService.class, RestTemplate.class})
 @TestPropertySource(properties = "edu.tokenEndpoint=http://localhost:8081/api/tokens/default")
@@ -59,5 +62,18 @@ class TokenServiceTest {
         assertEquals("Не удалось получить access token", ex.getMessage());
 
         mockServer.verify();
+    }
+
+    @Test
+    void testGetTokenThrowsExceptionWhenNullResponseBody() {
+        RestTemplate mockedRestTemplate = mock(RestTemplate.class);
+        TokenService service = new TokenService(mockedRestTemplate);
+        ReflectionTestUtils.setField(service, "tokenEndpoint", "http://localhost:8081/api/tokens/default");
+
+        when(mockedRestTemplate.getForEntity("http://localhost:8081/api/tokens/default", String.class))
+                .thenReturn(ResponseEntity.ok().build());
+
+        Exception ex = assertThrows(TokenResponseException.class, service::getToken);
+        assertEquals("Не удалось получить access token", ex.getMessage());
     }
 }

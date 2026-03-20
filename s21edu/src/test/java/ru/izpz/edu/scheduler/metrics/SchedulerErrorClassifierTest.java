@@ -48,4 +48,11 @@ class SchedulerErrorClassifierTest {
     void classify_shouldReturnExecutionException_whenNoKnownKeywords() {
         assertEquals(SchedulerErrorReason.EXECUTION_EXCEPTION, classifier.classify(new RuntimeException("boom")));
     }
+
+    @Test
+    void classify_shouldUseClassNameKeywords_whenMessageIsNull() {
+        class TimeoutFailure extends RuntimeException {}
+
+        assertEquals(SchedulerErrorReason.TIMEOUT, classifier.classify(new TimeoutFailure()));
+    }
 }

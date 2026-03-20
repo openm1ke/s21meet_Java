@@ -58,6 +58,17 @@ class MessageProcessorTest {
     }
 
     @Test
+    void handleCallbackMessage_whenHandlerThrows_sendsGenericErrorAndRecordsMetric() {
+        doThrow(new RuntimeException("boom"))
+                .when(callbackHandler).handleCallbackMessage(1L, "d", 2, "cb");
+
+        messageProcessor.handleCallbackMessage(1L, "d", 2, "cb");
+
+        verify(metricsService).recordProcessingError("callback_dispatch", "unexpected_exception");
+        verify(messageSender).sendMessage(1L, "Произошла внутренняя ошибка, попробуйте позже", null);
+    }
+
+    @Test
     void parseMessage_confirmed_delegatesToConfirmedFlow() {
         ProfileDto profile = new ProfileDto("1", "abc", ProfileStatus.CONFIRMED, null);
         messageProcessor.parseMessage(1L, profile, "t");
