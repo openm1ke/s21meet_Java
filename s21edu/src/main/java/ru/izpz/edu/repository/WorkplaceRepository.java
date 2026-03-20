@@ -51,13 +51,13 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
     List<CampusStageNameCountView> countParticipantsByCampusAndStageName();
 
     @Query("""
-        select w.stageGroupName as stageGroupName, count(w) as count
+        select w.stageName as stageName, count(w) as count
         from Workplace w
         join Cluster c on c.clusterId = w.id.clusterId
         where c.campusId = :campusId
-        group by w.stageGroupName
+        group by w.stageName
         """)
-    List<StageGroupCountView> countParticipantsByCampusIdAndStageGroupName(@Param("campusId") String campusId);
+    List<StageNameCountView> countParticipantsByCampusIdAndStageName(@Param("campusId") String campusId);
 
     interface CampusCountView {
         String getCampusId();
@@ -76,8 +76,8 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
         long getCount();
     }
 
-    interface StageGroupCountView {
-        String getStageGroupName();
+    interface StageNameCountView {
+        String getStageName();
         long getCount();
     }
 }

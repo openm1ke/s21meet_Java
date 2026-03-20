@@ -13,6 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SchedulerMetricsServiceTest {
@@ -51,6 +52,44 @@ class SchedulerMetricsServiceTest {
 
         assertEquals(0.0, freeGauge.value());
         assertEquals(3.0, occupiedGauge.value());
+    }
+
+    @Test
+    void recordClusterPlaces_normalizesBlankNameAndNegativeOccupied() {
+        service.recordClusterPlaces(campusId, "   ", 4, -2);
+
+        Gauge freeGauge = gauge(
+            "edu_cluster_places_current",
+            "campus_id", campusId,
+            "campus_name", campusCatalog.campusName(campusId),
+            "cluster_name", "unknown",
+            "place_type", "free"
+        );
+        Gauge occupiedGauge = gauge(
+            "edu_cluster_places_current",
+            "campus_id", campusId,
+            "campus_name", campusCatalog.campusName(campusId),
+            "cluster_name", "unknown",
+            "place_type", "occupied"
+        );
+
+        assertEquals(4.0, freeGauge.value());
+        assertEquals(0.0, occupiedGauge.value());
+    }
+
+    @Test
+    void recordClusterPlaces_keepsNonBlankName() {
+        service.recordClusterPlaces(campusId, "A1", 2, 2);
+
+        Gauge freeGauge = gauge(
+            "edu_cluster_places_current",
+            "campus_id", campusId,
+            "campus_name", campusCatalog.campusName(campusId),
+            "cluster_name", "A1",
+            "place_type", "free"
+        );
+
+        assertEquals(2.0, freeGauge.value());
     }
 
     @Test
@@ -194,6 +233,69 @@ class SchedulerMetricsServiceTest {
         assertEquals(3.0, updatedCounter.count());
         assertEquals(2.0, createdGauge.value());
         assertEquals(4.0, recipientsGauge.value());
+    }
+
+    @Test
+    void recordEventsAndNotifyRecipients_whenNonPositiveValues_onlyUpdatesLastGauges() {
+        service.recordEventsSaved("scheduler", 0, -3);
+        service.recordNotifyRecipients("scheduler", 0, -1);
+
+        Counter createdCounter = meterRegistry.find("edu_events_saved_total")
+            .tags("scheduler", "scheduler", "result", "created")
+            .counter();
+        Counter updatedCounter = meterRegistry.find("edu_events_saved_total")
+            .tags("scheduler", "scheduler", "result", "updated")
+            .counter();
+        Counter uniqueUsersCounter = meterRegistry.find("edu_notify_recipients_total")
+            .tags("scheduler", "scheduler", "recipient_type", "unique_users")
+            .counter();
+        Counter deliveriesCounter = meterRegistry.find("edu_notify_recipients_total")
+            .tags("scheduler", "scheduler", "recipient_type", "deliveries")
+            .counter();
+
+        Gauge createdGauge = gauge(
+            "edu_events_saved_last",
+            "scheduler", "scheduler",
+            "result", "created"
+        );
+        Gauge updatedGauge = gauge(
+            "edu_events_saved_last",
+            "scheduler", "scheduler",
+            "result", "updated"
+        );
+        Gauge uniqueUsersGauge = gauge(
+            "edu_notify_recipients_last",
+            "scheduler", "scheduler",
+            "recipient_type", "unique_users"
+        );
+        Gauge deliveriesGauge = gauge(
+            "edu_notify_recipients_last",
+            "scheduler", "scheduler",
+            "recipient_type", "deliveries"
+        );
+
+        assertNull(createdCounter);
+        assertNull(updatedCounter);
+        assertNull(uniqueUsersCounter);
+        assertNull(deliveriesCounter);
+        assertEquals(0.0, createdGauge.value());
+        assertEquals(0.0, updatedGauge.value());
+        assertEquals(0.0, uniqueUsersGauge.value());
+        assertEquals(0.0, deliveriesGauge.value());
+    }
+
+    @Test
+    void recordParticipantsByCampusAndStageGroup_normalizesBlankStageName() {
+        service.recordParticipantsByCampusAndStageGroup(campusId, " ", 3);
+
+        Gauge groupGauge = gauge(
+            "edu_participants_by_campus_stage_group",
+            "campus_id", campusId,
+            "campus_name", campusCatalog.campusName(campusId),
+            "stage_group_name", "unknown"
+        );
+
+        assertEquals(3.0, groupGauge.value());
     }
 
     private Gauge gauge(String name, String... tags) {
