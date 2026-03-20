@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.*;
 import ru.izpz.dto.api.ParticipantApi;
@@ -17,10 +18,12 @@ import ru.izpz.edu.model.Participant;
 import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.model.Profile;
 import ru.izpz.edu.model.ProfileValidation;
+import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.repository.ParticipantCampusRepository;
 import ru.izpz.edu.repository.ParticipantRepository;
 import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
+import ru.izpz.edu.repository.StudentCoalitionRepository;
 import ru.izpz.edu.utils.StringUtils;
 
 import java.time.OffsetDateTime;
@@ -42,21 +45,31 @@ public class ProfileService {
     private final ParticipantApi participantApi;
     private final ParticipantRepository participantRepository;
     private final ParticipantCampusRepository participantCampusRepository;
+    private final StudentCoalitionRepository studentCoalitionRepository;
+    @Nullable
+    private final GraphQLService graphQLService;
 
     public ProfileDto getOrCreateProfile(String telegramId) {
         return profileRepository.findByTelegramId(telegramId)
-            .map(profileMapper::toDto)
+            .map(profile -> {
+                refreshCoalitionOnProfileView(profile);
+                return profileMapper.toDto(profile);
+            })
             .orElseGet(() -> {
                 Profile profile = new Profile();
                 profile.setTelegramId(telegramId);
                 profile.setStatus(ProfileStatus.CREATED);
                 try {
                     Profile saved = profileRepository.save(profile);
+                    refreshCoalitionOnProfileView(saved);
                     return profileMapper.toDto(saved);
                 } catch (DataIntegrityViolationException e) {
                     log.warn("Race condition in getOrCreateProfile for telegramId={}: {}", telegramId, e.getMessage());
                     return profileRepository.findByTelegramId(telegramId)
-                        .map(profileMapper::toDto)
+                        .map(existing -> {
+                            refreshCoalitionOnProfileView(existing);
+                            return profileMapper.toDto(existing);
+                        })
                         .orElseGet(() -> profileMapper.toDto(profile));
                 }
             });
@@ -119,6 +132,7 @@ public class ProfileService {
     }
 
     public ParticipantDto getParticipant(String eduLogin) throws ApiException {
+        refreshCoalitionByLogin(eduLogin);
         var participantV1DTO = checkEduLogin(eduLogin);
 
         ParticipantCampus campus = profileMapper.toEntity(participantV1DTO.getCampus());
@@ -128,7 +142,9 @@ public class ProfileService {
         participant.setCampus(campus);
         participantRepository.save(participant);
 
-        return profileMapper.toDto(participant);
+        ParticipantDto dto = profileMapper.toDto(participant);
+        enrichCoalition(dto, eduLogin);
+        return dto;
     }
 
     public ProfileDto updateLastCommand(@Valid LastCommandRequest request) {
@@ -193,5 +209,36 @@ public class ProfileService {
         Participant participant = profileMapper.toEntity(participantDto);
         participant.setCampus(campus);
         participantRepository.save(participant);
+    }
+
+    private void refreshCoalitionOnProfileView(Profile profile) {
+        String s21login = profile.getS21login();
+        if (s21login == null || s21login.isBlank()) {
+            return;
+        }
+        refreshCoalitionByLogin(s21login);
+    }
+
+    private void refreshCoalitionByLogin(String login) {
+        if (graphQLService == null) {
+            return;
+        }
+        try {
+            graphQLService.refreshStudentCoalitionByLogin(login);
+        } catch (RuntimeException e) {
+            log.warn("Не удалось обновить данные коалиции для {}: {}", login, e.getMessage());
+        }
+    }
+
+    private void enrichCoalition(ParticipantDto dto, String login) {
+        StudentCoalition coalition = studentCoalitionRepository.findById(login).orElse(null);
+        if (coalition == null) {
+            return;
+        }
+        dto.setCoalition(new ParticipantCoalitionDto(
+                coalition.getCoalitionName(),
+                coalition.getMemberCount(),
+                coalition.getRank()
+        ));
     }
 }

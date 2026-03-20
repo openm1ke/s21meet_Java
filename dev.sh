@@ -324,6 +324,11 @@ compose_restart_targets() {
   compose_cmd restart "${with_proxy[@]}"
 }
 
+run_s21edu_migrations() {
+  info "Running s21edu migrations (s21edu-migrator)..."
+  compose_cmd run --rm s21edu-migrator
+}
+
 wait_for_postgres() {
   local retries=30
   local delay=2
@@ -371,8 +376,19 @@ if [[ "$FULL" -eq 1 ]]; then
     build_images "${BUILDABLE_IMAGES[@]}"
   fi
 
-  info "Compose up all services..."
-  compose_cmd up -d
+  info "Ensuring infra is up: ${INFRA_SERVICES[*]}"
+  compose_cmd up -d "${INFRA_SERVICES[@]}"
+  wait_for_postgres
+  run_s21edu_migrations
+
+  FULL_UP_TARGETS=("${INFRA_SERVICES[@]}" "${APP_SERVICES[@]}")
+  proxy_service="$(proxy_service_for_mode)"
+  if [[ -n "$proxy_service" ]]; then
+    FULL_UP_TARGETS+=("$proxy_service")
+  fi
+
+  info "Compose up runtime services: ${FULL_UP_TARGETS[*]}"
+  compose_cmd up -d "${FULL_UP_TARGETS[@]}"
   [[ "$SHOW_PS" -eq 1 ]] && compose_cmd ps
   info "✅ Done"
   exit 0

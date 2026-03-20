@@ -1,10 +1,19 @@
 package ru.izpz.edu.service;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ru.izpz.edu.client.GraphQLApiClient;
 import ru.izpz.edu.dto.*;
+import ru.izpz.edu.model.StudentCoalition;
+import ru.izpz.edu.model.StudentCredentials;
+import ru.izpz.edu.repository.StudentCoalitionRepository;
+import ru.izpz.edu.repository.StudentCredentialsRepository;
 
+import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -13,7 +22,14 @@ import java.util.Optional;
 @ConditionalOnProperty(name = "graphql.api.enabled", havingValue = "true")
 public class GraphQLService {
 
+    private static final String COALITION_REFRESH_COUNTER = "edu_graphql_coalition_refresh_total";
+    private static final String COALITION_REFRESH_DURATION = "edu_graphql_coalition_refresh_duration_seconds";
+    private static final String TAG_OUTCOME = "outcome";
     private final GraphQLApiClient client;
+    private final StudentCredentialsRepository studentCredentialsRepository;
+    private final StudentCoalitionRepository studentCoalitionRepository;
+    private final MeterRegistry meterRegistry;
+    private Duration coalitionRefreshTtl = Duration.ofMinutes(15);
 
     private static final String QUERY = """
         query getCampusPlanOccupied($clusterId: ID!) {
@@ -87,8 +103,54 @@ public class GraphQLService {
         }
         """;
 
-    public GraphQLService(GraphQLApiClient client) {
+    private static final String GET_STUDENT_COALITION_QUERY = """
+        query publicProfileGetCoalition($userId: UUID!) {
+          student {
+            getUserTournamentWidget(userId: $userId) {
+              coalitionMember {
+                coalition {
+                  avatarUrl
+                  color
+                  name
+                  memberCount
+                  __typename
+                }
+                currentTournamentPowerRank {
+                  rank
+                  power {
+                    id
+                    points
+                    __typename
+                  }
+                  __typename
+                }
+                __typename
+              }
+              lastTournamentResult {
+                userRank
+                power
+                __typename
+              }
+              __typename
+            }
+            __typename
+          }
+        }
+        """;
+
+    public GraphQLService(GraphQLApiClient client,
+                          StudentCredentialsRepository studentCredentialsRepository,
+                          StudentCoalitionRepository studentCoalitionRepository,
+                          MeterRegistry meterRegistry) {
         this.client = client;
+        this.studentCredentialsRepository = studentCredentialsRepository;
+        this.studentCoalitionRepository = studentCoalitionRepository;
+        this.meterRegistry = meterRegistry;
+    }
+
+    @Value("${graphql.coalition.refresh-ttl:PT15M}")
+    void setCoalitionRefreshTtl(Duration coalitionRefreshTtl) {
+        this.coalitionRefreshTtl = coalitionRefreshTtl;
     }
 
     public record ClusterSeat(
@@ -127,17 +189,14 @@ public class GraphQLService {
                 .toList();
     }
 
-    public String getUserIdByLogin(String login) {
-        GraphQLStudentCredentialsDataDto data = client.execute(
-                "getCredentialsByLogin",
-                Map.of("login", login),
-                GET_CREDENTIALS_QUERY,
-                GraphQLStudentCredentialsDataDto.class
-        );
+    public GraphQLStudentCredentialsDto getStudentCredentialsByLogin(String login) {
+        return studentCredentialsRepository.findById(login)
+                .map(this::toDto)
+                .orElseGet(() -> fetchAndStoreCredentials(login));
+    }
 
-        return Optional.ofNullable(data)
-                .map(GraphQLStudentCredentialsDataDto::school21)
-                .map(GraphQLSchool21Dto::getStudentByLogin)
+    public String getUserIdByLogin(String login) {
+        return Optional.ofNullable(getStudentCredentialsByLogin(login))
                 .map(GraphQLStudentCredentialsDto::userId)
                 .orElse(null);
     }
@@ -183,5 +242,114 @@ public class GraphQLService {
                         p.localCourseId()
                 ))
                 .toList();
+    }
+
+    public void refreshStudentCoalitionByLogin(String login) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String outcome = "success";
+        try {
+            if (!isCoalitionRefreshRequired(login)) {
+                outcome = "skipped_ttl";
+                return;
+            }
+
+            String userId = getUserIdByLogin(login);
+            if (userId == null) {
+                outcome = "skipped_no_user_id";
+                return;
+            }
+
+            GraphQLStudentCoalitionDataDto data = client.execute(
+                    "publicProfileGetCoalition",
+                    Map.of("userId", userId),
+                    GET_STUDENT_COALITION_QUERY,
+                    GraphQLStudentCoalitionDataDto.class
+            );
+
+            String coalitionName = Optional.ofNullable(data)
+                    .map(GraphQLStudentCoalitionDataDto::student)
+                    .map(GraphQLStudentTournamentDataDto::getUserTournamentWidget)
+                    .map(GraphQLUserTournamentWidgetDto::coalitionMember)
+                    .map(GraphQLCoalitionMemberDto::coalition)
+                    .map(GraphQLCoalitionDataDto::name)
+                    .orElse(null);
+
+            Integer coalitionMembers = Optional.ofNullable(data)
+                    .map(GraphQLStudentCoalitionDataDto::student)
+                    .map(GraphQLStudentTournamentDataDto::getUserTournamentWidget)
+                    .map(GraphQLUserTournamentWidgetDto::coalitionMember)
+                    .map(GraphQLCoalitionMemberDto::coalition)
+                    .map(GraphQLCoalitionDataDto::memberCount)
+                    .orElse(null);
+
+            Integer coalitionRank = Optional.ofNullable(data)
+                    .map(GraphQLStudentCoalitionDataDto::student)
+                    .map(GraphQLStudentTournamentDataDto::getUserTournamentWidget)
+                    .map(GraphQLUserTournamentWidgetDto::coalitionMember)
+                    .map(GraphQLCoalitionMemberDto::currentTournamentPowerRank)
+                    .map(GraphQLCurrentTournamentPowerRankDto::rank)
+                    .orElse(null);
+
+            StudentCoalition entity = studentCoalitionRepository.findById(login)
+                    .orElseGet(StudentCoalition::new);
+            entity.setLogin(login);
+            entity.setUserId(userId);
+            entity.setCoalitionName(coalitionName);
+            entity.setMemberCount(coalitionMembers);
+            entity.setRank(coalitionRank);
+            entity.setUpdatedAt(OffsetDateTime.now());
+            studentCoalitionRepository.save(entity);
+        } catch (RuntimeException e) {
+            outcome = "error";
+            throw e;
+        } finally {
+            meterRegistry.counter(COALITION_REFRESH_COUNTER, TAG_OUTCOME, outcome).increment();
+            sample.stop(Timer.builder(COALITION_REFRESH_DURATION)
+                    .description("Duration of GraphQL coalition refresh requests")
+                    .tag(TAG_OUTCOME, outcome)
+                    .register(meterRegistry));
+        }
+    }
+
+    private boolean isCoalitionRefreshRequired(String login) {
+        return studentCoalitionRepository.findById(login)
+                .map(StudentCoalition::getUpdatedAt)
+                .map(updatedAt -> updatedAt.isBefore(OffsetDateTime.now().minus(coalitionRefreshTtl)))
+                .orElse(true);
+    }
+
+    private GraphQLStudentCredentialsDto fetchAndStoreCredentials(String login) {
+        GraphQLStudentCredentialsDataDto data = client.execute(
+                "getCredentialsByLogin",
+                Map.of("login", login),
+                GET_CREDENTIALS_QUERY,
+                GraphQLStudentCredentialsDataDto.class
+        );
+
+        return Optional.ofNullable(data)
+                .map(GraphQLStudentCredentialsDataDto::school21)
+                .map(GraphQLSchool21Dto::getStudentByLogin)
+                .map(credentials -> {
+                    StudentCredentials entity = new StudentCredentials();
+                    entity.setLogin(login);
+                    entity.setStudentId(credentials.studentId());
+                    entity.setUserId(credentials.userId());
+                    entity.setSchoolId(credentials.schoolId());
+                    entity.setIsActive(credentials.isActive());
+                    entity.setIsGraduate(credentials.isGraduate());
+                    studentCredentialsRepository.save(entity);
+                    return credentials;
+                })
+                .orElse(null);
+    }
+
+    private GraphQLStudentCredentialsDto toDto(StudentCredentials credentials) {
+        return new GraphQLStudentCredentialsDto(
+                credentials.getStudentId(),
+                credentials.getUserId(),
+                credentials.getSchoolId(),
+                credentials.getIsActive(),
+                credentials.getIsGraduate()
+        );
     }
 }

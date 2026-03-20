@@ -1,16 +1,22 @@
 package ru.izpz.edu.service;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.edu.client.GraphQLApiClient;
 import ru.izpz.edu.dto.*;
+import ru.izpz.edu.model.StudentCoalition;
+import ru.izpz.edu.model.StudentCredentials;
+import ru.izpz.edu.repository.StudentCoalitionRepository;
+import ru.izpz.edu.repository.StudentCredentialsRepository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -21,15 +27,22 @@ class GraphQLServiceTest {
 
     @Mock
     private GraphQLApiClient client;
+    @Mock
+    private StudentCredentialsRepository studentCredentialsRepository;
+    @Mock
+    private StudentCoalitionRepository studentCoalitionRepository;
 
-    @InjectMocks
     private GraphQLService graphQLService;
 
     private GraphQLClusterDto testClusterDto;
     private GraphQLStudentCredentialsDataDto testCredentialsDto;
+    private SimpleMeterRegistry meterRegistry;
 
     @BeforeEach
     void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        graphQLService = new GraphQLService(client, studentCredentialsRepository, studentCoalitionRepository, meterRegistry);
+
         // Setup test data for cluster
         GraphQLPlaceDto testPlace = new GraphQLPlaceDto(
                 "A",
@@ -68,7 +81,7 @@ class GraphQLServiceTest {
         assertNotNull(result);
         assertEquals(1, result.size());
         
-        GraphQLService.ClusterSeat seat = result.get(0);
+        GraphQLService.ClusterSeat seat = result.getFirst();
         assertEquals(clusterId, seat.clusterId());
         assertEquals("A", seat.row());
         assertEquals(101, seat.number());
@@ -105,6 +118,7 @@ class GraphQLServiceTest {
     void getUserIdByLogin_shouldReturnUserId_whenFound() {
         // Given
         String login = "testuser";
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
         when(client.execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)), 
                 anyString(), eq(GraphQLStudentCredentialsDataDto.class)))
                 .thenReturn(testCredentialsDto);
@@ -114,6 +128,7 @@ class GraphQLServiceTest {
 
         // Then
         assertEquals("user123", result);
+        verify(studentCredentialsRepository).save(any(StudentCredentials.class));
         verify(client).execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)), 
                 anyString(), eq(GraphQLStudentCredentialsDataDto.class));
     }
@@ -122,6 +137,7 @@ class GraphQLServiceTest {
     void getUserIdByLogin_shouldReturnNull_whenNotFound() {
         // Given
         String login = "nonexistent";
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
         GraphQLStudentCredentialsDataDto emptyDto = new GraphQLStudentCredentialsDataDto(null);
         when(client.execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)), 
                 anyString(), eq(GraphQLStudentCredentialsDataDto.class)))
@@ -132,6 +148,7 @@ class GraphQLServiceTest {
 
         // Then
         assertNull(result);
+        verify(studentCredentialsRepository, never()).save(any(StudentCredentials.class));
         verify(client).execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)), 
                 anyString(), eq(GraphQLStudentCredentialsDataDto.class));
     }
@@ -140,6 +157,7 @@ class GraphQLServiceTest {
     void getStudentProjectsByLogin_shouldReturnEmptyList_whenUserNotFound() {
         // Given
         String login = "nonexistent";
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
         GraphQLStudentCredentialsDataDto emptyDto = new GraphQLStudentCredentialsDataDto(null);
         when(client.execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)), 
                 anyString(), eq(GraphQLStudentCredentialsDataDto.class)))
@@ -170,8 +188,8 @@ class GraphQLServiceTest {
         List<GraphQLService.ClusterSeat> result = graphQLService.getOccupiedSeats(clusterId);
 
         assertEquals(3, result.size());
-        assertEquals(0, result.get(0).number());
-        assertNull(result.get(0).login());
+        assertEquals(0, result.getFirst().number());
+        assertNull(result.getFirst().login());
         assertNull(result.get(0).expValue());
         assertNull(result.get(0).levelCode());
 
@@ -188,6 +206,7 @@ class GraphQLServiceTest {
     void getStudentProjectsByLogin_shouldReturnMappedProjects_whenUserExists() {
         String login = "exists";
         String userId = "user-42";
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
         GraphQLStudentCredentialsDataDto credentials = new GraphQLStudentCredentialsDataDto(
                 new GraphQLSchool21Dto(new GraphQLStudentCredentialsDto("s", userId, "school", true, false))
         );
@@ -217,6 +236,7 @@ class GraphQLServiceTest {
     void getStudentProjectsByLogin_shouldReturnEmptyList_whenProjectsDataMissing() {
         String login = "exists";
         String userId = "user-42";
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
         GraphQLStudentCredentialsDataDto credentials = new GraphQLStudentCredentialsDataDto(
                 new GraphQLSchool21Dto(new GraphQLStudentCredentialsDto("s", userId, "school", true, false))
         );
@@ -230,5 +250,132 @@ class GraphQLServiceTest {
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getStudentCredentialsByLogin_shouldReturnFromDb_whenCached() {
+        String login = "cached";
+        StudentCredentials cached = new StudentCredentials();
+        cached.setLogin(login);
+        cached.setStudentId("student-cached");
+        cached.setUserId("user-cached");
+        cached.setSchoolId("school-cached");
+        cached.setIsActive(true);
+        cached.setIsGraduate(false);
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(cached));
+
+        GraphQLStudentCredentialsDto result = graphQLService.getStudentCredentialsByLogin(login);
+
+        assertNotNull(result);
+        assertEquals("user-cached", result.userId());
+        verify(client, never()).execute(eq("getCredentialsByLogin"), anyMap(), anyString(), eq(GraphQLStudentCredentialsDataDto.class));
+        verify(studentCredentialsRepository, never()).save(any(StudentCredentials.class));
+    }
+
+    @Test
+    void refreshStudentCoalitionByLogin_shouldFetchAndStoreFreshData() {
+        String login = "elevante";
+        String userId = "02e9891a-fb02-4783-9b67-ab5265d0c684";
+
+        StudentCredentials cached = new StudentCredentials();
+        cached.setLogin(login);
+        cached.setUserId(userId);
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(cached));
+
+        GraphQLStudentCoalitionDataDto coalitionData = new GraphQLStudentCoalitionDataDto(
+                new GraphQLStudentTournamentDataDto(
+                        new GraphQLUserTournamentWidgetDto(
+                                new GraphQLCoalitionMemberDto(
+                                        new GraphQLCoalitionDataDto("Capybaras", 1085),
+                                        new GraphQLCurrentTournamentPowerRankDto(271)
+                                )
+                        )
+                )
+        );
+
+        when(client.execute(eq("publicProfileGetCoalition"), eq(Map.of("userId", userId)),
+                anyString(), eq(GraphQLStudentCoalitionDataDto.class)))
+                .thenReturn(coalitionData);
+        when(studentCoalitionRepository.findById(login)).thenReturn(Optional.empty());
+
+        graphQLService.refreshStudentCoalitionByLogin(login);
+
+        verify(client).execute(eq("publicProfileGetCoalition"), eq(Map.of("userId", userId)),
+                anyString(), eq(GraphQLStudentCoalitionDataDto.class));
+        verify(studentCoalitionRepository).save(argThat(entity ->
+                login.equals(entity.getLogin())
+                        && userId.equals(entity.getUserId())
+                        && "Capybaras".equals(entity.getCoalitionName())
+                        && Integer.valueOf(1085).equals(entity.getMemberCount())
+                        && Integer.valueOf(271).equals(entity.getRank())
+        ));
+        assertEquals(1.0, meterRegistry.find("edu_graphql_coalition_refresh_total")
+                .tag("outcome", "success")
+                .counter()
+                .count());
+        assertNotNull(meterRegistry.find("edu_graphql_coalition_refresh_duration_seconds")
+                .tag("outcome", "success")
+                .timer());
+    }
+
+    @Test
+    void refreshStudentCoalitionByLogin_shouldSkip_whenUserIdMissing() {
+        String login = "unknown";
+        when(studentCoalitionRepository.findById(login)).thenReturn(Optional.empty());
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
+        when(client.execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)),
+                anyString(), eq(GraphQLStudentCredentialsDataDto.class)))
+                .thenReturn(new GraphQLStudentCredentialsDataDto(null));
+
+        graphQLService.refreshStudentCoalitionByLogin(login);
+
+        verify(client, never()).execute(eq("publicProfileGetCoalition"), anyMap(), anyString(), eq(GraphQLStudentCoalitionDataDto.class));
+        verify(studentCoalitionRepository, never()).save(any(StudentCoalition.class));
+    }
+
+    @Test
+    void refreshStudentCoalitionByLogin_shouldSkip_whenFreshDataExists() {
+        String login = "fresh";
+        StudentCoalition fresh = new StudentCoalition();
+        fresh.setLogin(login);
+        fresh.setUpdatedAt(OffsetDateTime.now());
+        when(studentCoalitionRepository.findById(login)).thenReturn(Optional.of(fresh));
+
+        graphQLService.refreshStudentCoalitionByLogin(login);
+
+        verifyNoInteractions(client);
+        verify(studentCoalitionRepository, never()).save(any(StudentCoalition.class));
+        assertEquals(1.0, meterRegistry.find("edu_graphql_coalition_refresh_total")
+                .tag("outcome", "skipped_ttl")
+                .counter()
+                .count());
+        assertNotNull(meterRegistry.find("edu_graphql_coalition_refresh_duration_seconds")
+                .tag("outcome", "skipped_ttl")
+                .timer());
+    }
+
+    @Test
+    void refreshStudentCoalitionByLogin_shouldRecordErrorMetrics_whenGraphQlFails() {
+        String login = "broken";
+        String userId = "u-1";
+        when(studentCoalitionRepository.findById(login)).thenReturn(Optional.empty(), Optional.empty());
+        StudentCredentials cached = new StudentCredentials();
+        cached.setLogin(login);
+        cached.setUserId(userId);
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(cached));
+        when(client.execute(eq("publicProfileGetCoalition"), eq(Map.of("userId", userId)),
+                anyString(), eq(GraphQLStudentCoalitionDataDto.class)))
+                .thenThrow(new RuntimeException("boom"));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> graphQLService.refreshStudentCoalitionByLogin(login));
+
+        assertEquals("boom", ex.getMessage());
+        assertEquals(1.0, meterRegistry.find("edu_graphql_coalition_refresh_total")
+                .tag("outcome", "error")
+                .counter()
+                .count());
+        assertNotNull(meterRegistry.find("edu_graphql_coalition_refresh_duration_seconds")
+                .tag("outcome", "error")
+                .timer());
     }
 }

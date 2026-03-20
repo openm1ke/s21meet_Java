@@ -3,3 +3,7 @@ databaseChangeLog:
       file: db/changelog/changes/001-initial-schema.yaml
   - include:
       file: db/changelog/changes/002-initial-indexes.yaml
+  - include:
+      file: db/changelog/changes/003-student-credentials.yaml
+  - include:
+      file: db/changelog/changes/004-student-coalition.yaml
