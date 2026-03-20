@@ -58,4 +58,18 @@ class ParticipantMessageFormatterTest {
 
         assertTrue(message.startsWith("🚫 u"));
     }
+
+    @Test
+    void format_shouldFallbackWhenCampusNameIsNull() {
+        ParticipantDto participant = new ParticipantDto();
+        participant.setLogin("u");
+        participant.setClassName("c");
+        participant.setParallelName("p");
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
+        participant.setCampus(new ParticipantCampusDto("id", null));
+
+        String message = ParticipantMessageFormatter.format(participant);
+
+        assertTrue(message.contains("📍Out of campus"));
+    }
 }

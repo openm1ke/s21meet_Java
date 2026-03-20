@@ -145,6 +145,22 @@ class ProfileServiceTest {
     }
 
     @Test
+    void getOrCreateProfile_shouldFallbackToInMemoryProfile_whenSaveRaceConditionAndReloadMissing() {
+        when(profileRepository.findByTelegramId("123456"))
+                .thenReturn(Optional.empty(), Optional.empty());
+        when(profileRepository.save(any(Profile.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        ProfileDto result = profileService.getOrCreateProfile("123456");
+
+        assertNotNull(result);
+        assertEquals("123456", result.telegramId());
+        assertEquals(ProfileStatus.CREATED, result.status());
+        verify(profileRepository, times(2)).findByTelegramId("123456");
+        verify(profileRepository).save(any(Profile.class));
+    }
+
+    @Test
     void getProfile_shouldReturnProfile_whenFound() {
         // Given
         when(profileRepository.findByTelegramId("123456"))
@@ -252,6 +268,24 @@ class ProfileServiceTest {
         when(profileRepository.save(testProfile))
                 .thenThrow(new DataIntegrityViolationException("duplicate key"));
         when(profileMapper.toDto(savedByAnotherTx)).thenReturn(expected);
+
+        ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
+
+        assertNotNull(result);
+        assertEquals("newuser", result.s21login());
+        verify(profileRepository).save(testProfile);
+        verify(profileRepository, times(2)).findByTelegramId("123456");
+    }
+
+    @Test
+    void checkAndSetLogin_shouldFallbackToInMemoryProfile_whenSaveRaceConditionAndReloadMissing() {
+        testProfile.setS21login(null);
+
+        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
+        when(profileRepository.findByTelegramId("123456"))
+                .thenReturn(Optional.of(testProfile), Optional.empty());
+        when(profileRepository.save(testProfile))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
 
         ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
 
@@ -468,6 +502,53 @@ class ProfileServiceTest {
     }
 
     @Test
+    void getCampus_shouldThrowEntityNotFound_whenProfileMissing() {
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.empty());
+
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
+                () -> profileService.getCampus("123456"));
+
+        assertTrue(exception.getMessage().contains("Не найден логин"));
+    }
+
+    @Test
+    void getCampus_shouldFallbackToDefault_whenS21LoginBlank() {
+        testProfile.setS21login("   ");
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Moscow", result.getName());
+        assertEquals("6bfe3c56-0211-4fe1-9e59-51616caac4dd", result.getUuid());
+    }
+
+    @Test
+    void getCampus_shouldFallbackToDefault_whenS21LoginNull() {
+        testProfile.setS21login(null);
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Moscow", result.getName());
+        assertEquals("6bfe3c56-0211-4fe1-9e59-51616caac4dd", result.getUuid());
+    }
+
+    @Test
+    void getCampus_shouldFallbackToDefault_whenApiReturnsNullParticipant() throws ApiException {
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.empty());
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(null);
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Moscow", result.getName());
+        assertEquals("6bfe3c56-0211-4fe1-9e59-51616caac4dd", result.getUuid());
+    }
+
+    @Test
     void getCampus_shouldUseDatabaseFirst_whenParticipantExists() {
         ParticipantCampus campus = new ParticipantCampus();
         campus.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
@@ -486,6 +567,37 @@ class ProfileServiceTest {
         assertEquals("Kazan", result.getName());
         assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
         verifyNoInteractions(participantApi);
+    }
+
+    @Test
+    void getCampus_shouldFallbackToApi_whenStoredParticipantHasNoCampus() throws ApiException {
+        Participant participant = new Participant();
+        participant.setLogin("testuser");
+        participant.setCampus(null);
+
+        UUID campusId = UUID.fromString("7c293c9c-f28c-4b10-be29-560e4b000a34");
+        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
+        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
+        ParticipantCampus campusEntity = new ParticipantCampus();
+        campusEntity.setId(campusId.toString());
+        campusEntity.setCampusName("Kazan");
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(participant));
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
+        when(participantDto.getCampus()).thenReturn(campusDto);
+        when(campusDto.getShortName()).thenReturn("Kazan");
+        when(campusDto.getId()).thenReturn(campusId);
+        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
+        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertEquals("Kazan", result.getName());
+        assertEquals(campusId.toString(), result.getUuid());
+        verify(participantApi).getParticipantByLogin("testuser");
     }
 
     @Test
@@ -519,6 +631,25 @@ class ProfileServiceTest {
         ParticipantCampus campus = new ParticipantCampus();
         campus.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
         campus.setCampusName("  ");
+        Participant participant = new Participant();
+        participant.setLogin("testuser");
+        participant.setCampus(campus);
+
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(participant));
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Moscow", result.getName());
+        assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
+    }
+
+    @Test
+    void getCampus_shouldUseDefaultName_whenStoredCampusNameNull() {
+        ParticipantCampus campus = new ParticipantCampus();
+        campus.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
+        campus.setCampusName(null);
         Participant participant = new Participant();
         participant.setLogin("testuser");
         participant.setCampus(campus);

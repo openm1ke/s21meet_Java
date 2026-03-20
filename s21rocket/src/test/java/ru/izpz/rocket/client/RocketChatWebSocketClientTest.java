@@ -139,6 +139,29 @@ class RocketChatWebSocketClientTest {
     }
 
     @Test
+    void execute_shouldReturnUnexpectedEmptyResponse_whenLatchCompletedWithoutPayload() {
+        RocketChatWebSocketClient emptyClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+            @Override
+            public boolean connectBlocking() {
+                try {
+                    var latchField = RocketChatWebSocketClient.class.getDeclaredField("latch");
+                    latchField.setAccessible(true);
+                    ((CountDownLatch) latchField.get(this)).countDown();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return true;
+            }
+        };
+
+        RocketChatSendResponse result = emptyClient.execute(5);
+
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertEquals("Unexpected empty response", result.getMessage());
+    }
+
+    @Test
     void onMessage_shouldHandlePingMessage() {
         // Given
         String pingMessage = "{\"msg\":\"ping\"}";
@@ -188,6 +211,27 @@ class RocketChatWebSocketClientTest {
 
         // When & Then - should not throw exception
         assertDoesNotThrow(() -> client.onMessage(unknownMessage));
+    }
+
+    @Test
+    void onMessage_shouldIgnoreResultWithUnknownId() {
+        String unknownResultId = "{\"msg\":\"result\",\"id\":\"some_other_id\",\"result\":{}}";
+
+        assertDoesNotThrow(() -> client.onMessage(unknownResultId));
+    }
+
+    @Test
+    void onMessage_shouldIgnoreChangedWithoutArgs() {
+        String changedWithoutArgs = "{\"msg\":\"changed\",\"fields\":{\"args\":[]}}";
+
+        assertDoesNotThrow(() -> client.onMessage(changedWithoutArgs));
+    }
+
+    @Test
+    void onMessage_shouldIgnoreChangedWithoutExpectedQrPhrase() {
+        String changedOtherMessage = "{\"msg\":\"changed\",\"fields\":{\"args\":[{\"msg\":\"Another message\"}]}}";
+
+        assertDoesNotThrow(() -> client.onMessage(changedOtherMessage));
     }
 
     @Test

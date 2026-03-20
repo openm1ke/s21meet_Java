@@ -40,4 +40,17 @@ class LastCommandAttributeConverterTest {
     void convertToEntityAttribute_shouldReturnNull_whenInvalidJson() {
         assertNull(converter.convertToEntityAttribute("{not-json"));
     }
+
+    @Test
+    void convertToDatabaseColumn_shouldThrow_whenSerializationFails() {
+        Object badValue = new Object() {
+            @SuppressWarnings("unused")
+            public Object getBroken() {
+                throw new RuntimeException("boom");
+            }
+        };
+        LastCommandState state = new LastCommandState(LastCommandType.SEARCH, Map.of("bad", badValue));
+
+        assertThrows(IllegalStateException.class, () -> converter.convertToDatabaseColumn(state));
+    }
 }
