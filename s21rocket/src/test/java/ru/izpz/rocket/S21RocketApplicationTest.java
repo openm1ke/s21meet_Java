@@ -4,13 +4,15 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.springframework.boot.SpringApplication;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mockStatic;
 
 class S21RocketApplicationTest {
 
     @Test
     void constructor_isCallable() {
-        new S21RocketApplication();
+        S21RocketApplication app = new S21RocketApplication();
+        assertNotNull(app);
     }
 
     @Test

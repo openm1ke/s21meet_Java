@@ -1,11 +1,9 @@
 name: Sonar Push
 
 on:
-  pull_request:
+  push:
     branches:
       - master
-    types:
-      - closed
   workflow_dispatch:
 
 concurrency:
@@ -17,7 +15,6 @@ permissions:
 
 jobs:
   sonar-quality:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     name: Sonar Quality (push)
     uses: ./.github/workflows/sonar-common.yml
     with:
