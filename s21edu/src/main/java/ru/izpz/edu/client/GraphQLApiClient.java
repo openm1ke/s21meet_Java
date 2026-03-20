@@ -3,6 +3,8 @@ package ru.izpz.edu.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
@@ -25,35 +27,68 @@ public class GraphQLApiClient {
     private static final String SCHOOL_ID = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
     private static final String ERRORS_FIELD = "errors";
     private static final String DATA_FIELD = "data";
+    private static final String GRAPHQL_REQUEST_COUNTER = "edu_graphql_requests_total";
+    private static final String GRAPHQL_REQUEST_DURATION = "edu_graphql_request_duration_seconds";
+    private static final String TAG_DOMAIN = "domain";
+    private static final String TAG_OPERATION = "operation";
+    private static final String TAG_OUTCOME = "outcome";
+    private static final String DOMAIN_PLATFORM = "platform";
     private final RestTemplate restTemplate;
     private final TokenService tokenService;
     private final ObjectMapper om;
+    private final MeterRegistry meterRegistry;
 
     public <T> T execute(String operationName,
                          Map<String, Object> variables,
                          String query,
                          Class<T> dataClass) {
-
-        String token = tokenService.getToken();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(token);
-        headers.add("schoolId", SCHOOL_ID);
-
-        GraphQlRequest body = new GraphQlRequest(operationName, variables, query);
-        HttpEntity<GraphQlRequest> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<String> resp;
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String outcome = "success";
         try {
-            resp = restTemplate.postForEntity(GRAPHQL_URL, entity, String.class);
+            String token = tokenService.getToken();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(token);
+            headers.add("schoolId", SCHOOL_ID);
+
+            GraphQlRequest body = new GraphQlRequest(operationName, variables, query);
+            HttpEntity<GraphQlRequest> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<String> resp = executePost(entity);
+
+            String raw = resp.getBody();
+            if (raw == null || raw.isBlank()) {
+                throw new GraphQlRemoteException("Пустой ответ GraphQL");
+            }
+
+            return parseAndConvert(raw, dataClass);
+        } catch (RuntimeException e) {
+            outcome = "error";
+            throw e;
+        } finally {
+            meterRegistry.counter(
+                    GRAPHQL_REQUEST_COUNTER,
+                    TAG_DOMAIN, DOMAIN_PLATFORM,
+                    TAG_OPERATION, operationName,
+                    TAG_OUTCOME, outcome
+            ).increment();
+            sample.stop(Timer.builder(GRAPHQL_REQUEST_DURATION)
+                    .description("Duration of GraphQL requests")
+                    .tag(TAG_DOMAIN, DOMAIN_PLATFORM)
+                    .tag(TAG_OPERATION, operationName)
+                    .tag(TAG_OUTCOME, outcome)
+                    .register(meterRegistry));
+        }
+    }
+
+    private ResponseEntity<String> executePost(HttpEntity<GraphQlRequest> entity) {
+        try {
+            return restTemplate.postForEntity(GRAPHQL_URL, entity, String.class);
         } catch (HttpStatusCodeException e) {
             throw new GraphQlRemoteException("HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString(), e);
         }
+    }
 
-        String raw = resp.getBody();
-        if (raw == null || raw.isBlank()) {
-            throw new GraphQlRemoteException("Пустой ответ GraphQL");
-        }
-
+    private <T> T parseAndConvert(String raw, Class<T> dataClass) {
         try {
             JsonNode root = om.readTree(raw);
             if (root.has(ERRORS_FIELD) && root.get(ERRORS_FIELD).isArray() && !root.get(ERRORS_FIELD).isEmpty()) {
@@ -64,7 +99,6 @@ public class GraphQLApiClient {
                 throw new GraphQlRemoteException("В ответе нет поля '" + DATA_FIELD + "'");
             }
             return om.convertValue(data, dataClass);
-
         } catch (JsonProcessingException e) {
             throw new GraphQlRemoteException("Не удалось распарсить JSON GraphQL", e);
         }

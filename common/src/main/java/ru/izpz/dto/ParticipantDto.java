@@ -17,4 +17,5 @@ public class ParticipantDto {
     private int expToNextLevel;
     private ParticipantStatusEnum status;
     private ParticipantCampusDto campus;
+    private ParticipantCoalitionDto coalition;
 }

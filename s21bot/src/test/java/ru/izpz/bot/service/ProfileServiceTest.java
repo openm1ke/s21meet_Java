@@ -428,6 +428,7 @@ class ProfileServiceTest {
                 5,
                 50,
                 ParticipantStatusEnum.ACTIVE,
+                null,
                 null
         );
     }
