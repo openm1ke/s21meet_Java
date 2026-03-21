@@ -111,7 +111,7 @@
           "editorMode": "code",
           "expr": "sum(rate(edu_graphql_requests_total{job=\"s21edu\"}[5m])) by (operation, outcome)",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{operation}} | {{outcome}} | rps",
           "range": true,
           "refId": "A"
         },
@@ -121,28 +121,15 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rate(edu_graphql_request_duration_seconds_sum{job=\"s21edu\"}[5m]) / rate(edu_graphql_request_duration_seconds_count{job=\"s21edu\"}[5m])",
+          "expr": "sum by (operation, outcome) (rate(edu_graphql_request_duration_seconds_sum{job=\"s21edu\"}[5m])) / sum by (operation, outcome) (rate(edu_graphql_request_duration_seconds_count{job=\"s21edu\"}[5m]))",
           "hide": false,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{operation}} | {{outcome}} | avg_latency_s",
           "range": true,
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum(increase(edu_graphql_coalition_refresh_total{job=\"s21edu\"}[15m])) by (outcome)",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "C"
         }
       ],
-      "title": "Panel Title",
+      "title": "GraphQL client: success and latency",
       "type": "timeseries"
     },
     {

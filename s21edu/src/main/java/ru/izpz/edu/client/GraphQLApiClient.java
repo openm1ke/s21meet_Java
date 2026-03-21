@@ -29,10 +29,8 @@ public class GraphQLApiClient {
     private static final String DATA_FIELD = "data";
     private static final String GRAPHQL_REQUEST_COUNTER = "edu_graphql_requests_total";
     private static final String GRAPHQL_REQUEST_DURATION = "edu_graphql_request_duration_seconds";
-    private static final String TAG_DOMAIN = "domain";
     private static final String TAG_OPERATION = "operation";
     private static final String TAG_OUTCOME = "outcome";
-    private static final String DOMAIN_PLATFORM = "platform";
     private final RestTemplate restTemplate;
     private final TokenService tokenService;
     private final ObjectMapper om;
@@ -67,13 +65,11 @@ public class GraphQLApiClient {
         } finally {
             meterRegistry.counter(
                     GRAPHQL_REQUEST_COUNTER,
-                    TAG_DOMAIN, DOMAIN_PLATFORM,
                     TAG_OPERATION, operationName,
                     TAG_OUTCOME, outcome
             ).increment();
             sample.stop(Timer.builder(GRAPHQL_REQUEST_DURATION)
                     .description("Duration of GraphQL requests")
-                    .tag(TAG_DOMAIN, DOMAIN_PLATFORM)
                     .tag(TAG_OPERATION, operationName)
                     .tag(TAG_OUTCOME, outcome)
                     .register(meterRegistry));

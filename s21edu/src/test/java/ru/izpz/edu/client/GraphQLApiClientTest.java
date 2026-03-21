@@ -50,7 +50,6 @@ class GraphQLApiClientTest {
         assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
                 () -> client.execute("op", Map.of(), "query", String.class));
         assertEquals(1.0, meterRegistry.find("edu_graphql_requests_total")
-                .tag("domain", "platform")
                 .tag("operation", "op")
                 .tag("outcome", "error")
                 .counter()
@@ -168,13 +167,11 @@ class GraphQLApiClientTest {
 
         assertEquals("value", result);
         assertEquals(1.0, meterRegistry.find("edu_graphql_requests_total")
-                .tag("domain", "platform")
                 .tag("operation", "op")
                 .tag("outcome", "success")
                 .counter()
                 .count());
         assertNotNull(meterRegistry.find("edu_graphql_request_duration_seconds")
-                .tag("domain", "platform")
                 .tag("operation", "op")
                 .tag("outcome", "success")
                 .timer());
