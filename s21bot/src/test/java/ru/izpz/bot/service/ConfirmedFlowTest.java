@@ -184,16 +184,22 @@ class ConfirmedFlowTest {
         participant.setParallelName("AP4");
         participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
+        when(profileService.getProjects("abc")).thenReturn(List.of(
+                new ProjectsDto("g1", "Libft", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+                new ProjectsDto("g2", "minishell", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+        ));
 
         ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
         confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.PROFILE.getCommand());
 
         verify(profileService).showParticipant(chatId.toString(), "abc");
+        verify(profileService).getProjects("abc");
         verify(messageSender).sendMessage(eq(chatId), argThat(message ->
                 message.contains("✅ abc")
                         && message.contains("🌊22_10_MSK")
                         && message.contains("✨21617 XP (level 12)")
                         && message.contains("👨‍💻AP4")
+                        && message.contains("📁Libft, minishell")
         ), eq(null));
     }
 
@@ -303,7 +309,7 @@ class ConfirmedFlowTest {
         ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
         confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.PROJECTS.getCommand());
 
-        verify(messageSender).sendMessage(chatId, "У вас нет активных проектов", null);
+        verify(messageSender).sendMessage(chatId, "нет активных проектов", null);
     }
 
     @Test
@@ -313,15 +319,15 @@ class ConfirmedFlowTest {
 
         ProjectsDto p1 = new ProjectsDto(
                 "g1",
-                "Project1",
+                "AP4_Info21 v2.0 Web_Jv",
                 "Desc",
                 10,
                 null, // dateTime
                 null, // finalPercentage
                 null, // laboriousness
-                null, // executionType
-                null, // goalStatus
-                null, // courseType
+                "INDIVIDUAL", // executionType
+                "IN_PROGRESS", // goalStatus
+                "PROJECT", // courseType
                 "IN_PROGRESS", // displayedCourseStatus
                 null,
                 null,
@@ -334,15 +340,15 @@ class ConfirmedFlowTest {
         );
         ProjectsDto p2 = new ProjectsDto(
                 "g2",
-                "Project2",
+                "DevOps Exam",
                 "",
-                null,
+                200,
                 null, // dateTime
                 null, // finalPercentage
                 null, // laboriousness
-                null, // executionType
+                "EXAM_TEST", // executionType
                 null, // goalStatus
-                null, // courseType
+                "EXAM", // courseType
                 null, // displayedCourseStatus
                 null, // amountAnswers
                 null, // amountMembers
@@ -356,15 +362,15 @@ class ConfirmedFlowTest {
 
         ProjectsDto p3 = new ProjectsDto(
                 "g3",
-                "Project3",
+                "BE4_GRPCAuth",
+                null,
+                600,
                 null,
                 null,
                 null,
+                "GROUP",
                 null,
-                null,
-                null,
-                null,
-                null,
+                "PROJECT",
                 null,
                 null,
                 null,
@@ -381,13 +387,10 @@ class ConfirmedFlowTest {
         confirmedFlow.startConfirmed(chatId, profile, MenuCommandEnum.PROJECTS.getCommand());
 
         verify(messageSender).sendMessage(eq(chatId), argThat(t ->
-                t.contains("Ваши активные проекты")
-                        && t.contains("Project1")
-                        && t.contains("Desc")
-                        && t.contains("Опыт: 10")
-                        && t.contains("Статус: IN_PROGRESS")
-                        && t.contains("Project2")
-                        && t.contains("Project3")), eq(null));
+                t.contains("🖥️ Мои активные проекты 💼")
+                        && t.contains("1. 👨🏻‍💻 AP4_Info21 v2.0 Web_Jv (10xp)")
+                        && t.contains("2. ✍️ DevOps Exam (200xp)")
+                        && t.contains("3. 👥 BE4_GRPCAuth (600xp)")), eq(null));
     }
 
     @Test

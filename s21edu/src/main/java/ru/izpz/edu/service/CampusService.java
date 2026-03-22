@@ -3,6 +3,7 @@ package ru.izpz.edu.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.CampusDto;
@@ -34,6 +35,8 @@ public class CampusService {
     private final WorkplaceProvider workplaceProvider;
     private final SchedulerMetricsService schedulerMetricsService;
     private final WorkplaceRepository workplaceRepository;
+    @Nullable
+    private final GraphQLService graphQLService;
 
     public List<Clusters> getClusters(CampusDto campus) {
         return persistenceService.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
@@ -77,7 +80,9 @@ public class CampusService {
     }
 
     public List<ProjectsDto> getStudentProjectsByLogin(String login) {
-        var projects = campusClient.getStudentProjectsByLogin(login);
+        var projects = graphQLService == null
+                ? campusClient.getStudentProjectsByLogin(login)
+                : graphQLService.getCachedStudentProjectsByLogin(login);
         return projects.stream()
                 .map(projectsMapper::toDto)
                 .toList();

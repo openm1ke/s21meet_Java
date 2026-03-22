@@ -49,6 +49,8 @@ class CampusServiceTest {
     
     @Mock
     private WorkplaceRepository workplaceRepository;
+    @Mock
+    private GraphQLService graphQLService;
 
     private static final UUID CAMPUS_ID = UUID.fromString("6bfe3c56-0211-4fe1-9e59-51616caac4dd");
     private static final Long CLUSTER_ID = 123L;
@@ -156,7 +158,7 @@ class CampusServiceTest {
         // Arrange
         GraphQLStudentProject src = new GraphQLStudentProject("g", "n", "d", 1, "dt", 1, 1, "e", "gs", "ct", "ds", 1, 1, 1, 1, 1, 1, "grp", 1);
         ProjectsDto dto = new ProjectsDto("g","n","d",1,"dt",1,1,"e","gs","ct","ds",1,1,1,1,1,1,"grp",1);
-        when(campusClient.getStudentProjectsByLogin("login")).thenReturn(List.of(src));
+        when(graphQLService.getCachedStudentProjectsByLogin("login")).thenReturn(List.of(src));
         when(projectsMapper.toDto(src)).thenReturn(dto);
 
         // Act
@@ -165,6 +167,8 @@ class CampusServiceTest {
         // Assert
         assertEquals(1, result.size());
         org.junit.jupiter.api.Assertions.assertSame(dto, result.getFirst());
+        verify(graphQLService).getCachedStudentProjectsByLogin("login");
+        verify(campusClient, never()).getStudentProjectsByLogin(anyString());
     }
 
     @Test
