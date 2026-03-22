@@ -2,6 +2,8 @@ package ru.izpz.dto;
 
 import lombok.*;
 
+import java.time.OffsetDateTime;
+
 @Getter
 @Setter
 @ToString
@@ -18,4 +20,7 @@ public class ParticipantDto {
     private ParticipantStatusEnum status;
     private ParticipantCampusDto campus;
     private ParticipantCoalitionDto coalition;
+    private Boolean isOnline;
+    private ParticipantSeatDto seat;
+    private OffsetDateTime lastSeenAt;
 }

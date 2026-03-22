@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/changes/004-student-coalition.yaml
   - include:
       file: db/changelog/changes/005-student-project.yaml
+  - include:
+      file: db/changelog/changes/006-online-last-seen.yaml
