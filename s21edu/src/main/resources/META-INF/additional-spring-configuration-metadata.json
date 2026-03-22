@@ -76,6 +76,18 @@
       "description": "Description for notify.scheduler.enabled."
     },
     {
+      "name": "graphql.coalition.refresh-ttl",
+      "type": "java.time.Duration",
+      "defaultValue": "PT15M",
+      "description": "TTL for refreshing cached coalition data by login."
+    },
+    {
+      "name": "graphql.projects.refresh-ttl",
+      "type": "java.time.Duration",
+      "defaultValue": "PT15M",
+      "description": "TTL for refreshing cached student projects by login."
+    },
+    {
       "name": "notify.scheduler.enabled",
       "type": "java.lang.Boolean",
       "description": "Description for notify.scheduler.enabled."

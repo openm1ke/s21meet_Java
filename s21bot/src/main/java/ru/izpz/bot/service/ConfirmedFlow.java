@@ -23,6 +23,7 @@ import java.util.TreeMap;
 @Service
 @RequiredArgsConstructor
 public class ConfirmedFlow {
+    private static final String DEVELOPER_PROJECT_EMOJI = "\uD83D\uDC68\uD83C\uDFFB\u200D\uD83D\uDCBB";
 
     private final BotProperties botProperties;
     private final ProfileService profileService;
@@ -84,7 +85,8 @@ public class ConfirmedFlow {
             case FRIENDS -> callbackHandler.showFriends(chatId, 0, null);
             case PROFILE -> {
                 ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), profile.s21login());
-                messageSender.sendMessage(chatId, ParticipantMessageFormatter.format(showProfile), null);
+                List<ProjectsDto> projects = profileService.getProjects(profile.s21login());
+                messageSender.sendMessage(chatId, ParticipantMessageFormatter.format(showProfile, projects), null);
             }
             case EVENTS -> callbackHandler.showEvents(chatId, 0, null);
             case CAMPUS -> {
@@ -126,24 +128,20 @@ public class ConfirmedFlow {
     private String getProjectsByLogin(String login) {
         var projects = profileService.getProjects(login);
         if (projects.isEmpty()) {
-            return "У вас нет активных проектов";
+            return "нет активных проектов";
         }
 
-        StringBuilder result = new StringBuilder("Ваши активные проекты:%n%n");
-        for (ProjectsDto project : projects) {
-            result.append(String.format("\uD83D\uDCC1 %s%n", project.name()));
-            if (project.description() != null && !project.description().isEmpty()) {
-                result.append(String.format("\uD83D\uDCDD %s%n", project.description()));
-            }
-            if (project.experience() != null) {
-                result.append(String.format("⭐ Опыт: %d%n", project.experience()));
-            }
-            if (project.displayedCourseStatus() != null) {
-                result.append(String.format("\uD83D\uDCCA Статус: %s%n", project.displayedCourseStatus()));
-            }
-            result.append("\n");
+        StringBuilder result = new StringBuilder("🖥️ Мои активные проекты 💼\n\n");
+        for (int i = 0; i < projects.size(); i++) {
+            ProjectsDto project = projects.get(i);
+            String xp = project.experience() == null ? "-" : project.experience().toString();
+            result.append(String.format("%d. %s %s (%sxp)%n",
+                    i + 1,
+                    projectEmoji(project),
+                    safeString(project.name(), "-"),
+                    xp));
         }
-        return result.toString();
+        return result.toString().trim();
     }
 
     private CampusResponse showCampusMap(Long chatId) {
@@ -256,6 +254,27 @@ public class ConfirmedFlow {
             return "";
         }
         return value;
+    }
+
+    private String safeString(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        return value;
+    }
+
+    private String projectEmoji(ProjectsDto project) {
+        String executionType = project.executionType();
+        if (executionType == null || executionType.isBlank()) {
+            return DEVELOPER_PROJECT_EMOJI;
+        }
+        return switch (executionType.trim().toUpperCase()) {
+            case "EXAM", "EXAM_TEST" -> "✍️";
+            case "GROUP", "TEAM", "TEAMWORK", "PAIR" -> "👥";
+            case "INTERNSHIP" -> "💼";
+            case "INDIVIDUAL" -> DEVELOPER_PROJECT_EMOJI;
+            default -> DEVELOPER_PROJECT_EMOJI;
+        };
     }
 
     private String getFloorEmoji(int floorNumber) {

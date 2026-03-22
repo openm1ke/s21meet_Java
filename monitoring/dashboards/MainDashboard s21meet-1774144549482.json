@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -65,7 +65,7 @@
               "mode": "off"
             }
           },
-          "displayName": "${__field.labels.domain} | ${__field.labels.operation} ${__field.labels.outcome}",
+          "displayName": "${__field.labels.operation} | ${__field.labels.outcome}",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -114,19 +114,6 @@
           "legendFormat": "{{operation}} | {{outcome}} | rps",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum by (operation, outcome) (rate(edu_graphql_request_duration_seconds_sum{job=\"s21edu\"}[5m])) / sum by (operation, outcome) (rate(edu_graphql_request_duration_seconds_count{job=\"s21edu\"}[5m]))",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "{{operation}} | {{outcome}} | avg_latency_s",
-          "range": true,
-          "refId": "B"
         }
       ],
       "title": "GraphQL client: success and latency",
@@ -2348,6 +2335,6 @@
   "timezone": "browser",
   "title": "MainDashboard s21meet",
   "uid": "bfe1j8anhfn5sd",
-  "version": 8,
+  "version": 2,
   "weekStart": ""
 }

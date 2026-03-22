@@ -1,0 +1,121 @@
+databaseChangeLog:
+  - changeSet:
+      id: 022-create-student-project
+      author: openmike
+      changes:
+        - createTable:
+            tableName: student_project
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: login
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: VARCHAR(255)
+              - column:
+                  name: goal_id
+                  type: VARCHAR(255)
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+              - column:
+                  name: description
+                  type: TEXT
+              - column:
+                  name: experience
+                  type: INTEGER
+              - column:
+                  name: date_time
+                  type: VARCHAR(255)
+              - column:
+                  name: final_percentage
+                  type: INTEGER
+              - column:
+                  name: laboriousness
+                  type: INTEGER
+              - column:
+                  name: execution_type
+                  type: VARCHAR(255)
+              - column:
+                  name: goal_status
+                  type: VARCHAR(255)
+              - column:
+                  name: course_type
+                  type: VARCHAR(255)
+              - column:
+                  name: displayed_course_status
+                  type: VARCHAR(255)
+              - column:
+                  name: amount_answers
+                  type: INTEGER
+              - column:
+                  name: amount_members
+                  type: INTEGER
+              - column:
+                  name: amount_joined_members
+                  type: INTEGER
+              - column:
+                  name: amount_reviewed_answers
+                  type: INTEGER
+              - column:
+                  name: amount_code_review_members
+                  type: INTEGER
+              - column:
+                  name: amount_current_code_review_members
+                  type: INTEGER
+              - column:
+                  name: group_name
+                  type: VARCHAR(255)
+              - column:
+                  name: local_course_id
+                  type: INTEGER
+              - column:
+                  name: sort_order
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: snapshot
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 023-index-student-project-login-sort-order
+      author: openmike
+      changes:
+        - createIndex:
+            tableName: student_project
+            indexName: idx_student_project_login_sort_order
+            columns:
+              - column:
+                  name: login
+              - column:
+                  name: sort_order
+
+  - changeSet:
+      id: 024-index-student-project-login-updated-at
+      author: openmike
+      changes:
+        - createIndex:
+            tableName: student_project
+            indexName: idx_student_project_login_updated_at
+            columns:
+              - column:
+                  name: login
+              - column:
+                  name: updated_at

@@ -2,6 +2,7 @@ package ru.izpz.edu.service;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -9,8 +10,10 @@ import ru.izpz.edu.client.GraphQLApiClient;
 import ru.izpz.edu.dto.*;
 import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.model.StudentCredentials;
+import ru.izpz.edu.model.StudentProject;
 import ru.izpz.edu.repository.StudentCoalitionRepository;
 import ru.izpz.edu.repository.StudentCredentialsRepository;
+import ru.izpz.edu.repository.StudentProjectRepository;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -19,17 +22,24 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
+@Slf4j
 @ConditionalOnProperty(name = "graphql.api.enabled", havingValue = "true")
 public class GraphQLService {
 
     private static final String COALITION_REFRESH_COUNTER = "edu_graphql_coalition_refresh_total";
     private static final String COALITION_REFRESH_DURATION = "edu_graphql_coalition_refresh_duration_seconds";
+    private static final String PROJECTS_REFRESH_COUNTER = "edu_graphql_projects_refresh_total";
+    private static final String PROJECTS_REFRESH_DURATION = "edu_graphql_projects_refresh_duration_seconds";
     private static final String TAG_OUTCOME = "outcome";
+    private static final String USER_ID_PARAM = "userId";
     private final GraphQLApiClient client;
     private final StudentCredentialsRepository studentCredentialsRepository;
     private final StudentCoalitionRepository studentCoalitionRepository;
+    private final StudentProjectRepository studentProjectRepository;
+    private final StudentProjectRefreshService studentProjectRefreshService;
     private final MeterRegistry meterRegistry;
     private Duration coalitionRefreshTtl = Duration.ofMinutes(15);
+    private Duration projectsRefreshTtl = Duration.ofMinutes(15);
 
     private static final String QUERY = """
         query getCampusPlanOccupied($clusterId: ID!) {
@@ -141,16 +151,25 @@ public class GraphQLService {
     public GraphQLService(GraphQLApiClient client,
                           StudentCredentialsRepository studentCredentialsRepository,
                           StudentCoalitionRepository studentCoalitionRepository,
+                          StudentProjectRepository studentProjectRepository,
+                          StudentProjectRefreshService studentProjectRefreshService,
                           MeterRegistry meterRegistry) {
         this.client = client;
         this.studentCredentialsRepository = studentCredentialsRepository;
         this.studentCoalitionRepository = studentCoalitionRepository;
+        this.studentProjectRepository = studentProjectRepository;
+        this.studentProjectRefreshService = studentProjectRefreshService;
         this.meterRegistry = meterRegistry;
     }
 
     @Value("${graphql.coalition.refresh-ttl:PT15M}")
     void setCoalitionRefreshTtl(Duration coalitionRefreshTtl) {
         this.coalitionRefreshTtl = coalitionRefreshTtl;
+    }
+
+    @Value("${graphql.projects.refresh-ttl:PT15M}")
+    void setProjectsRefreshTtl(Duration projectsRefreshTtl) {
+        this.projectsRefreshTtl = projectsRefreshTtl;
     }
 
     public record ClusterSeat(
@@ -209,7 +228,7 @@ public class GraphQLService {
 
         GraphQLStudentProjectsDataDto data = client.execute(
                 "getStudentCurrentProjects",
-                Map.of("userId", userId),
+                Map.of(USER_ID_PARAM, userId),
                 GET_STUDENT_PROJECTS_QUERY,
                 GraphQLStudentProjectsDataDto.class
         );
@@ -244,6 +263,58 @@ public class GraphQLService {
                 .toList();
     }
 
+    public List<GraphQLStudentProject> getCachedStudentProjectsByLogin(String login) {
+        try {
+            refreshStudentProjectsByLogin(login);
+        } catch (RuntimeException e) {
+            log.warn("Не удалось обновить данные проектов для {}: {}", login, e.getMessage());
+        }
+
+        return studentProjectRepository.findAllByLoginAndSnapshotFalseOrderBySortOrderAsc(login).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    public void refreshStudentProjectsByLogin(String login) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String outcome = "success";
+        try {
+            if (!isProjectsRefreshRequired(login)) {
+                outcome = "skipped_ttl";
+                return;
+            }
+
+            String userId = getUserIdByLogin(login);
+            if (userId == null) {
+                outcome = "skipped_no_user_id";
+                return;
+            }
+
+            GraphQLStudentProjectsDataDto data = client.execute(
+                    "getStudentCurrentProjects",
+                    Map.of(USER_ID_PARAM, userId),
+                    GET_STUDENT_PROJECTS_QUERY,
+                    GraphQLStudentProjectsDataDto.class
+            );
+
+            var projects = Optional.ofNullable(data)
+                    .map(GraphQLStudentProjectsDataDto::student)
+                    .map(GraphQLStudentQueriesDto::getStudentCurrentProjects)
+                    .orElse(List.of());
+
+            studentProjectRefreshService.replaceProjects(login, userId, projects);
+        } catch (RuntimeException e) {
+            outcome = "error";
+            throw e;
+        } finally {
+            meterRegistry.counter(PROJECTS_REFRESH_COUNTER, TAG_OUTCOME, outcome).increment();
+            sample.stop(Timer.builder(PROJECTS_REFRESH_DURATION)
+                    .description("Duration of GraphQL student projects refresh requests")
+                    .tag(TAG_OUTCOME, outcome)
+                    .register(meterRegistry));
+        }
+    }
+
     public void refreshStudentCoalitionByLogin(String login) {
         Timer.Sample sample = Timer.start(meterRegistry);
         String outcome = "success";
@@ -261,7 +332,7 @@ public class GraphQLService {
 
             GraphQLStudentCoalitionDataDto data = client.execute(
                     "publicProfileGetCoalition",
-                    Map.of("userId", userId),
+                    Map.of(USER_ID_PARAM, userId),
                     GET_STUDENT_COALITION_QUERY,
                     GraphQLStudentCoalitionDataDto.class
             );
@@ -318,6 +389,12 @@ public class GraphQLService {
                 .orElse(true);
     }
 
+    private boolean isProjectsRefreshRequired(String login) {
+        return Optional.ofNullable(studentProjectRepository.findMaxUpdatedAtByLogin(login))
+                .map(updatedAt -> updatedAt.isBefore(OffsetDateTime.now().minus(projectsRefreshTtl)))
+                .orElse(true);
+    }
+
     private GraphQLStudentCredentialsDto fetchAndStoreCredentials(String login) {
         GraphQLStudentCredentialsDataDto data = client.execute(
                 "getCredentialsByLogin",
@@ -352,4 +429,29 @@ public class GraphQLService {
                 credentials.getIsGraduate()
         );
     }
+
+    private GraphQLStudentProject toDto(StudentProject project) {
+        return new GraphQLStudentProject(
+                project.getGoalId(),
+                project.getName(),
+                project.getDescription(),
+                project.getExperience(),
+                project.getDateTime(),
+                project.getFinalPercentage(),
+                project.getLaboriousness(),
+                project.getExecutionType(),
+                project.getGoalStatus(),
+                project.getCourseType(),
+                project.getDisplayedCourseStatus(),
+                project.getAmountAnswers(),
+                project.getAmountMembers(),
+                project.getAmountJoinedMembers(),
+                project.getAmountReviewedAnswers(),
+                project.getAmountCodeReviewMembers(),
+                project.getAmountCurrentCodeReviewMembers(),
+                project.getGroupName(),
+                project.getLocalCourseId()
+        );
+    }
+
 }
