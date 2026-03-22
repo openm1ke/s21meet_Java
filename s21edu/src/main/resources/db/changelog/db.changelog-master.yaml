@@ -7,3 +7,5 @@ databaseChangeLog:
       file: db/changelog/changes/003-student-credentials.yaml
   - include:
       file: db/changelog/changes/004-student-coalition.yaml
+  - include:
+      file: db/changelog/changes/005-student-project.yaml

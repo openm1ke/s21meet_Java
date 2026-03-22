@@ -1,9 +1,13 @@
 package ru.izpz.bot.service;
 
+import ru.izpz.dto.ProjectsDto;
 import ru.izpz.dto.ParticipantCampusDto;
 import ru.izpz.dto.ParticipantCoalitionDto;
 import ru.izpz.dto.ParticipantDto;
 import ru.izpz.dto.ParticipantStatusEnum;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 public final class ParticipantMessageFormatter {
 
@@ -11,12 +15,17 @@ public final class ParticipantMessageFormatter {
     }
 
     public static String format(ParticipantDto participant) {
+        return format(participant, List.of());
+    }
+
+    public static String format(ParticipantDto participant, List<ProjectsDto> projects) {
         StringBuilder message = new StringBuilder();
         message.append(statusEmoji(participant.getStatus())).append(" ").append(safe(participant.getLogin())).append("\n\n");
         message.append("🌊").append(safeOrDash(participant.getClassName())).append("\n");
         message.append("✨").append(participant.getExpValue()).append(" XP (level ").append(participant.getLevel()).append(")\n");
         message.append("\uD83D\uDC68\u200D\uD83D\uDCBB").append(safeOrDash(participant.getParallelName())).append("\n\n");
         appendCoalition(message, participant);
+        appendProjects(message, projects);
         message.append("📍").append(formatCampus(participant.getCampus()));
         return message.toString();
     }
@@ -29,6 +38,20 @@ public final class ParticipantMessageFormatter {
         String rank = coalition.getRank() == null ? "-" : String.valueOf(coalition.getRank());
         String memberCount = coalition.getMemberCount() == null ? "-" : String.valueOf(coalition.getMemberCount());
         message.append("🦙").append(coalition.getName()).append(" ").append(rank).append(" / ").append(memberCount).append("\n\n");
+    }
+
+    private static void appendProjects(StringBuilder message, List<ProjectsDto> projects) {
+        if (projects == null || projects.isEmpty()) {
+            return;
+        }
+        String names = projects.stream()
+                .map(ProjectsDto::name)
+                .filter(name -> name != null && !name.isBlank())
+                .collect(Collectors.joining(", "));
+        if (names.isBlank()) {
+            return;
+        }
+        message.append("📁").append(names).append("\n\n");
     }
 
     private static String formatCampus(ParticipantCampusDto campus) {

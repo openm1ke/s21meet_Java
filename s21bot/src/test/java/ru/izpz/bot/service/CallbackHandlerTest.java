@@ -24,6 +24,7 @@ import ru.izpz.dto.*;
 import ru.izpz.dto.model.ErrorResponseDTO;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Mockito.*;
@@ -127,10 +128,16 @@ class CallbackHandlerTest {
         participant.setParallelName("AP4");
         participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
+        when(profileService.getProjects("abc")).thenReturn(List.of(
+                new ProjectsDto("g1", "Libft", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+                new ProjectsDto("g2", "C Piscine", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+        ));
 
         callbackHandler.handleCallbackMessage(chatId, "data", 5, "cb");
 
-        verify(messageSender).sendMessage(eq(chatId), startsWith("✅ abc"), eq(kb));
+        verify(messageSender).sendMessage(eq(chatId), argThat(text ->
+                text.startsWith("✅ abc") && text.contains("📁Libft, C Piscine")
+        ), eq(kb));
     }
 
     @Test
@@ -270,10 +277,15 @@ class CallbackHandlerTest {
         participant.setParallelName("AP4");
         participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
+        when(profileService.getProjects("abc")).thenReturn(List.of(
+                new ProjectsDto("g1", "Exam_Rank_02", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+        ));
 
         callbackHandler.showProfile(chatId, "abc");
 
-        verify(messageSender).sendMessage(eq(chatId), startsWith("✅ abc"), eq(kb));
+        verify(messageSender).sendMessage(eq(chatId), argThat(text ->
+                text.startsWith("✅ abc") && text.contains("📁Exam_Rank_02")
+        ), eq(kb));
     }
 
     @Test

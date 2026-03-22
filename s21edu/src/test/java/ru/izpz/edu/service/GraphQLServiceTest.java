@@ -10,8 +10,10 @@ import ru.izpz.edu.client.GraphQLApiClient;
 import ru.izpz.edu.dto.*;
 import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.model.StudentCredentials;
+import ru.izpz.edu.model.StudentProject;
 import ru.izpz.edu.repository.StudentCoalitionRepository;
 import ru.izpz.edu.repository.StudentCredentialsRepository;
+import ru.izpz.edu.repository.StudentProjectRepository;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,10 @@ class GraphQLServiceTest {
     private StudentCredentialsRepository studentCredentialsRepository;
     @Mock
     private StudentCoalitionRepository studentCoalitionRepository;
+    @Mock
+    private StudentProjectRepository studentProjectRepository;
+    @Mock
+    private StudentProjectRefreshService studentProjectRefreshService;
 
     private GraphQLService graphQLService;
 
@@ -41,7 +47,14 @@ class GraphQLServiceTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        graphQLService = new GraphQLService(client, studentCredentialsRepository, studentCoalitionRepository, meterRegistry);
+        graphQLService = new GraphQLService(
+                client,
+                studentCredentialsRepository,
+                studentCoalitionRepository,
+                studentProjectRepository,
+                studentProjectRefreshService,
+                meterRegistry
+        );
 
         // Setup test data for cluster
         GraphQLPlaceDto testPlace = new GraphQLPlaceDto(
@@ -377,5 +390,148 @@ class GraphQLServiceTest {
         assertNotNull(meterRegistry.find("edu_graphql_coalition_refresh_duration_seconds")
                 .tag("outcome", "error")
                 .timer());
+    }
+
+    @Test
+    void refreshStudentProjectsByLogin_shouldFetchAndStoreFreshProjects() {
+        String login = "quarkron";
+        String userId = "u-42";
+        when(studentProjectRepository.findMaxUpdatedAtByLogin(login)).thenReturn(null);
+
+        StudentCredentials cached = new StudentCredentials();
+        cached.setLogin(login);
+        cached.setUserId(userId);
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(cached));
+
+        GraphQLStudentProject p1 = new GraphQLStudentProject(
+                "g1", "Project1", "d1", 100, "2026-01-01", 10, 1,
+                "INDIVIDUAL", "IN_PROGRESS", "CORE", "IN_PROGRESS",
+                1, 2, 3, 4, 5, 6, "grp1", 7
+        );
+        GraphQLStudentProject p2 = new GraphQLStudentProject(
+                "g2", "Project2", "d2", 200, "2026-01-02", 20, 2,
+                "GROUP", "WAITING_FOR_START", "CORE", "WAITING_FOR_START",
+                2, 3, 4, 5, 6, 7, "grp2", 8
+        );
+        GraphQLStudentProjectsDataDto projectsData =
+                new GraphQLStudentProjectsDataDto(new GraphQLStudentQueriesDto(List.of(p1, p2)));
+        when(client.execute(eq("getStudentCurrentProjects"), eq(Map.of("userId", userId)), anyString(), eq(GraphQLStudentProjectsDataDto.class)))
+                .thenReturn(projectsData);
+
+        graphQLService.refreshStudentProjectsByLogin(login);
+
+        verify(studentProjectRefreshService).replaceProjects(eq(login), eq(userId), argThat(list ->
+                list.size() == 2
+                        && "g1".equals(list.getFirst().goalId())
+                        && "g2".equals(list.get(1).goalId())
+        ));
+        assertEquals(1.0, meterRegistry.find("edu_graphql_projects_refresh_total")
+                .tag("outcome", "success")
+                .counter()
+                .count());
+    }
+
+    @Test
+    void refreshStudentProjectsByLogin_shouldSaveSnapshot_whenProjectsAreEmpty() {
+        String login = "no-projects";
+        String userId = "u-empty";
+        when(studentProjectRepository.findMaxUpdatedAtByLogin(login)).thenReturn(null);
+
+        StudentCredentials cached = new StudentCredentials();
+        cached.setLogin(login);
+        cached.setUserId(userId);
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(cached));
+        when(client.execute(eq("getStudentCurrentProjects"), eq(Map.of("userId", userId)), anyString(), eq(GraphQLStudentProjectsDataDto.class)))
+                .thenReturn(new GraphQLStudentProjectsDataDto(new GraphQLStudentQueriesDto(List.of())));
+
+        graphQLService.refreshStudentProjectsByLogin(login);
+
+        verify(studentProjectRefreshService).replaceProjects(eq(login), eq(userId), argThat(List::isEmpty));
+    }
+
+    @Test
+    void refreshStudentProjectsByLogin_shouldSkip_whenFreshDataExists() {
+        String login = "fresh-projects";
+        when(studentProjectRepository.findMaxUpdatedAtByLogin(login)).thenReturn(OffsetDateTime.now());
+
+        graphQLService.refreshStudentProjectsByLogin(login);
+
+        verifyNoInteractions(client);
+        verifyNoInteractions(studentProjectRefreshService);
+        assertEquals(1.0, meterRegistry.find("edu_graphql_projects_refresh_total")
+                .tag("outcome", "skipped_ttl")
+                .counter()
+                .count());
+    }
+
+    @Test
+    void refreshStudentProjectsByLogin_shouldSkip_whenUserIdMissing() {
+        String login = "unknown-projects";
+        when(studentProjectRepository.findMaxUpdatedAtByLogin(login)).thenReturn(null);
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
+        when(client.execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)), anyString(), eq(GraphQLStudentCredentialsDataDto.class)))
+                .thenReturn(new GraphQLStudentCredentialsDataDto(null));
+
+        graphQLService.refreshStudentProjectsByLogin(login);
+
+        verify(client, never()).execute(eq("getStudentCurrentProjects"), anyMap(), anyString(), eq(GraphQLStudentProjectsDataDto.class));
+        verifyNoInteractions(studentProjectRefreshService);
+        assertEquals(1.0, meterRegistry.find("edu_graphql_projects_refresh_total")
+                .tag("outcome", "skipped_no_user_id")
+                .counter()
+                .count());
+    }
+
+    @Test
+    void refreshStudentProjectsByLogin_shouldRecordErrorMetrics_whenGraphQlFails() {
+        String login = "broken-projects";
+        String userId = "u-broken";
+        when(studentProjectRepository.findMaxUpdatedAtByLogin(login)).thenReturn(null);
+        StudentCredentials cached = new StudentCredentials();
+        cached.setLogin(login);
+        cached.setUserId(userId);
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(cached));
+        when(client.execute(eq("getStudentCurrentProjects"), eq(Map.of("userId", userId)), anyString(), eq(GraphQLStudentProjectsDataDto.class)))
+                .thenThrow(new RuntimeException("projects-boom"));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> graphQLService.refreshStudentProjectsByLogin(login));
+
+        assertEquals("projects-boom", ex.getMessage());
+        verifyNoInteractions(studentProjectRefreshService);
+        assertEquals(1.0, meterRegistry.find("edu_graphql_projects_refresh_total")
+                .tag("outcome", "error")
+                .counter()
+                .count());
+    }
+
+    @Test
+    void getCachedStudentProjectsByLogin_shouldReturnStoredProjects_whenRefreshFails() {
+        String login = "fallback";
+        String userId = "u-fallback";
+        when(studentProjectRepository.findMaxUpdatedAtByLogin(login)).thenReturn(null);
+        StudentCredentials cached = new StudentCredentials();
+        cached.setLogin(login);
+        cached.setUserId(userId);
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(cached));
+        when(client.execute(eq("getStudentCurrentProjects"), eq(Map.of("userId", userId)), anyString(), eq(GraphQLStudentProjectsDataDto.class)))
+                .thenThrow(new RuntimeException("boom"));
+
+        StudentProject stored = new StudentProject();
+        stored.setLogin(login);
+        stored.setGoalId("g-stored");
+        stored.setName("Stored Project");
+        stored.setExperience(321);
+        stored.setExecutionType("INDIVIDUAL");
+        stored.setGoalStatus("IN_PROGRESS");
+        stored.setSortOrder(0);
+        stored.setSnapshot(false);
+        when(studentProjectRepository.findAllByLoginAndSnapshotFalseOrderBySortOrderAsc(login)).thenReturn(List.of(stored));
+
+        List<GraphQLStudentProject> result = graphQLService.getCachedStudentProjectsByLogin(login);
+
+        assertEquals(1, result.size());
+        assertEquals("g-stored", result.getFirst().goalId());
+        assertEquals("Stored Project", result.getFirst().name());
+        assertEquals(Integer.valueOf(321), result.getFirst().experience());
     }
 }

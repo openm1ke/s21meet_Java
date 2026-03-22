@@ -15,6 +15,7 @@ import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
 import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.*;
 
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -145,7 +146,8 @@ public class CallbackHandler {
             FriendDto friend = profileService.applyFriend(chatId, login, FriendRequest.Action.NONE, null);
             InlineKeyboardMarkup keyboard = telegramKeyboardFactory.getFriendInlineKeyboard(login, friend);
             ParticipantDto showProfile = profileService.showParticipant(chatId.toString(), login);
-            messageSender.sendMessage(chatId, ParticipantMessageFormatter.format(showProfile), keyboard);
+            List<ProjectsDto> projects = loadProjects(login);
+            messageSender.sendMessage(chatId, ParticipantMessageFormatter.format(showProfile, projects), keyboard);
         } catch (FeignException e) {
             metricsService.recordProcessingError(STAGE_SHOW_PROFILE, REASON_FEIGN_EXCEPTION);
             messageSender.sendMessage(chatId, "Ошибка поиска профиля, попробуйте позже", null);
@@ -180,5 +182,14 @@ public class CallbackHandler {
 
     private boolean isValidLogin(String login) {
         return login != null && login.matches("^[a-zA-Z]{3,30}$");
+    }
+
+    private List<ProjectsDto> loadProjects(String login) {
+        try {
+            return profileService.getProjects(login);
+        } catch (FeignException e) {
+            log.warn("Не удалось получить проекты для {}: {}", login, e.getMessage());
+            return List.of();
+        }
     }
 }
