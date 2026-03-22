@@ -4,12 +4,17 @@ import ru.izpz.dto.ProjectsDto;
 import ru.izpz.dto.ParticipantCampusDto;
 import ru.izpz.dto.ParticipantCoalitionDto;
 import ru.izpz.dto.ParticipantDto;
+import ru.izpz.dto.ParticipantSeatDto;
 import ru.izpz.dto.ParticipantStatusEnum;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public final class ParticipantMessageFormatter {
+
+    private static final DateTimeFormatter LAST_SEEN_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     private ParticipantMessageFormatter() {
     }
@@ -26,6 +31,7 @@ public final class ParticipantMessageFormatter {
         message.append("\uD83D\uDC68\u200D\uD83D\uDCBB").append(safeOrDash(participant.getParallelName())).append("\n\n");
         appendCoalition(message, participant);
         appendProjects(message, projects);
+        appendPresence(message, participant);
         message.append("📍").append(formatCampus(participant.getCampus()));
         return message.toString();
     }
@@ -59,6 +65,34 @@ public final class ParticipantMessageFormatter {
             return "Out of campus";
         }
         return campus.getCampusName();
+    }
+
+    private static void appendPresence(StringBuilder message, ParticipantDto participant) {
+        if (Boolean.TRUE.equals(participant.getIsOnline())) {
+            String seat = formatSeat(participant);
+            message.append("🪑").append(seat).append("\n");
+            return;
+        }
+        message.append("🕒").append("Last online: ").append(formatLastSeen(participant.getLastSeenAt())).append("\n");
+    }
+
+    private static String formatSeat(ParticipantDto participant) {
+        ParticipantSeatDto seat = participant.getSeat();
+        if (seat == null) {
+            return "- / - / --";
+        }
+        String cluster = safeOrDash(seat.getClusterName());
+        String stage = safeOrDash(seat.getStageName());
+        String row = safeOrDash(seat.getRow());
+        String number = seat.getNumber() == null ? "-" : String.valueOf(seat.getNumber());
+        return cluster + " / " + stage + " / " + row + "-" + number;
+    }
+
+    private static String formatLastSeen(OffsetDateTime lastSeenAt) {
+        if (lastSeenAt == null) {
+            return "-";
+        }
+        return LAST_SEEN_FORMAT.format(lastSeenAt);
     }
 
     private static String safeOrDash(String value) {

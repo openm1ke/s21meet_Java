@@ -19,11 +19,18 @@ import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.model.Profile;
 import ru.izpz.edu.model.ProfileValidation;
 import ru.izpz.edu.model.StudentCoalition;
+import ru.izpz.edu.model.Workplace;
+import ru.izpz.edu.model.WorkplaceId;
+import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.model.Online;
+import ru.izpz.edu.repository.ClusterRepository;
+import ru.izpz.edu.repository.OnlineRepository;
 import ru.izpz.edu.repository.ParticipantCampusRepository;
 import ru.izpz.edu.repository.ParticipantRepository;
 import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
 import ru.izpz.edu.repository.StudentCoalitionRepository;
+import ru.izpz.edu.repository.WorkplaceRepository;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -62,6 +69,12 @@ class ProfileServiceTest {
     @Mock
     private StudentCoalitionRepository studentCoalitionRepository;
     @Mock
+    private WorkplaceRepository workplaceRepository;
+    @Mock
+    private OnlineRepository onlineRepository;
+    @Mock
+    private ClusterRepository clusterRepository;
+    @Mock
     private GraphQLService graphQLService;
 
     @InjectMocks
@@ -96,6 +109,8 @@ class ProfileServiceTest {
         lenient().when(campusCatalog.campusName("6bfe3c56-0211-4fe1-9e59-51616caac4dd")).thenReturn("MSK");
         lenient().when(campusCatalog.campusName("7c293c9c-f28c-4b10-be29-560e4b000a34")).thenReturn("KZN");
         lenient().when(participantRepository.findByLogin(anyString())).thenReturn(Optional.empty());
+        lenient().when(workplaceRepository.findByLogin(anyString())).thenReturn(Optional.empty());
+        lenient().when(onlineRepository.findByLogin(anyString())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -644,6 +659,7 @@ class ProfileServiceTest {
 
         assertNotNull(result);
         assertEquals("testuser", result.getLogin());
+        assertEquals(Boolean.FALSE, result.getIsOnline());
         verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
         verify(participantCampusRepository).save(campusEntity);
         verify(participantRepository).save(participantEntity);
@@ -679,6 +695,74 @@ class ProfileServiceTest {
         assertEquals("Capybaras", result.getCoalition().getName());
         assertEquals(Integer.valueOf(1085), result.getCoalition().getMemberCount());
         assertEquals(Integer.valueOf(271), result.getCoalition().getRank());
+    }
+
+    @Test
+    void getParticipant_shouldIncludeSeatData_whenOnlineInCampus() throws ApiException {
+        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
+        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
+        ParticipantCampus campusEntity = new ParticipantCampus();
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+        ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
+        Workplace workplace = new Workplace();
+        workplace.setId(new WorkplaceId(42L, "A", 7));
+        workplace.setStageGroupName("Core");
+        workplace.setStageName("C3");
+        Cluster cluster = new Cluster();
+        cluster.setClusterId(42L);
+        cluster.setName("Main Cluster");
+
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
+        when(participantDto.getCampus()).thenReturn(campusDto);
+        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
+        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
+        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.empty());
+        when(workplaceRepository.findByLogin("testuser")).thenReturn(Optional.of(workplace));
+        when(clusterRepository.findById(42L)).thenReturn(Optional.of(cluster));
+
+        ParticipantDto result = profileService.getParticipant("testuser");
+
+        assertNotNull(result);
+        assertEquals(Boolean.TRUE, result.getIsOnline());
+        assertNotNull(result.getSeat());
+        assertEquals("Main Cluster", result.getSeat().getClusterName());
+        assertEquals("A", result.getSeat().getRow());
+        assertEquals(Integer.valueOf(7), result.getSeat().getNumber());
+        assertEquals("Core", result.getSeat().getStageGroupName());
+        assertEquals("C3", result.getSeat().getStageName());
+        assertNull(result.getLastSeenAt());
+    }
+
+    @Test
+    void getParticipant_shouldIncludeLastSeen_whenOffline() throws ApiException {
+        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
+        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
+        ParticipantCampus campusEntity = new ParticipantCampus();
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+        ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
+        Online online = new Online();
+        online.setLogin("testuser");
+        online.setIsOnline(false);
+        OffsetDateTime seenAt = OffsetDateTime.now().minusMinutes(3);
+        online.setLastSeenAt(seenAt);
+
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
+        when(participantDto.getCampus()).thenReturn(campusDto);
+        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
+        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
+        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.empty());
+        when(workplaceRepository.findByLogin("testuser")).thenReturn(Optional.empty());
+        when(onlineRepository.findByLogin("testuser")).thenReturn(Optional.of(online));
+
+        ParticipantDto result = profileService.getParticipant("testuser");
+
+        assertNotNull(result);
+        assertEquals(Boolean.FALSE, result.getIsOnline());
+        assertEquals(seenAt, result.getLastSeenAt());
     }
 
     @Test

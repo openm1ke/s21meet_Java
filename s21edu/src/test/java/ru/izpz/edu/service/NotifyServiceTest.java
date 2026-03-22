@@ -66,6 +66,7 @@ class NotifyServiceTest extends BaseTestH2 {
 
         Online after = onlineRepository.findByLogin("lucankri").orElseThrow();
         assertTrue(after.getIsOnline(), "Статус lucankri должен стать TRUE");
+        assertNull(after.getLastSeenAt(), "Для ONLINE-перехода lastSeenAt не должен выставляться");
     }
 
     @Test
@@ -123,5 +124,6 @@ class NotifyServiceTest extends BaseTestH2 {
 
         Online after = onlineRepository.findByLogin("elevante").orElseThrow();
         assertFalse(after.getIsOnline(), "Статус elevante должен стать FALSE");
+        assertNotNull(after.getLastSeenAt(), "Для OFFLINE-перехода должен выставляться lastSeenAt");
     }
 }

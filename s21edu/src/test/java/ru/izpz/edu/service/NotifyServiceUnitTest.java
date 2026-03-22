@@ -85,4 +85,28 @@ class NotifyServiceUnitTest {
         assertTrue(result.isEmpty());
         verify(onlineRepository, never()).save(any(Online.class));
     }
+
+    @Test
+    void computeAndPersistChanges_setsLastSeenAt_whenTransitionToOffline() {
+        FriendsRepository friendsRepository = mock(FriendsRepository.class);
+        WorkplaceRepository workplaceRepository = mock(WorkplaceRepository.class);
+        OnlineRepository onlineRepository = mock(OnlineRepository.class);
+        NotifyService service = new NotifyService(friendsRepository, workplaceRepository, onlineRepository);
+
+        Online existing = new Online();
+        existing.setLogin("carol");
+        existing.setIsOnline(true);
+
+        when(friendsRepository.findDistinctLogins()).thenReturn(List.of("carol"));
+        when(workplaceRepository.existsByLogin("carol")).thenReturn(false);
+        when(onlineRepository.findByLogin("carol")).thenReturn(Optional.of(existing));
+        when(friendsRepository.findByLoginAndIsSubscribeTrue("carol")).thenReturn(List.of());
+
+        List<StatusChange> result = service.computeAndPersistChanges();
+
+        assertTrue(result.isEmpty());
+        verify(onlineRepository).save(argThat(saved ->
+                Boolean.FALSE.equals(saved.getIsOnline()) && saved.getLastSeenAt() != null
+        ));
+    }
 }
