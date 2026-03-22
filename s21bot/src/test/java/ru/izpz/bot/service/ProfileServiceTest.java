@@ -420,17 +420,15 @@ class ProfileServiceTest {
     }
 
     private ParticipantDto createTestParticipantDto() {
-        return new ParticipantDto(
-                login,
-                "Class A",
-                "Parallel 1",
-                100,
-                5,
-                50,
-                ParticipantStatusEnum.ACTIVE,
-                null,
-                null
-        );
+        return ParticipantDto.builder()
+                .login(login)
+                .className("Class A")
+                .parallelName("Parallel 1")
+                .expValue(100)
+                .level(5)
+                .expToNextLevel(50)
+                .status(ParticipantStatusEnum.ACTIVE)
+                .build();
     }
 
     private FriendDto createTestFriendDto() {

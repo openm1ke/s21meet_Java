@@ -19,6 +19,9 @@ public interface ProfileMapper {
 
     Participant toEntity(ParticipantV1DTO dto);
     @Mapping(target = "coalition", ignore = true)
+    @Mapping(target = "isOnline", ignore = true)
+    @Mapping(target = "seat", ignore = true)
+    @Mapping(target = "lastSeenAt", ignore = true)
     ParticipantDto toDto(Participant entity);
 
     @Mapping(target = "campusName", source = "shortName")

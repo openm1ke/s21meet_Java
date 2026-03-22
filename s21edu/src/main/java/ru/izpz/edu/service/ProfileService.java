@@ -11,6 +11,7 @@ import ru.izpz.dto.*;
 import ru.izpz.dto.api.ParticipantApi;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.dto.CampusDto;
+import ru.izpz.dto.ParticipantSeatDto;
 import ru.izpz.edu.exception.EntityNotFoundException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
@@ -19,11 +20,15 @@ import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.model.Profile;
 import ru.izpz.edu.model.ProfileValidation;
 import ru.izpz.edu.model.StudentCoalition;
+import ru.izpz.edu.model.Workplace;
+import ru.izpz.edu.repository.ClusterRepository;
+import ru.izpz.edu.repository.OnlineRepository;
 import ru.izpz.edu.repository.ParticipantCampusRepository;
 import ru.izpz.edu.repository.ParticipantRepository;
 import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
 import ru.izpz.edu.repository.StudentCoalitionRepository;
+import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.utils.StringUtils;
 
 import java.time.OffsetDateTime;
@@ -46,6 +51,9 @@ public class ProfileService {
     private final ParticipantRepository participantRepository;
     private final ParticipantCampusRepository participantCampusRepository;
     private final StudentCoalitionRepository studentCoalitionRepository;
+    private final WorkplaceRepository workplaceRepository;
+    private final OnlineRepository onlineRepository;
+    private final ClusterRepository clusterRepository;
     @Nullable
     private final GraphQLService graphQLService;
 
@@ -144,6 +152,7 @@ public class ProfileService {
 
         ParticipantDto dto = profileMapper.toDto(participant);
         enrichCoalition(dto, eduLogin);
+        enrichPresence(dto, eduLogin);
         return dto;
     }
 
@@ -240,5 +249,30 @@ public class ProfileService {
                 coalition.getMemberCount(),
                 coalition.getRank()
         ));
+    }
+
+    private void enrichPresence(ParticipantDto dto, String login) {
+        Workplace seat = workplaceRepository.findByLogin(login).orElse(null);
+        if (seat != null) {
+            dto.setIsOnline(true);
+            ParticipantSeatDto seatDto = new ParticipantSeatDto();
+            seatDto.setStageGroupName(seat.getStageGroupName());
+            seatDto.setStageName(seat.getStageName());
+            if (seat.getId() != null) {
+                seatDto.setRow(seat.getId().getRow());
+                seatDto.setNumber(seat.getId().getNumber());
+                Long clusterId = seat.getId().getClusterId();
+                if (clusterId != null) {
+                    clusterRepository.findById(clusterId).ifPresent(cluster -> seatDto.setClusterName(cluster.getName()));
+                }
+            }
+            dto.setSeat(seatDto);
+            dto.setLastSeenAt(null);
+            return;
+        }
+
+        dto.setIsOnline(false);
+        dto.setSeat(null);
+        onlineRepository.findByLogin(login).ifPresent(online -> dto.setLastSeenAt(online.getLastSeenAt()));
     }
 }

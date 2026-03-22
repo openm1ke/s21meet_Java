@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.time.OffsetDateTime;
 
 @Slf4j
 @Service
@@ -94,11 +95,17 @@ public class NotifyService {
                 return created;
             });
             entity.setIsOnline(status);
+            if (!status) {
+                entity.setLastSeenAt(OffsetDateTime.now());
+            }
             onlineRepository.save(entity);
         } catch (DataIntegrityViolationException e) {
             log.warn("Race condition while saving online status for login={}: {}", login, e.getMessage());
             onlineRepository.findByLogin(login).ifPresent(existing -> {
                 existing.setIsOnline(status);
+                if (!status) {
+                    existing.setLastSeenAt(OffsetDateTime.now());
+                }
                 onlineRepository.save(existing);
             });
         }
