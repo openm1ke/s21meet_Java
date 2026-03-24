@@ -14,6 +14,7 @@ import ru.izpz.dto.api.CampusApi;
 import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.api.EventApi;
 import ru.izpz.dto.api.ParticipantApi;
+import ru.izpz.dto.api.ProjectApi;
 import ru.izpz.edu.service.TokenService;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,7 +50,7 @@ class ApiClientConfigTest {
         }).when(chain).proceed(any(Request.class));
 
         Response response = assertDoesNotThrow(() ->
-                apiClient.getHttpClient().interceptors().get(0).intercept(chain)
+                apiClient.getHttpClient().interceptors().getFirst().intercept(chain)
         );
 
         assertNotNull(response);
@@ -71,11 +72,13 @@ class ApiClientConfigTest {
         CampusApi campusApi = config.campusApi(apiClient);
         ClusterApi clusterApi = config.clusterApi(apiClient);
         ParticipantApi participantApi = config.participantApi(apiClient);
+        ProjectApi projectApi = config.projectApi(apiClient);
         EventApi eventApi = config.eventApi(apiClient);
 
         assertSame(apiClient, campusApi.getApiClient());
         assertSame(apiClient, clusterApi.getApiClient());
         assertSame(apiClient, participantApi.getApiClient());
+        assertSame(apiClient, projectApi.getApiClient());
         assertSame(apiClient, eventApi.getApiClient());
     }
 }

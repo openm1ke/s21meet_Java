@@ -185,8 +185,8 @@ class ConfirmedFlowTest {
         participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
         when(profileService.getProjects("abc")).thenReturn(List.of(
-                new ProjectsDto("g1", "Libft", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-                new ProjectsDto("g2", "minishell", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                new ProjectsDto("g1", "Libft", null, null, null, null, null, null, null, null, null),
+                new ProjectsDto("g2", "minishell", null, null, null, null, null, null, null, null, null)
         ));
 
         ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
@@ -327,15 +327,7 @@ class ConfirmedFlowTest {
                 null, // laboriousness
                 "INDIVIDUAL", // executionType
                 "IN_PROGRESS", // goalStatus
-                "PROJECT", // courseType
-                "IN_PROGRESS", // displayedCourseStatus
                 null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "GroupA",
                 1
         );
         ProjectsDto p2 = new ProjectsDto(
@@ -348,15 +340,7 @@ class ConfirmedFlowTest {
                 null, // laboriousness
                 "EXAM_TEST", // executionType
                 null, // goalStatus
-                "EXAM", // courseType
-                null, // displayedCourseStatus
-                null, // amountAnswers
                 null, // amountMembers
-                null, // amountJoinedMembers
-                null, // amountReviewedAnswers
-                null, // amountCodeReviewMembers
-                null, // amountCurrentCodeReviewMembers
-                "GroupB",
                 2
         );
 
@@ -370,15 +354,7 @@ class ConfirmedFlowTest {
                 null,
                 "GROUP",
                 null,
-                "PROJECT",
                 null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "GroupC",
                 3
         );
         when(profileService.getProjects("abc")).thenReturn(java.util.List.of(p1, p2, p3));

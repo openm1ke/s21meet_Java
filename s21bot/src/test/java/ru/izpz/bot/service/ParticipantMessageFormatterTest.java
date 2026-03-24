@@ -68,8 +68,8 @@ class ParticipantMessageFormatterTest {
         String message = ParticipantMessageFormatter.format(
                 participant,
                 List.of(
-                        new ProjectsDto("g1", "Libft", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-                        new ProjectsDto("g2", "minishell", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                        new ProjectsDto("g1", "Libft", null, null, null, null, null, null, null, null, null),
+                        new ProjectsDto("g2", "minishell", null, null, null, null, null, null, null, null, null)
                 )
         );
 
@@ -107,14 +107,36 @@ class ParticipantMessageFormatterTest {
         String message = ParticipantMessageFormatter.format(
                 participant,
                 List.of(
-                        new ProjectsDto("g1", " ", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-                        new ProjectsDto("g2", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-                        new ProjectsDto("g3", "minishell", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                        new ProjectsDto("g1", " ", null, null, null, null, null, null, null, null, null),
+                        new ProjectsDto("g2", null, null, null, null, null, null, null, null, null, null),
+                        new ProjectsDto("g3", "minishell", null, null, null, null, null, null, null, null, null)
                 )
         );
 
         Assertions.assertTrue(message.contains("📁minishell"));
         Assertions.assertFalse(message.contains("📁,"));
+    }
+
+    @Test
+    void format_shouldNotIncludeProjectsLine_whenAllProjectNamesBlank() {
+        ParticipantDto participant = new ParticipantDto();
+        participant.setLogin("quarkron");
+        participant.setClassName("22_10_MSK");
+        participant.setExpValue(21617);
+        participant.setLevel(12);
+        participant.setParallelName("AP4_Info21");
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
+        participant.setCampus(new ParticipantCampusDto("id", "Moscow"));
+
+        String message = ParticipantMessageFormatter.format(
+                participant,
+                List.of(
+                        new ProjectsDto("g1", " ", null, null, null, null, null, null, null, null, null),
+                        new ProjectsDto("g2", "", null, null, null, null, null, null, null, null, null)
+                )
+        );
+
+        Assertions.assertFalse(message.contains("📁"));
     }
 
     @Test
@@ -176,6 +198,22 @@ class ParticipantMessageFormatterTest {
         String message = ParticipantMessageFormatter.format(participant);
 
         assertTrue(message.contains("🪑Cluster A / Stage 1 / B-3"));
+    }
+
+    @Test
+    void format_shouldShowSeatPlaceholder_whenParticipantOnlineAndSeatMissing() {
+        ParticipantDto participant = new ParticipantDto();
+        participant.setLogin("u");
+        participant.setClassName("c");
+        participant.setParallelName("p");
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
+        participant.setCampus(new ParticipantCampusDto("id", "Moscow"));
+        participant.setIsOnline(true);
+        participant.setSeat(null);
+
+        String message = ParticipantMessageFormatter.format(participant);
+
+        assertTrue(message.contains("🪑- / - / --"));
     }
 
     @Test

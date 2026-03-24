@@ -10,8 +10,6 @@ import ru.izpz.bot.client.RocketChatClient;
 import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.dto.*;
-import ru.izpz.dto.model.ErrorResponseDTO;
-import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.utils.FeignErrorParser;
 import java.util.List;
 
@@ -33,12 +31,12 @@ public class ProfileService {
         }
     }
 
-    public ParticipantV1DTO checkEduLogin(String login) {
+    public ParticipantDto checkEduLogin(String login) {
         log.info("Получен запрос на проверку логина: login = {}", login);
         try {
             return profileClient.checkEduLogin(login);
         } catch (FeignException e) {
-            ErrorResponseDTO error = FeignErrorParser.parse(e);
+            ServiceErrorDto error = FeignErrorParser.parse(e);
             log.warn("Ошибка логина: {}", error.getMessage());
 
             // Пробрасываем с кастомным исключением, если нужно

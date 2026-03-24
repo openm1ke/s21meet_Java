@@ -21,7 +21,7 @@ import ru.izpz.bot.keyboard.CallbackPayloadSerializer;
 import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
 import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.*;
-import ru.izpz.dto.model.ErrorResponseDTO;
+import ru.izpz.dto.ServiceErrorDto;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -113,7 +113,7 @@ class CallbackHandlerTest {
     void handleCallbackMessage_showFriend_callsShowProfile() {
         when(callbackPayloadSerializer.deserialize("data")).thenReturn(new CallbackPayload("show_friend", Map.of("login", "abc")));
 
-        when(profileService.checkEduLogin("abc")).thenReturn(new ru.izpz.dto.model.ParticipantV1DTO());
+        when(profileService.checkEduLogin("abc")).thenReturn(new ParticipantDto());
         FriendDto friend = FriendDto.builder().login("abc").isFriend(false).build();
         when(profileService.applyFriend(chatId, "abc", FriendRequest.Action.NONE, null)).thenReturn(friend);
 
@@ -129,8 +129,8 @@ class CallbackHandlerTest {
         participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
         when(profileService.getProjects("abc")).thenReturn(List.of(
-                new ProjectsDto("g1", "Libft", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-                new ProjectsDto("g2", "C Piscine", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                new ProjectsDto("g1", "Libft", null, null, null, null, null, null, null, null, null),
+                new ProjectsDto("g2", "C Piscine", null, null, null, null, null, null, null, null, null)
         ));
 
         callbackHandler.handleCallbackMessage(chatId, "data", 5, "cb");
@@ -264,7 +264,7 @@ class CallbackHandlerTest {
 
     @Test
     void showProfile_success_sendsProfileWithKeyboard() {
-        when(profileService.checkEduLogin("abc")).thenReturn(new ru.izpz.dto.model.ParticipantV1DTO());
+        when(profileService.checkEduLogin("abc")).thenReturn(new ParticipantDto());
         FriendDto friend = FriendDto.builder().login("abc").isFriend(false).build();
         when(profileService.applyFriend(chatId, "abc", FriendRequest.Action.NONE, null)).thenReturn(friend);
         InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
@@ -278,7 +278,7 @@ class CallbackHandlerTest {
         participant.setStatus(ParticipantStatusEnum.ACTIVE);
         when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
         when(profileService.getProjects("abc")).thenReturn(List.of(
-                new ProjectsDto("g1", "Exam_Rank_02", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                new ProjectsDto("g1", "Exam_Rank_02", null, null, null, null, null, null, null, null, null)
         ));
 
         callbackHandler.showProfile(chatId, "abc");
@@ -352,7 +352,7 @@ class CallbackHandlerTest {
 
     @Test
     void showProfile_whenEduLoginCheckException_sendsUserAndAdmin() {
-        ErrorResponseDTO err = new ErrorResponseDTO().status(400).message("bad");
+        ServiceErrorDto err = new ServiceErrorDto().setStatus(400).setMessage("bad");
         when(profileService.checkEduLogin("abc")).thenThrow(new EduLoginCheckException(err));
 
         callbackHandler.showProfile(chatId, "abc");

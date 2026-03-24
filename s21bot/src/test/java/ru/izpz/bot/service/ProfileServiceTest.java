@@ -16,7 +16,6 @@ import ru.izpz.bot.client.RocketChatClient;
 import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.dto.*;
-import ru.izpz.dto.model.ErrorResponseDTO;
 import ru.izpz.utils.FeignErrorParser;
 
 import java.nio.charset.StandardCharsets;
@@ -77,11 +76,11 @@ class ProfileServiceTest {
     @Test
     void checkEduLogin_FeignException_ThrowsEduLoginCheckException() {
         FeignException feignException = createFeignException(400, "Bad Request");
-        ErrorResponseDTO errorResponse = new ErrorResponseDTO()
-                .status(400)
-                .exceptionUUID("test-uuid")
-                .code("login_NOT_FOUND")
-                .message("Login not found");
+        ServiceErrorDto errorResponse = new ServiceErrorDto()
+                .setStatus(400)
+                .setExceptionUUID("test-uuid")
+                .setCode("login_NOT_FOUND")
+                .setMessage("Login not found");
         
         when(profileClient.checkEduLogin(login)).thenThrow(feignException);
         
@@ -493,15 +492,7 @@ class ProfileServiceTest {
                 10,
                 "INDIVIDUAL",
                 "COMPLETED",
-                "BASIC",
-                "PASSED",
-                5,
                 2,
-                2,
-                3,
-                2,
-                1,
-                "Group A",
                 1
         );
         return Collections.singletonList(project);

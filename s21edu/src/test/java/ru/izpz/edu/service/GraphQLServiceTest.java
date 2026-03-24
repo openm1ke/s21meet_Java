@@ -177,7 +177,7 @@ class GraphQLServiceTest {
                 .thenReturn(emptyDto);
 
         // When
-        List<GraphQLStudentProject> result = graphQLService.getStudentProjectsByLogin(login);
+        List<StudentProjectData> result = graphQLService.getStudentProjectsByLogin(login);
 
         // Then
         assertNotNull(result);
@@ -223,10 +223,9 @@ class GraphQLServiceTest {
         GraphQLStudentCredentialsDataDto credentials = new GraphQLStudentCredentialsDataDto(
                 new GraphQLSchool21Dto(new GraphQLStudentCredentialsDto("s", userId, "school", true, false))
         );
-        GraphQLStudentProject source = new GraphQLStudentProject(
+        StudentProjectData source = new StudentProjectData(
                 "goal", "Project", "Desc", 10, "2026-01-01",
-                99, 5, "ONLINE", "IN_PROGRESS", "CORE", "IN_PROGRESS",
-                1, 2, 3, 4, 5, 6, "grp", 7
+                99, 5, "ONLINE", "IN_PROGRESS", 2, 7
         );
         GraphQLStudentProjectsDataDto projects = new GraphQLStudentProjectsDataDto(new GraphQLStudentQueriesDto(List.of(source)));
 
@@ -235,13 +234,13 @@ class GraphQLServiceTest {
         when(client.execute(eq("getStudentCurrentProjects"), eq(Map.of("userId", userId)), anyString(), eq(GraphQLStudentProjectsDataDto.class)))
                 .thenReturn(projects);
 
-        List<GraphQLStudentProject> result = graphQLService.getStudentProjectsByLogin(login);
+        List<StudentProjectData> result = graphQLService.getStudentProjectsByLogin(login);
 
         assertEquals(1, result.size());
-        GraphQLStudentProject mapped = result.getFirst();
+        StudentProjectData mapped = result.getFirst();
         assertEquals("goal", mapped.goalId());
         assertEquals("Project", mapped.name());
-        assertEquals("grp", mapped.groupName());
+        assertEquals(Integer.valueOf(2), mapped.amountMembers());
         assertEquals(7, mapped.localCourseId());
     }
 
@@ -259,7 +258,7 @@ class GraphQLServiceTest {
         when(client.execute(eq("getStudentCurrentProjects"), eq(Map.of("userId", userId)), anyString(), eq(GraphQLStudentProjectsDataDto.class)))
                 .thenReturn(null);
 
-        List<GraphQLStudentProject> result = graphQLService.getStudentProjectsByLogin(login);
+        List<StudentProjectData> result = graphQLService.getStudentProjectsByLogin(login);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -403,15 +402,13 @@ class GraphQLServiceTest {
         cached.setUserId(userId);
         when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(cached));
 
-        GraphQLStudentProject p1 = new GraphQLStudentProject(
+        StudentProjectData p1 = new StudentProjectData(
                 "g1", "Project1", "d1", 100, "2026-01-01", 10, 1,
-                "INDIVIDUAL", "IN_PROGRESS", "CORE", "IN_PROGRESS",
-                1, 2, 3, 4, 5, 6, "grp1", 7
+                "INDIVIDUAL", "IN_PROGRESS", 2, 7
         );
-        GraphQLStudentProject p2 = new GraphQLStudentProject(
+        StudentProjectData p2 = new StudentProjectData(
                 "g2", "Project2", "d2", 200, "2026-01-02", 20, 2,
-                "GROUP", "WAITING_FOR_START", "CORE", "WAITING_FOR_START",
-                2, 3, 4, 5, 6, 7, "grp2", 8
+                "GROUP", "WAITING_FOR_START", 3, 8
         );
         GraphQLStudentProjectsDataDto projectsData =
                 new GraphQLStudentProjectsDataDto(new GraphQLStudentQueriesDto(List.of(p1, p2)));
@@ -527,7 +524,7 @@ class GraphQLServiceTest {
         stored.setSnapshot(false);
         when(studentProjectRepository.findAllByLoginAndSnapshotFalseOrderBySortOrderAsc(login)).thenReturn(List.of(stored));
 
-        List<GraphQLStudentProject> result = graphQLService.getCachedStudentProjectsByLogin(login);
+        List<StudentProjectData> result = graphQLService.getCachedStudentProjectsByLogin(login);
 
         assertEquals(1, result.size());
         assertEquals("g-stored", result.getFirst().goalId());

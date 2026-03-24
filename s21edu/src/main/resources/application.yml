@@ -49,13 +49,33 @@ logging:
   level:
     io.github.resilience4j: INFO
 
-api.client.enabled: true
-cluster.api.enabled: true
+api:
+  client:
+    enabled: ${API_CLIENT_ENABLED:true}
+  graphql:
+    enabled: ${GRAPHQL_API_ENABLED:true}
+  campus:
+    enabled: ${CAMPUS_API_ENABLED:true}
+  cluster:
+    enabled: ${CLUSTER_API_ENABLED:true}
+  participant:
+    enabled: ${PARTICIPANT_API_ENABLED:true}
+  project:
+    enabled: ${PROJECT_API_ENABLED:true}
+  coalition:
+    enabled: ${COALITION_API_ENABLED:true}
 profile:
   api.enabled: true
   service.enabled: true
-participant.api.enabled: true
-graphql.api.enabled: true
+coalition:
+  provider: ${COALITION_PROVIDER:graphql}  # auto|graphql|rest
+  rest:
+    fetch-member-count: ${COALITION_REST_FETCH_MEMBER_COUNT:false}
+    page-size: ${COALITION_REST_PAGE_SIZE:1000}
+projects:
+  provider: ${PROJECTS_PROVIDER:graphql}  # auto|graphql|rest
+  rest:
+    page-size: ${PROJECTS_REST_PAGE_SIZE:1000}
 graphql:
   coalition:
     refresh-ttl: ${GRAPHQL_COALITION_REFRESH_TTL:PT15M}
@@ -72,7 +92,6 @@ notify:
     enabled: true
     fixed-delay: PT30S
 campus:
-  api.enabled: true
   service.enabled: true
   workplace:
     provider: ${CAMPUS_WORKPLACE_PROVIDER:graphql}  # rest или graphql (по умолчанию graphql)

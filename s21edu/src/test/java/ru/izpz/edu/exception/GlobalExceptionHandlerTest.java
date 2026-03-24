@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import ru.izpz.dto.ApiException;
-import ru.izpz.dto.model.ErrorResponseDTO;
+import ru.izpz.dto.ServiceErrorDto;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -30,7 +30,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleApiException_shouldReturnParsedBody_whenJsonIsValid() throws Exception {
-        ErrorResponseDTO dto = new ErrorResponseDTO();
+        ServiceErrorDto dto = new ServiceErrorDto();
         dto.setStatus(400);
         dto.setCode("BAD_REQUEST");
         dto.setMessage("bad");
@@ -41,8 +41,8 @@ class GlobalExceptionHandlerTest {
 
         ResponseEntity<Object> response = handler.handleApiException(ex);
         assertEquals(400, response.getStatusCode().value());
-        assertInstanceOf(ErrorResponseDTO.class, response.getBody());
-        ErrorResponseDTO body = (ErrorResponseDTO) response.getBody();
+        assertInstanceOf(ServiceErrorDto.class, response.getBody());
+        ServiceErrorDto body = (ServiceErrorDto) response.getBody();
         assertEquals("BAD_REQUEST", body.getCode());
         assertEquals("bad", body.getMessage());
         assertEquals(400, body.getStatus());

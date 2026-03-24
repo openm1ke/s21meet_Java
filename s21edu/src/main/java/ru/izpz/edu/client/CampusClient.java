@@ -11,7 +11,7 @@ import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.model.ClusterV1DTO;
 import ru.izpz.dto.model.WorkplaceV1DTO;
 import ru.izpz.edu.service.GraphQLService;
-import ru.izpz.edu.dto.GraphQLStudentProject;
+import ru.izpz.edu.dto.StudentProjectData;
 
 import java.util.List;
 import java.util.UUID;
@@ -68,7 +68,7 @@ public class CampusClient {
 
     @RateLimiter(name = "platform")
     @Retry(name = "platform")
-    public List<GraphQLStudentProject> getStudentProjectsByLogin(String login) {
+    public List<StudentProjectData> getStudentProjectsByLogin(String login) {
         return graphQLService.getStudentProjectsByLogin(login);
     }
 }

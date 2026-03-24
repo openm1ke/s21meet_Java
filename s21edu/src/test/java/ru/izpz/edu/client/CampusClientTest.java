@@ -12,8 +12,8 @@ import ru.izpz.dto.model.ClusterV1DTO;
 import ru.izpz.dto.model.ClustersV1DTO;
 import ru.izpz.dto.model.ClusterMapV1DTO;
 import ru.izpz.dto.model.WorkplaceV1DTO;
+import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.service.GraphQLService;
-import ru.izpz.edu.dto.GraphQLStudentProject;
 
 import java.util.List;
 import java.util.UUID;
@@ -94,10 +94,10 @@ class CampusClientTest {
 
     @Test
     void getStudentProjectsByLogin_shouldDelegateToGraphqlService() {
-        GraphQLStudentProject p = new GraphQLStudentProject("g", "n", "d", 1, "dt", 1, 1, "e", "gs", "ct", "ds", 1, 1, 1, 1, 1, 1, "grp", 1);
+        StudentProjectData p = new StudentProjectData("g", "n", "d", 1, "dt", 1, 1, "e", "gs", 1, 1);
         when(graphQLService.getStudentProjectsByLogin("login")).thenReturn(List.of(p));
 
-        List<GraphQLStudentProject> result = campusClient.getStudentProjectsByLogin("login");
+        List<StudentProjectData> result = campusClient.getStudentProjectsByLogin("login");
 
         assertEquals(1, result.size());
         verify(graphQLService).getStudentProjectsByLogin("login");

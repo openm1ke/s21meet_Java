@@ -17,32 +17,39 @@ concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  packages: read
-
 jobs:
   deploy-prod:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     environment: prod
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - name: Resolve image repo
         id: vars
+        env:
+          INPUT_IMAGE_REPO: ${{ inputs.image_repo }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -n "${{ inputs.image_repo }}" ]]; then
-            echo "image_repo=${{ inputs.image_repo }}" >> "$GITHUB_OUTPUT"
+          if [[ -n "$INPUT_IMAGE_REPO" ]]; then
+            if [[ ! "$INPUT_IMAGE_REPO" =~ ^[a-z0-9]+([._-][a-z0-9]+)*(\/[a-z0-9]+([._-][a-z0-9]+)*)+$ ]]; then
+              echo "Invalid image_repo format: '$INPUT_IMAGE_REPO'"
+              exit 1
+            fi
+            echo "image_repo=$INPUT_IMAGE_REPO" >> "$GITHUB_OUTPUT"
           else
             OWNER_LC="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
             echo "image_repo=ghcr.io/${OWNER_LC}/s21meet" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
         shell: bash
         run: |
           set -euo pipefail
@@ -54,11 +61,13 @@ jobs:
           if [[ -z "$DEPLOY_USER" ]]; then echo "DEPLOY_USER var is required"; exit 1; fi
           if [[ -z "$PORT" ]]; then PORT="22"; fi
 
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          if [[ -n "${{ vars.DEPLOY_KNOWN_HOSTS }}" ]]; then
-            echo "${{ vars.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          umask 077
+          install -d -m 700 ~/.ssh
+          install -m 600 /dev/null ~/.ssh/id_ed25519
+          install -m 600 /dev/null ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          if [[ -n "$DEPLOY_KNOWN_HOSTS" ]]; then
+            printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           else
             for attempt in 1 2 3 4 5; do
               if ssh-keyscan -T 10 -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
@@ -103,6 +112,9 @@ jobs:
           scp "${SSH_OPTS[@]}" -P "$PORT" scripts/proxy/ssh-socks-entrypoint.sh "$REMOTE:$APP_DIR/scripts/proxy/ssh-socks-entrypoint.sh"
 
       - name: Run prod deploy
+        env:
+          IMAGE_REPO: ${{ steps.vars.outputs.image_repo }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -127,10 +139,21 @@ jobs:
             -o ServerAliveCountMax=6
           )
 
+          if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
+            echo "Invalid image_tag format: '$IMAGE_TAG'"
+            exit 1
+          fi
+          if [[ ! "$IMAGE_REPO" =~ ^[a-z0-9]+([._-][a-z0-9]+)*(\/[a-z0-9]+([._-][a-z0-9]+)*)+$ ]]; then
+            echo "Invalid image_repo format: '$IMAGE_REPO'"
+            exit 1
+          fi
+          SAFE_IMAGE_REPO="$(printf '%q' "$IMAGE_REPO")"
+          SAFE_IMAGE_TAG="$(printf '%q' "$IMAGE_TAG")"
+
           ssh "${SSH_OPTS[@]}" -p "$PORT" "$REMOTE" "\
             set -euo pipefail; \
             cd \"$APP_DIR\"; \
             chmod +x scripts/deploy-compose.sh; \
             chmod +x scripts/proxy/ssh-socks-entrypoint.sh; \
-            IMAGE_REPO='${{ steps.vars.outputs.image_repo }}' IMAGE_TAG='${{ inputs.image_tag }}' \
+            IMAGE_REPO=${SAFE_IMAGE_REPO} IMAGE_TAG=${SAFE_IMAGE_TAG} \
             scripts/deploy-compose.sh 'env/prod/compose.env' '' 'rolling'"

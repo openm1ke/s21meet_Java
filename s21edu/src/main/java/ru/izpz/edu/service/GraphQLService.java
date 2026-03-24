@@ -23,7 +23,7 @@ import java.util.Optional;
 
 @Service
 @Slf4j
-@ConditionalOnProperty(name = "graphql.api.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "api.graphql.enabled", havingValue = "true")
 public class GraphQLService {
 
     private static final String COALITION_REFRESH_COUNTER = "edu_graphql_coalition_refresh_total";
@@ -220,7 +220,7 @@ public class GraphQLService {
                 .orElse(null);
     }
 
-    public List<GraphQLStudentProject> getStudentProjectsByLogin(String login) {
+    public List<StudentProjectData> getStudentProjectsByLogin(String login) {
         String userId = getUserIdByLogin(login);
         if (userId == null) {
             return List.of();
@@ -239,7 +239,7 @@ public class GraphQLService {
                 .orElse(List.of());
 
         return projects.stream()
-                .map(p -> new GraphQLStudentProject(
+                .map(p -> new StudentProjectData(
                         p.goalId(),
                         p.name(),
                         p.description(),
@@ -249,25 +249,17 @@ public class GraphQLService {
                         p.laboriousness(),
                         p.executionType(),
                         p.goalStatus(),
-                        p.courseType(),
-                        p.displayedCourseStatus(),
-                        p.amountAnswers(),
                         p.amountMembers(),
-                        p.amountJoinedMembers(),
-                        p.amountReviewedAnswers(),
-                        p.amountCodeReviewMembers(),
-                        p.amountCurrentCodeReviewMembers(),
-                        p.groupName(),
                         p.localCourseId()
                 ))
                 .toList();
     }
 
-    public List<GraphQLStudentProject> getCachedStudentProjectsByLogin(String login) {
+    public List<StudentProjectData> getCachedStudentProjectsByLogin(String login) {
         try {
             refreshStudentProjectsByLogin(login);
         } catch (RuntimeException e) {
-            log.warn("Не удалось обновить данные проектов для {}: {}", login, e.getMessage());
+            log.warn("Не удалось обновить данные проектов для {}: {}", login, e.getMessage(), e);
         }
 
         return studentProjectRepository.findAllByLoginAndSnapshotFalseOrderBySortOrderAsc(login).stream()
@@ -430,8 +422,8 @@ public class GraphQLService {
         );
     }
 
-    private GraphQLStudentProject toDto(StudentProject project) {
-        return new GraphQLStudentProject(
+    private StudentProjectData toDto(StudentProject project) {
+        return new StudentProjectData(
                 project.getGoalId(),
                 project.getName(),
                 project.getDescription(),
@@ -441,15 +433,7 @@ public class GraphQLService {
                 project.getLaboriousness(),
                 project.getExecutionType(),
                 project.getGoalStatus(),
-                project.getCourseType(),
-                project.getDisplayedCourseStatus(),
-                project.getAmountAnswers(),
                 project.getAmountMembers(),
-                project.getAmountJoinedMembers(),
-                project.getAmountReviewedAnswers(),
-                project.getAmountCodeReviewMembers(),
-                project.getAmountCurrentCodeReviewMembers(),
-                project.getGroupName(),
                 project.getLocalCourseId()
         );
     }

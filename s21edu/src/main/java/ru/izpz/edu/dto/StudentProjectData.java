@@ -1,6 +1,9 @@
-package ru.izpz.dto;
+package ru.izpz.edu.dto;
 
-public record ProjectsDto(
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record StudentProjectData(
         String goalId,
         String name,
         String description,
@@ -12,5 +15,4 @@ public record ProjectsDto(
         String goalStatus,
         Integer amountMembers,
         Integer localCourseId
-) {
-}
+) {}

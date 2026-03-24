@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 025-trim-student-project-columns
+      author: openmike
+      changes:
+        - dropColumn:
+            tableName: student_project
+            columnName: course_type
+        - dropColumn:
+            tableName: student_project
+            columnName: displayed_course_status
+        - dropColumn:
+            tableName: student_project
+            columnName: amount_answers
+        - dropColumn:
+            tableName: student_project
+            columnName: amount_joined_members
+        - dropColumn:
+            tableName: student_project
+            columnName: amount_reviewed_answers
+        - dropColumn:
+            tableName: student_project
+            columnName: amount_code_review_members
+        - dropColumn:
+            tableName: student_project
+            columnName: amount_current_code_review_members
+        - dropColumn:
+            tableName: student_project
+            columnName: group_name

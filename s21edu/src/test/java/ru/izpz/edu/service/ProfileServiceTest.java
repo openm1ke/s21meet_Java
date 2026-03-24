@@ -3,14 +3,12 @@ package ru.izpz.edu.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.*;
-import ru.izpz.dto.api.ParticipantApi;
-import ru.izpz.dto.model.ParticipantCampusV1DTO;
-import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.exception.EntityNotFoundException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
@@ -18,22 +16,18 @@ import ru.izpz.edu.model.Participant;
 import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.model.Profile;
 import ru.izpz.edu.model.ProfileValidation;
-import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Online;
 import ru.izpz.edu.repository.ClusterRepository;
 import ru.izpz.edu.repository.OnlineRepository;
-import ru.izpz.edu.repository.ParticipantCampusRepository;
 import ru.izpz.edu.repository.ParticipantRepository;
 import ru.izpz.edu.repository.ProfileRepository;
 import ru.izpz.edu.repository.ProfileValidationRepository;
-import ru.izpz.edu.repository.StudentCoalitionRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -56,27 +50,21 @@ class ProfileServiceTest {
     private ProfileValidationRepository profileValidationRepository;
     
     @Mock
-    private ParticipantApi participantApi;
+    private ParticipantSyncService participantSyncService;
+    @Mock
+    private ParticipantCoalitionService participantCoalitionService;
     
     @Mock
     private ParticipantRepository participantRepository;
     
     @Mock
-    private ParticipantCampusRepository participantCampusRepository;
-    
-    @Mock
     private CampusCatalog campusCatalog;
-    @Mock
-    private StudentCoalitionRepository studentCoalitionRepository;
     @Mock
     private WorkplaceRepository workplaceRepository;
     @Mock
     private OnlineRepository onlineRepository;
     @Mock
     private ClusterRepository clusterRepository;
-    @Mock
-    private GraphQLService graphQLService;
-
     @InjectMocks
     private ProfileService profileService;
 
@@ -127,7 +115,7 @@ class ProfileServiceTest {
         assertNotNull(result);
         assertEquals(testProfileDto, result);
         verify(profileRepository).findByTelegramId("123456");
-        verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
+        verifyNoInteractions(participantCoalitionService);
         verify(profileRepository, never()).save(any());
     }
 
@@ -146,7 +134,7 @@ class ProfileServiceTest {
         assertNotNull(result);
         assertEquals(testProfileDto, result);
         verify(profileRepository).findByTelegramId("123456");
-        verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
+        verifyNoInteractions(participantCoalitionService);
         verify(profileRepository).save(any(Profile.class));
         assertEquals(ProfileStatus.CREATED, testProfile.getStatus());
     }
@@ -162,7 +150,7 @@ class ProfileServiceTest {
         ProfileDto result = profileService.getOrCreateProfile("123456");
 
         assertNotNull(result);
-        verify(graphQLService, never()).refreshStudentCoalitionByLogin(anyString());
+        verifyNoInteractions(participantCoalitionService);
     }
 
     @Test
@@ -272,10 +260,10 @@ class ProfileServiceTest {
     @Test
     void checkAndSetLogin_shouldSetLogin_whenValid() {
         // Given
-        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
         testProfile.setS21login(null);
         when(profileRepository.findByTelegramId("123456"))
                 .thenReturn(Optional.of(testProfile));
+        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
         when(profileRepository.save(testProfile)).thenReturn(testProfile);
 
         // When
@@ -299,9 +287,9 @@ class ProfileServiceTest {
 
         ProfileDto expected = new ProfileDto("123456", "newuser", ProfileStatus.CREATED, null);
 
-        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
         when(profileRepository.findByTelegramId("123456"))
                 .thenReturn(Optional.of(testProfile), Optional.of(savedByAnotherTx));
+        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
         when(profileRepository.save(testProfile))
                 .thenThrow(new DataIntegrityViolationException("duplicate key"));
         when(profileMapper.toDto(savedByAnotherTx)).thenReturn(expected);
@@ -318,9 +306,9 @@ class ProfileServiceTest {
     void checkAndSetLogin_shouldFallbackToInMemoryProfile_whenSaveRaceConditionAndReloadMissing() {
         testProfile.setS21login(null);
 
-        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
         when(profileRepository.findByTelegramId("123456"))
                 .thenReturn(Optional.of(testProfile), Optional.empty());
+        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
         when(profileRepository.save(testProfile))
                 .thenThrow(new DataIntegrityViolationException("duplicate key"));
 
@@ -335,6 +323,9 @@ class ProfileServiceTest {
     @Test
     void checkAndSetLogin_shouldThrowException_whenLoginAlreadyExists() {
         // Given
+        testProfile.setS21login(null);
+        when(profileRepository.findByTelegramId("123456"))
+                .thenReturn(Optional.of(testProfile));
         when(profileRepository.existsByS21login("existinguser")).thenReturn(true);
 
         // When & Then
@@ -343,15 +334,14 @@ class ProfileServiceTest {
                 () -> profileService.checkAndSetLogin("123456", "existinguser")
         );
         assertTrue(exception.getMessage().contains("Логин existinguser уже привязан к другому профилю"));
+        verify(profileRepository).findByTelegramId("123456");
         verify(profileRepository).existsByS21login("existinguser");
-        verify(profileRepository, never()).findByTelegramId(any());
         verify(profileRepository, never()).save(any());
     }
 
     @Test
     void checkAndSetLogin_shouldThrowException_whenProfileAlreadyHasLogin() {
         // Given
-        when(profileRepository.existsByS21login("anotheruser")).thenReturn(false);
         when(profileRepository.findByTelegramId("123456"))
                 .thenReturn(Optional.of(testProfile));
 
@@ -361,15 +351,14 @@ class ProfileServiceTest {
                 () -> profileService.checkAndSetLogin("123456", "anotheruser")
         );
         assertTrue(exception.getMessage().contains("Профиль уже привязан к логину testuser"));
-        verify(profileRepository).existsByS21login("anotheruser");
         verify(profileRepository).findByTelegramId("123456");
+        verify(profileRepository, never()).existsByS21login(anyString());
         verify(profileRepository, never()).save(any());
     }
 
     @Test
     void checkAndSetLogin_shouldThrowException_whenProfileNotFound() {
         // Given
-        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
         when(profileRepository.findByTelegramId("123456"))
                 .thenReturn(Optional.empty());
 
@@ -379,8 +368,23 @@ class ProfileServiceTest {
                 () -> profileService.checkAndSetLogin("123456", "newuser")
         );
         assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
-        verify(profileRepository).existsByS21login("newuser");
         verify(profileRepository).findByTelegramId("123456");
+        verify(profileRepository, never()).existsByS21login(anyString());
+        verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void checkAndSetLogin_shouldReturnProfile_whenSameLoginAlreadyBoundToSameTelegram() {
+        when(profileRepository.findByTelegramId("123456"))
+                .thenReturn(Optional.of(testProfile));
+        when(profileMapper.toDto(testProfile)).thenReturn(testProfileDto);
+
+        ProfileDto result = profileService.checkAndSetLogin("123456", "testuser");
+
+        assertNotNull(result);
+        assertEquals("testuser", result.s21login());
+        verify(profileRepository).findByTelegramId("123456");
+        verify(profileRepository, never()).existsByS21login(anyString());
         verify(profileRepository, never()).save(any());
     }
 
@@ -498,38 +502,28 @@ class ProfileServiceTest {
 
     @Test
     void getCampus_shouldReturnParticipantCampus_whenApiReturnsCampus() throws ApiException {
-        UUID campusId = UUID.fromString("7c293c9c-f28c-4b10-be29-560e4b000a34");
-        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
-        ParticipantV1DTO participant = mock(ParticipantV1DTO.class);
         ParticipantCampus campusEntity = new ParticipantCampus();
-        campusEntity.setId(campusId.toString());
+        campusEntity.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
         campusEntity.setCampusName("Kazan");
         Participant participantEntity = new Participant();
         participantEntity.setLogin("testuser");
+        participantEntity.setCampus(campusEntity);
 
         when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
-        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.empty());
-        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participant);
-        when(participant.getCampus()).thenReturn(campusDto);
-        when(campusDto.getId()).thenReturn(campusId);
-        when(campusDto.getShortName()).thenReturn("Kazan");
-        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
-        when(profileMapper.toEntity(participant)).thenReturn(participantEntity);
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participantEntity);
 
         CampusDto result = profileService.getCampus("123456");
 
         assertNotNull(result);
         assertEquals("Kazan", result.getName());
-        assertEquals(campusId.toString(), result.getUuid());
-        verify(participantCampusRepository).save(campusEntity);
-        verify(participantRepository).save(participantEntity);
+        assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
+        verify(participantSyncService).getOrSyncByEduLogin("testuser");
     }
 
     @Test
     void getCampus_shouldFallbackToDefaultMoscow_whenApiThrows() throws ApiException {
         when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
-        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.empty());
-        when(participantApi.getParticipantByLogin("testuser")).thenThrow(mock(ApiException.class));
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenThrow(mock(ApiException.class));
 
         CampusDto result = profileService.getCampus("123456");
 
@@ -575,8 +569,8 @@ class ProfileServiceTest {
     @Test
     void getCampus_shouldFallbackToDefault_whenApiReturnsNullParticipant() throws ApiException {
         when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
-        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.empty());
-        when(participantApi.getParticipantByLogin("testuser")).thenReturn(null);
+        when(participantSyncService.getOrSyncByEduLogin("testuser"))
+                .thenThrow(new IllegalStateException("Участник не найден"));
 
         CampusDto result = profileService.getCampus("123456");
 
@@ -586,7 +580,7 @@ class ProfileServiceTest {
     }
 
     @Test
-    void getCampus_shouldUseDatabaseFirst_whenParticipantExists() {
+    void getCampus_shouldUseDatabaseFirst_whenParticipantExists() throws ApiException {
         ParticipantCampus campus = new ParticipantCampus();
         campus.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
         campus.setCampusName("Kazan");
@@ -596,101 +590,72 @@ class ProfileServiceTest {
         participant.setCampus(campus);
 
         when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
-        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(participant));
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participant);
 
         CampusDto result = profileService.getCampus("123456");
 
         assertNotNull(result);
         assertEquals("Kazan", result.getName());
         assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
-        verifyNoInteractions(participantApi);
+        verify(participantSyncService).getOrSyncByEduLogin("testuser");
     }
 
     @Test
     void getCampus_shouldFallbackToApi_whenStoredParticipantHasNoCampus() throws ApiException {
-        Participant participant = new Participant();
-        participant.setLogin("testuser");
-        participant.setCampus(null);
-
-        UUID campusId = UUID.fromString("7c293c9c-f28c-4b10-be29-560e4b000a34");
-        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
-        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
         ParticipantCampus campusEntity = new ParticipantCampus();
-        campusEntity.setId(campusId.toString());
+        campusEntity.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
         campusEntity.setCampusName("Kazan");
         Participant participantEntity = new Participant();
         participantEntity.setLogin("testuser");
+        participantEntity.setCampus(campusEntity);
 
         when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
-        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(participant));
-        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
-        when(participantDto.getCampus()).thenReturn(campusDto);
-        when(campusDto.getShortName()).thenReturn("Kazan");
-        when(campusDto.getId()).thenReturn(campusId);
-        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
-        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participantEntity);
 
         CampusDto result = profileService.getCampus("123456");
 
         assertEquals("Kazan", result.getName());
-        assertEquals(campusId.toString(), result.getUuid());
-        verify(participantApi).getParticipantByLogin("testuser");
+        assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
+        verify(participantSyncService).getOrSyncByEduLogin("testuser");
     }
 
     @Test
     void getParticipant_shouldMapAndPersistParticipantAndCampus() throws ApiException {
-        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
-        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
-        ParticipantCampus campusEntity = new ParticipantCampus();
-        campusEntity.setId("campus-id");
-        campusEntity.setCampusName("Moscow");
         Participant participantEntity = new Participant();
         participantEntity.setLogin("testuser");
         ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
 
-        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
-        when(participantDto.getCampus()).thenReturn(campusDto);
-        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
-        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participantEntity);
         when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
-        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.empty());
 
         ParticipantDto result = profileService.getParticipant("testuser");
 
         assertNotNull(result);
         assertEquals("testuser", result.getLogin());
         assertEquals(Boolean.FALSE, result.getIsOnline());
-        verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
-        verify(participantCampusRepository).save(campusEntity);
-        verify(participantRepository).save(participantEntity);
-        assertSame(campusEntity, participantEntity.getCampus());
+        InOrder inOrder = inOrder(participantSyncService, participantCoalitionService);
+        inOrder.verify(participantSyncService).getOrSyncByEduLogin("testuser");
+        inOrder.verify(participantCoalitionService).enrichParticipant(mappedDto, "testuser");
     }
 
     @Test
     void getParticipant_shouldIncludeCoalition_whenCoalitionExists() throws ApiException {
-        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
-        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
-        ParticipantCampus campusEntity = new ParticipantCampus();
         Participant participantEntity = new Participant();
         participantEntity.setLogin("testuser");
         ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
-        StudentCoalition coalition = new StudentCoalition();
-        coalition.setLogin("testuser");
-        coalition.setCoalitionName("Capybaras");
-        coalition.setMemberCount(1085);
-        coalition.setRank(271);
+        doAnswer(invocation -> {
+            ParticipantDto dto = invocation.getArgument(0);
+            dto.setCoalition(new ParticipantCoalitionDto("Capybaras", 1085, 271));
+            return null;
+        }).when(participantCoalitionService).enrichParticipant(mappedDto, "testuser");
 
-        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
-        when(participantDto.getCampus()).thenReturn(campusDto);
-        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
-        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participantEntity);
         when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
-        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.of(coalition));
 
         ParticipantDto result = profileService.getParticipant("testuser");
 
         assertNotNull(result);
-        verify(graphQLService).refreshStudentCoalitionByLogin("testuser");
+        verify(participantCoalitionService).enrichParticipant(mappedDto, "testuser");
         assertNotNull(result.getCoalition());
         assertEquals("Capybaras", result.getCoalition().getName());
         assertEquals(Integer.valueOf(1085), result.getCoalition().getMemberCount());
@@ -699,9 +664,6 @@ class ProfileServiceTest {
 
     @Test
     void getParticipant_shouldIncludeSeatData_whenOnlineInCampus() throws ApiException {
-        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
-        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
-        ParticipantCampus campusEntity = new ParticipantCampus();
         Participant participantEntity = new Participant();
         participantEntity.setLogin("testuser");
         ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
@@ -713,12 +675,8 @@ class ProfileServiceTest {
         cluster.setClusterId(42L);
         cluster.setName("Main Cluster");
 
-        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
-        when(participantDto.getCampus()).thenReturn(campusDto);
-        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
-        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participantEntity);
         when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
-        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.empty());
         when(workplaceRepository.findByLogin("testuser")).thenReturn(Optional.of(workplace));
         when(clusterRepository.findById(42L)).thenReturn(Optional.of(cluster));
 
@@ -737,9 +695,6 @@ class ProfileServiceTest {
 
     @Test
     void getParticipant_shouldIncludeLastSeen_whenOffline() throws ApiException {
-        ParticipantV1DTO participantDto = mock(ParticipantV1DTO.class);
-        ParticipantCampusV1DTO campusDto = mock(ParticipantCampusV1DTO.class);
-        ParticipantCampus campusEntity = new ParticipantCampus();
         Participant participantEntity = new Participant();
         participantEntity.setLogin("testuser");
         ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
@@ -749,12 +704,8 @@ class ProfileServiceTest {
         OffsetDateTime seenAt = OffsetDateTime.now().minusMinutes(3);
         online.setLastSeenAt(seenAt);
 
-        when(participantApi.getParticipantByLogin("testuser")).thenReturn(participantDto);
-        when(participantDto.getCampus()).thenReturn(campusDto);
-        when(profileMapper.toEntity(campusDto)).thenReturn(campusEntity);
-        when(profileMapper.toEntity(participantDto)).thenReturn(participantEntity);
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participantEntity);
         when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
-        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.empty());
         when(workplaceRepository.findByLogin("testuser")).thenReturn(Optional.empty());
         when(onlineRepository.findByLogin("testuser")).thenReturn(Optional.of(online));
 
@@ -766,7 +717,7 @@ class ProfileServiceTest {
     }
 
     @Test
-    void getCampus_shouldUseDefaultName_whenStoredCampusNameBlank() {
+    void getCampus_shouldUseDefaultName_whenStoredCampusNameBlank() throws ApiException {
         ParticipantCampus campus = new ParticipantCampus();
         campus.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
         campus.setCampusName("  ");
@@ -775,7 +726,7 @@ class ProfileServiceTest {
         participant.setCampus(campus);
 
         when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
-        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(participant));
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participant);
 
         CampusDto result = profileService.getCampus("123456");
 
@@ -785,7 +736,7 @@ class ProfileServiceTest {
     }
 
     @Test
-    void getCampus_shouldUseDefaultName_whenStoredCampusNameNull() {
+    void getCampus_shouldUseDefaultName_whenStoredCampusNameNull() throws ApiException {
         ParticipantCampus campus = new ParticipantCampus();
         campus.setId("7c293c9c-f28c-4b10-be29-560e4b000a34");
         campus.setCampusName(null);
@@ -794,7 +745,7 @@ class ProfileServiceTest {
         participant.setCampus(campus);
 
         when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
-        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(participant));
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participant);
 
         CampusDto result = profileService.getCampus("123456");
 
