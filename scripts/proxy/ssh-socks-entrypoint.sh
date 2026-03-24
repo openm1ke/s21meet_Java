@@ -9,20 +9,20 @@ SSH_KEY_PATH="${SSH_KEY_PATH:-/run/secrets/ssh_private_key}"
 SSH_KNOWN_HOSTS_PATH="${SSH_KNOWN_HOSTS_PATH:-/run/secrets/ssh_known_hosts}"
 
 if [ ! -r "$SSH_KEY_PATH" ]; then
-  echo "ERROR: SSH private key not found or not readable: $SSH_KEY_PATH"
+  echo "ERROR: SSH private key not found or not readable: $SSH_KEY_PATH" >&2
   exit 1
 fi
 
 chmod 600 "$SSH_KEY_PATH" 2>/dev/null || true
 
 if [ ! -s "$SSH_KNOWN_HOSTS_PATH" ]; then
-  echo "ERROR: known_hosts is missing or empty: $SSH_KNOWN_HOSTS_PATH"
+  echo "ERROR: known_hosts is missing or empty: $SSH_KNOWN_HOSTS_PATH" >&2
   exit 1
 fi
 
 HOSTPORT="[$FR_HOST]:$FR_PORT"
 if ! ssh-keygen -F "$HOSTPORT" -f "$SSH_KNOWN_HOSTS_PATH" >/dev/null 2>&1; then
-  echo "ERROR: known_hosts does not contain entry for $HOSTPORT"
+  echo "ERROR: known_hosts does not contain entry for $HOSTPORT" >&2
   exit 1
 fi
 

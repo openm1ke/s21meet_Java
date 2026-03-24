@@ -4,11 +4,15 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import ru.izpz.dto.LastCommandState;
 import ru.izpz.dto.LastCommandType;
+import ru.izpz.dto.ParticipantStatusEnum;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
+import ru.izpz.dto.model.ParticipantCampusV1DTO;
+import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.model.Profile;
 
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -89,5 +93,61 @@ class ProfileMapperTest {
 
         // Assert
         assertNull(result);
+    }
+
+    @Test
+    void toDto_shouldMapParticipantFromApiDto() {
+        ParticipantCampusV1DTO campus = new ParticipantCampusV1DTO();
+        UUID campusId = UUID.randomUUID();
+        campus.setId(campusId);
+        campus.setShortName("KZN");
+
+        ParticipantV1DTO dto = new ParticipantV1DTO();
+        dto.setLogin("testuser");
+        dto.setClassName("B17");
+        dto.setParallelName("java");
+        dto.setExpValue(1200L);
+        dto.setLevel(5);
+        dto.setExpToNextLevel(300L);
+        dto.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        dto.setCampus(campus);
+
+        var result = profileMapper.toDto(dto);
+
+        assertNotNull(result);
+        assertEquals("testuser", result.getLogin());
+        assertEquals("B17", result.getClassName());
+        assertEquals("java", result.getParallelName());
+        assertEquals(1200, result.getExpValue());
+        assertEquals(5, result.getLevel());
+        assertEquals(300, result.getExpToNextLevel());
+        assertEquals(ParticipantStatusEnum.ACTIVE, result.getStatus());
+        assertNotNull(result.getCampus());
+        assertEquals(campusId.toString(), result.getCampus().getId());
+        assertEquals("KZN", result.getCampus().getCampusName());
+    }
+
+    @Test
+    void toDto_shouldReturnNullForNullParticipantApiDto() {
+        assertNull(profileMapper.toDto((ParticipantV1DTO) null));
+    }
+
+    @Test
+    void toDto_shouldMapCampusFromApiDto() {
+        ParticipantCampusV1DTO campus = new ParticipantCampusV1DTO();
+        UUID campusId = UUID.randomUUID();
+        campus.setId(campusId);
+        campus.setShortName("MSK");
+
+        var result = profileMapper.toDto(campus);
+
+        assertNotNull(result);
+        assertEquals(campusId.toString(), result.getId());
+        assertEquals("MSK", result.getCampusName());
+    }
+
+    @Test
+    void toDto_shouldReturnNullForNullCampusApiDto() {
+        assertNull(profileMapper.toDto((ParticipantCampusV1DTO) null));
     }
 }

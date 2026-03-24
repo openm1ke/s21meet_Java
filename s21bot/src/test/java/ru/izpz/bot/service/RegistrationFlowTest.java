@@ -23,9 +23,10 @@ import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.ProfileCodeResponse;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
+import ru.izpz.dto.ParticipantDto;
+import ru.izpz.dto.ParticipantStatusEnum;
 import ru.izpz.dto.RocketChatSendResponse;
-import ru.izpz.dto.model.ErrorResponseDTO;
-import ru.izpz.dto.model.ParticipantV1DTO;
+import ru.izpz.dto.ServiceErrorDto;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -127,7 +128,7 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_checkEduLoginThrowsEduLoginCheckException_sendsUserAndAdminMessages() {
-        ErrorResponseDTO error = new ErrorResponseDTO().status(400).message("bad");
+        ServiceErrorDto error = new ServiceErrorDto().setStatus(400).setMessage("bad");
         when(profileService.checkEduLogin("abc")).thenThrow(new EduLoginCheckException(error));
 
         registrationFlow.startRegistration(chatId, "abc");
@@ -139,8 +140,8 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_inactiveParticipant_sendsError() {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
-        participant.setStatus(ParticipantV1DTO.StatusEnum.BLOCKED);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setStatus(ParticipantStatusEnum.BLOCKED);
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
         registrationFlow.startRegistration(chatId, "abc");
@@ -151,8 +152,8 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_parallelNameNull_sendsError() {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
-        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         participant.setParallelName(null);
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
@@ -164,8 +165,8 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_nonCoreProgram_sendsError() {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
-        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         participant.setParallelName("Piscine");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
@@ -177,8 +178,8 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_checkAndSetLoginFeignException_sendsUserAndAdmin() {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
-        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
@@ -194,8 +195,8 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_sendVerificationCodeSuccess_updatesStatusValidationAndNotifiesAdmin() {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
-        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
@@ -214,8 +215,8 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_whenCheckAndSetLoginReturnsDifferentLogin_doesNotStartValidation() {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
-        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
@@ -231,8 +232,8 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_sendVerificationCodeThrowsRocketChatSendException_notifiesUserAndAdmin() {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
-        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
@@ -251,8 +252,8 @@ class RegistrationFlowTest {
 
     @Test
     void startRegistration_sendVerificationCodeThrowsFeignException_notifiesUserAndAdmin() {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
-        participant.setStatus(ParticipantV1DTO.StatusEnum.ACTIVE);
+        ParticipantDto participant = new ParticipantDto();
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
         participant.setParallelName("Core program");
         when(profileService.checkEduLogin("abc")).thenReturn(participant);
 

@@ -9,7 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import ru.izpz.dto.ApiException;
-import ru.izpz.dto.model.ErrorResponseDTO;
+import ru.izpz.dto.ServiceErrorDto;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Object> handleApiException(ApiException ex) {
         try {
-            ErrorResponseDTO error = objectMapper.readValue(ex.getResponseBody(), ErrorResponseDTO.class);
+            ServiceErrorDto error = objectMapper.readValue(ex.getResponseBody(), ServiceErrorDto.class);
             log.warn("Ошибка от внешнего API [{}]: {}", error.getCode(), error.getMessage());
             return ResponseEntity
                     .status(error.getStatus())

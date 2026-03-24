@@ -13,9 +13,10 @@ import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
 import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
+import ru.izpz.dto.ParticipantDto;
+import ru.izpz.dto.ParticipantStatusEnum;
 import ru.izpz.dto.RocketChatSendResponse;
-import ru.izpz.dto.model.ErrorResponseDTO;
-import ru.izpz.dto.model.ParticipantV1DTO;
+import ru.izpz.dto.ServiceErrorDto;
 
 @Slf4j
 @Service
@@ -65,19 +66,19 @@ public class RegistrationFlow {
             return;
         }
 
-        ParticipantV1DTO participant;
+        ParticipantDto participant;
         try {
             participant = profileService.checkEduLogin(text);
         } catch (EduLoginCheckException e) {
             metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "edu_login_check_exception");
-            ErrorResponseDTO error = e.getError();
+            ServiceErrorDto error = e.getError();
             messageSender.sendMessage(chatId, "Ошибка проверки логина: " + error.getMessage(), null);
             messageSender.sendMessage(botProperties.admin(), "Ошибка проверки логина: " + error, null);
             return;
         }
 
         // проверяем что профиль активный
-        if (participant.getStatus() != ParticipantV1DTO.StatusEnum.ACTIVE) {
+        if (participant.getStatus() != ParticipantStatusEnum.ACTIVE) {
             messageSender.sendMessage(chatId, "Введенный логин не активен", null);
             return;
         }

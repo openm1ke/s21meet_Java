@@ -12,7 +12,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.izpz.dto.*;
 import ru.izpz.dto.api.ClusterApi;
-import ru.izpz.dto.model.ParticipantV1DTO;
+import ru.izpz.dto.api.ParticipantApi;
 import ru.izpz.edu.S21EduApplication;
 import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.service.CampusService;
@@ -72,6 +72,9 @@ class ProfileControllerTest {
 
     @MockitoBean
     private ClusterApi clusterApi;
+
+    @MockitoBean
+    private ParticipantApi participantApi;
 
     @Test
     void getProfile_shouldReturnOk() throws Exception {
@@ -144,7 +147,7 @@ class ProfileControllerTest {
 
     @Test
     void checkEduLogin_shouldReturnOk() throws Exception {
-        ParticipantV1DTO participant = new ParticipantV1DTO();
+        ParticipantDto participant = new ParticipantDto();
         when(profileService.checkEduLogin("login")).thenReturn(participant);
 
         mockMvc.perform(get("/profile/login").param("login", "login"))
@@ -273,7 +276,7 @@ class ProfileControllerTest {
 
     @Test
     void getProjects_shouldReturnOk() throws Exception {
-        ProjectsDto p = new ProjectsDto("g", "n", "d", 1, "dt", 1, 1, "e", "gs", "ct", "ds", 1, 1, 1, 1, 1, 1, "grp", 1);
+        ProjectsDto p = new ProjectsDto("g", "n", "d", 1, "dt", 1, 1, "e", "gs", 1, 1);
         when(campusService.getStudentProjectsByLogin("login")).thenReturn(List.of(p));
 
         mockMvc.perform(get("/profile/projects").param("login", "login"))

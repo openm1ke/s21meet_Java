@@ -10,15 +10,7 @@ public record ProjectsDto(
         Integer laboriousness,
         String executionType,
         String goalStatus,
-        String courseType,
-        String displayedCourseStatus,
-        Integer amountAnswers,
         Integer amountMembers,
-        Integer amountJoinedMembers,
-        Integer amountReviewedAnswers,
-        Integer amountCodeReviewMembers,
-        Integer amountCurrentCodeReviewMembers,
-        String groupName,
         Integer localCourseId
 ) {
 }

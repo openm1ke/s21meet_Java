@@ -3,22 +3,21 @@ package ru.izpz.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import lombok.experimental.UtilityClass;
-import ru.izpz.dto.model.ErrorResponseDTO;
+import ru.izpz.dto.ServiceErrorDto;
 
 @UtilityClass
 public class FeignErrorParser {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    public ErrorResponseDTO parse(FeignException ex) {
+    public ServiceErrorDto parse(FeignException ex) {
         try {
             String content = ex.contentUTF8();
-            return mapper.readValue(content, ErrorResponseDTO.class);
+            return mapper.readValue(content, ServiceErrorDto.class);
         } catch (Exception e) {
-            ErrorResponseDTO fallback = new ErrorResponseDTO();
-            fallback.setStatus(ex.status());
-            fallback.setMessage("Ошибка без тела или парсинг не удался");
-            return fallback;
+            return new ServiceErrorDto()
+                    .setStatus(ex.status())
+                    .setMessage("Ошибка без тела или парсинг не удался");
         }
     }
 }

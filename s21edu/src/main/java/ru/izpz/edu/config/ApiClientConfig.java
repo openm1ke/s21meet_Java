@@ -9,8 +9,10 @@ import org.springframework.web.client.RestTemplate;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.api.CampusApi;
 import ru.izpz.dto.api.ClusterApi;
+import ru.izpz.dto.api.CoalitionApi;
 import ru.izpz.dto.api.EventApi;
 import ru.izpz.dto.api.ParticipantApi;
+import ru.izpz.dto.api.ProjectApi;
 import ru.izpz.edu.service.TokenService;
 
 @Slf4j
@@ -37,25 +39,37 @@ public class ApiClientConfig {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "campus.api.enabled", havingValue = "true")
+    @ConditionalOnProperty(name = "api.campus.enabled", havingValue = "true")
     public CampusApi campusApi(ApiClient apiClient) {
         return new CampusApi(apiClient);
     }
 
     @Bean
-    @ConditionalOnProperty(name = "cluster.api.enabled", havingValue = "true")
+    @ConditionalOnProperty(name = "api.cluster.enabled", havingValue = "true")
     public ClusterApi clusterApi(ApiClient apiClient) {
         return new ClusterApi(apiClient);
     }
 
     @Bean
-    @ConditionalOnProperty(name = "participant.api.enabled", havingValue = "true")
+    @ConditionalOnProperty(name = "api.participant.enabled", havingValue = "true")
     public ParticipantApi participantApi(ApiClient apiClient) {
         return new ParticipantApi(apiClient);
     }
 
     @Bean
+    @ConditionalOnProperty(name = "api.coalition.enabled", havingValue = "true")
+    public CoalitionApi coalitionApi(ApiClient apiClient) {
+        return new CoalitionApi(apiClient);
+    }
+
+    @Bean
     public EventApi eventApi(ApiClient apiClient) {
         return new EventApi(apiClient);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "api.project.enabled", havingValue = "true")
+    public ProjectApi projectApi(ApiClient apiClient) {
+        return new ProjectApi(apiClient);
     }
 }

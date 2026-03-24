@@ -11,19 +11,39 @@
       "description": "Description for profile.service.enabled."
     },
     {
-      "name": "participant.api.enabled",
+      "name": "api.participant.enabled",
       "type": "java.lang.Boolean",
-      "description": "Description for participant.api.enabled."
+      "description": "Enable/disable Participant REST API client bean."
+    },
+    {
+      "name": "api.project.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable/disable Project REST API client bean."
+    },
+    {
+      "name": "api.coalition.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable/disable Coalition REST API client bean."
+    },
+    {
+      "name": "api.cluster.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable/disable Cluster REST API client bean."
+    },
+    {
+      "name": "api.campus.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable/disable Campus REST API client bean."
+    },
+    {
+      "name": "api.graphql.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable/disable GraphQL API client and GraphQL-based providers."
     },
     {
       "name": "api.client.enabled",
       "type": "java.lang.Boolean",
-      "description": "Description for api.client.enabled."
-    },
-    {
-      "name": "campus.api.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Description for campus.api.enabled."
+      "description": "Enable/disable base authorized ApiClient bean."
     },
     {
       "name": "campus.service.enabled",
@@ -71,11 +91,6 @@
       "description": "Enable or disable sending notifications to bot while keeping online status polling active."
     },
     {
-      "name": "graphql.api.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Description for notify.scheduler.enabled."
-    },
-    {
       "name": "graphql.coalition.refresh-ttl",
       "type": "java.time.Duration",
       "defaultValue": "PT15M",
@@ -99,14 +114,21 @@
       "description": "Fixed delay for notify scheduler polling, expressed as ISO-8601 duration (e.g. PT30S)."
     },
     {
-      "name": "cluster.api.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Description for cluster.api.enabled."
-    },
-    {
       "name": "campus.workplace.provider",
       "type": "java.lang.String",
       "defaultValue": "rest",
       "description": "Provider for workplace data: 'rest' for REST API, 'graphql' for GraphQL API."
+    },
+    {
+      "name": "projects.provider",
+      "type": "java.lang.String",
+      "defaultValue": "auto",
+      "description": "Provider for participant projects: 'auto', 'rest', or 'graphql'."
+    },
+    {
+      "name": "projects.rest.page-size",
+      "type": "java.lang.Integer",
+      "defaultValue": 1000,
+      "description": "Page size for REST requests to fetch participant projects by status."
     }
   ] }

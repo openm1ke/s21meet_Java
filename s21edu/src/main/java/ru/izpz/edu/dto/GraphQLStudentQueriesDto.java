@@ -5,5 +5,5 @@ import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record GraphQLStudentQueriesDto(
-        List<GraphQLStudentProject> getStudentCurrentProjects
+        List<StudentProjectData> getStudentCurrentProjects
 ) {}

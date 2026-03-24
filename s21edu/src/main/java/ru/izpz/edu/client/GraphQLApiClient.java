@@ -19,7 +19,7 @@ import ru.izpz.edu.service.TokenService;
 import java.util.Map;
 
 @Component
-@ConditionalOnProperty(name = "graphql.api.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "api.graphql.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class GraphQLApiClient {
 
