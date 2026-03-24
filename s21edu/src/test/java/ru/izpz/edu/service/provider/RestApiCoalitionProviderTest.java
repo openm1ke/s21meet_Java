@@ -18,7 +18,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -97,5 +99,84 @@ class RestApiCoalitionProviderTest {
         assertEquals(Integer.valueOf(271), entity.getRank());
         verify(coalitionApi).getParticipantsByCoalitionId(319L, 2, 0);
         verify(coalitionApi).getParticipantsByCoalitionId(319L, 2, 2);
+    }
+
+    @Test
+    void refreshCoalitionByLogin_shouldSetNullMemberCount_whenCoalitionIdIsNull() throws ApiException {
+        properties.getRest().setFetchMemberCount(true);
+
+        ParticipantCoalitionV1DTO dto = new ParticipantCoalitionV1DTO();
+        dto.setCoalitionId(null);
+        dto.setName("Capybaras");
+        dto.setRank(271);
+
+        StudentCoalition entity = new StudentCoalition();
+        entity.setLogin("testuser");
+        entity.setMemberCount(12);
+
+        when(participantApi.getCoalitionByLogin("testuser")).thenReturn(dto);
+        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.of(entity));
+        when(studentCoalitionRepository.save(any(StudentCoalition.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        provider.refreshCoalitionByLogin("testuser");
+
+        assertNull(entity.getMemberCount());
+        verify(coalitionApi, never()).getParticipantsByCoalitionId(any(), any(), any());
+    }
+
+    @Test
+    void refreshCoalitionByLogin_shouldSetNullMemberCount_whenCoalitionApiFails() throws ApiException {
+        properties.getRest().setFetchMemberCount(true);
+        properties.getRest().setPageSize(2);
+
+        ParticipantCoalitionV1DTO dto = new ParticipantCoalitionV1DTO();
+        dto.setCoalitionId(319L);
+        dto.setName("Capybaras");
+        dto.setRank(271);
+
+        StudentCoalition entity = new StudentCoalition();
+        entity.setLogin("testuser");
+
+        when(participantApi.getCoalitionByLogin("testuser")).thenReturn(dto);
+        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.of(entity));
+        when(coalitionApi.getParticipantsByCoalitionId(319L, 2, 0)).thenThrow(new ApiException("boom"));
+        when(studentCoalitionRepository.save(any(StudentCoalition.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        provider.refreshCoalitionByLogin("testuser");
+
+        assertNull(entity.getMemberCount());
+    }
+
+    @Test
+    void refreshCoalitionByLogin_shouldClampMemberCountToIntegerMaxValue() throws ApiException {
+        properties.getRest().setFetchMemberCount(true);
+        properties.getRest().setPageSize(Integer.MAX_VALUE);
+
+        ParticipantCoalitionV1DTO dto = new ParticipantCoalitionV1DTO();
+        dto.setCoalitionId(319L);
+        dto.setName("Capybaras");
+        dto.setRank(271);
+
+        StudentCoalition entity = new StudentCoalition();
+        entity.setLogin("testuser");
+
+        ParticipantLoginsV1DTO hugePage = new ParticipantLoginsV1DTO();
+        @SuppressWarnings("unchecked")
+        List<String> hugeList = mock(List.class);
+        when(hugeList.size()).thenReturn(Integer.MAX_VALUE);
+        hugePage.setParticipants(hugeList);
+
+        ParticipantLoginsV1DTO tailPage = new ParticipantLoginsV1DTO();
+        tailPage.setParticipants(List.of("u1"));
+
+        when(participantApi.getCoalitionByLogin("testuser")).thenReturn(dto);
+        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.of(entity));
+        when(coalitionApi.getParticipantsByCoalitionId(319L, Integer.MAX_VALUE, 0)).thenReturn(hugePage);
+        when(coalitionApi.getParticipantsByCoalitionId(319L, Integer.MAX_VALUE, Integer.MAX_VALUE)).thenReturn(tailPage);
+        when(studentCoalitionRepository.save(any(StudentCoalition.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        provider.refreshCoalitionByLogin("testuser");
+
+        assertEquals(Integer.valueOf(Integer.MAX_VALUE), entity.getMemberCount());
     }
 }

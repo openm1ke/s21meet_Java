@@ -108,6 +108,7 @@ sonarqube {
         property("sonar.scm.disabled", "true")
         property("sonar.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**")
         property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**")
+        property("sonar.gradle.scanAll", "true")
     }
 }
 
