@@ -27,20 +27,30 @@ spring:
     init:
       mode: always
 
-participant.api.enabled: false
+api:
+  participant:
+    enabled: false
+  project:
+    enabled: false
+  coalition:
+    enabled: false
+  graphql:
+    enabled: false
+  cluster:
+    enabled: false
+  client:
+    enabled: false
+  campus:
+    enabled: false
 profile.service.enabled: false
 profile.api.enabled: false
-graphql.api.enabled: false
 notify.delivery.enabled: false
 notify.scheduler.enabled: false
-cluster.api.enabled: false
-api.client.enabled: false
 bot.service.url: http://localhost:18083
 event:
   scheduler:
     enabled: false
 campus:
-  api.enabled: false
   service.enabled: false
   scheduler:
     enabled: false

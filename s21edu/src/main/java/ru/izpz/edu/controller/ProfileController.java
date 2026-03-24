@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.izpz.dto.*;
-import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.dto.CampusDto;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.EventService;
@@ -53,7 +52,7 @@ public class ProfileController {
     }
 
     @GetMapping("/login")
-    ResponseEntity<ParticipantV1DTO> checkEduLogin(@RequestParam @NotBlank String login) throws ApiException {
+    ResponseEntity<ParticipantDto> checkEduLogin(@RequestParam @NotBlank String login) throws ApiException {
         log.info("Получен запрос на проверку логина: login = {}", login);
         var participant = profileService.checkEduLogin(login);
         return ResponseEntity.ok(participant);

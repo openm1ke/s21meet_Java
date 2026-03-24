@@ -2,7 +2,7 @@ package ru.izpz.edu.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.izpz.edu.dto.GraphQLStudentProject;
+import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.model.StudentProject;
 import ru.izpz.edu.repository.StudentProjectRepository;
 
@@ -20,7 +20,7 @@ public class StudentProjectRefreshService {
     }
 
     @Transactional
-    public void replaceProjects(String login, String userId, List<GraphQLStudentProject> projects) {
+    public void replaceProjects(String login, String userId, List<StudentProjectData> projects) {
         OffsetDateTime now = OffsetDateTime.now();
         studentProjectRepository.deleteByLogin(login);
         if (projects.isEmpty()) {
@@ -36,7 +36,7 @@ public class StudentProjectRefreshService {
 
     private StudentProject toEntity(String login,
                                     String userId,
-                                    GraphQLStudentProject project,
+                                    StudentProjectData project,
                                     OffsetDateTime updatedAt,
                                     int sortOrder) {
         StudentProject entity = new StudentProject();
@@ -51,15 +51,7 @@ public class StudentProjectRefreshService {
         entity.setLaboriousness(project.laboriousness());
         entity.setExecutionType(project.executionType());
         entity.setGoalStatus(project.goalStatus());
-        entity.setCourseType(project.courseType());
-        entity.setDisplayedCourseStatus(project.displayedCourseStatus());
-        entity.setAmountAnswers(project.amountAnswers());
         entity.setAmountMembers(project.amountMembers());
-        entity.setAmountJoinedMembers(project.amountJoinedMembers());
-        entity.setAmountReviewedAnswers(project.amountReviewedAnswers());
-        entity.setAmountCodeReviewMembers(project.amountCodeReviewMembers());
-        entity.setAmountCurrentCodeReviewMembers(project.amountCurrentCodeReviewMembers());
-        entity.setGroupName(project.groupName());
         entity.setLocalCourseId(project.localCourseId());
         entity.setSortOrder(sortOrder);
         entity.setSnapshot(false);

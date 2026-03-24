@@ -3,18 +3,17 @@ package ru.izpz.edu.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.CampusDto;
 import ru.izpz.dto.Clusters;
 import ru.izpz.dto.ProjectsDto;
 import ru.izpz.dto.model.ClusterV1DTO;
-import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.mapper.CampusMapper;
 import ru.izpz.edu.mapper.ProjectsMapper;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.repository.WorkplaceRepository;
+import ru.izpz.edu.service.provider.ProjectsProvider;
 import ru.izpz.edu.service.provider.WorkplaceProvider;
 
 import java.util.Comparator;
@@ -30,13 +29,11 @@ public class CampusService {
 
     private final CampusPersistenceService persistenceService;
     private final CampusMapper campusMapper;
-    private final CampusClient campusClient;
     private final ProjectsMapper projectsMapper;
     private final WorkplaceProvider workplaceProvider;
+    private final ProjectsProvider projectsProvider;
     private final SchedulerMetricsService schedulerMetricsService;
     private final WorkplaceRepository workplaceRepository;
-    @Nullable
-    private final GraphQLService graphQLService;
 
     public List<Clusters> getClusters(CampusDto campus) {
         return persistenceService.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
@@ -80,9 +77,7 @@ public class CampusService {
     }
 
     public List<ProjectsDto> getStudentProjectsByLogin(String login) {
-        var projects = graphQLService == null
-                ? campusClient.getStudentProjectsByLogin(login)
-                : graphQLService.getCachedStudentProjectsByLogin(login);
+        var projects = projectsProvider.getStudentProjectsByLogin(login);
         return projects.stream()
                 .map(projectsMapper::toDto)
                 .toList();

@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.izpz.edu.dto.GraphQLStudentProject;
+import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.model.StudentProject;
 import ru.izpz.edu.repository.StudentProjectRepository;
 
@@ -41,15 +41,13 @@ class StudentProjectRefreshServiceTest {
     @Test
     void replaceProjects_shouldStoreMappedProjects_whenProjectsExist() {
         StudentProjectRefreshService service = new StudentProjectRefreshService(studentProjectRepository);
-        GraphQLStudentProject p1 = new GraphQLStudentProject(
+        StudentProjectData p1 = new StudentProjectData(
                 "g1", "Project1", "d1", 100, "2026-01-01", 10, 1,
-                "INDIVIDUAL", "IN_PROGRESS", "CORE", "IN_PROGRESS",
-                1, 2, 3, 4, 5, 6, "grp1", 7
+                "INDIVIDUAL", "IN_PROGRESS", 2, 7
         );
-        GraphQLStudentProject p2 = new GraphQLStudentProject(
+        StudentProjectData p2 = new StudentProjectData(
                 "g2", "Project2", "d2", 200, "2026-01-02", 20, 2,
-                "GROUP", "WAITING_FOR_START", "CORE", "WAITING_FOR_START",
-                2, 3, 4, 5, 6, 7, "grp2", 8
+                "GROUP", "WAITING_FOR_START", 3, 8
         );
 
         service.replaceProjects("login", "userId", List.of(p1, p2));
