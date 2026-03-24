@@ -75,6 +75,7 @@ remove_inactive_proxies() {
       docker rm -f "$container_id" >/dev/null 2>&1 || true
     fi
   done
+  return 0
 }
 
 wait_for_postgres_healthy() {

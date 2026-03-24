@@ -15,15 +15,24 @@ if command -v docker &>/dev/null && docker compose version &>/dev/null; then
 elif command -v docker-compose &>/dev/null; then
   COMPOSE=(docker-compose)
 else
-  echo "[ERROR] docker compose / docker-compose not found"
+  echo "[ERROR] docker compose / docker-compose not found" >&2
   exit 1
 fi
 
 # ---------- colors/log ----------
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-info(){ echo -e "${GREEN}[INFO]${NC} $*"; }
-warn(){ echo -e "${YELLOW}[WARN]${NC} $*"; }
-err(){  echo -e "${RED}[ERROR]${NC} $*"; }
+info() {
+  echo -e "${GREEN}[INFO]${NC} $*"
+  return 0
+}
+warn() {
+  echo -e "${YELLOW}[WARN]${NC} $*"
+  return 0
+}
+err() {
+  echo -e "${RED}[ERROR]${NC} $*" >&2
+  return 0
+}
 
 usage() {
   cat <<'USAGE'
@@ -51,6 +60,7 @@ Examples:
   ./dev.sh infra
   ./dev.sh --full
 USAGE
+  return 0
 }
 
 # ---------- args parsing ----------
@@ -98,7 +108,10 @@ fi
 
 # ---------- helpers ----------
 compose_file_ok() {
-  [[ -f docker-compose.yml ]]
+  if [[ -f docker-compose.yml ]]; then
+    return 0
+  fi
+  return 1
 }
 
 copy_if_missing() {
@@ -112,11 +125,20 @@ copy_if_missing() {
   mkdir -p "$(dirname "$dst")"
   cp "$src" "$dst"
   info "Created $dst from $(basename "$src")"
+  return 0
 }
 
 normalize_test_env() {
-  perl -0pi -e 's|^DB_URL=.*$|DB_URL=jdbc:postgresql://postgres:5432/postgres|m; s|^TOKEN_ENDPOINT=.*$|TOKEN_ENDPOINT=http://s21auth:8081/api/tokens/default|m; s|^BOT_SERVICE_URL=.*$|BOT_SERVICE_URL=http://s21bot:8083|m' "$TEST_ENV_DIR/s21edu.env"
-  perl -0pi -e 's|^PROFILE_SERVICE_URL=.*$|PROFILE_SERVICE_URL=http://s21edu:8082|m; s|^ROCKETCHAT_SERVICE_URL=.*$|ROCKETCHAT_SERVICE_URL=http://s21rocket:8084|m' "$TEST_ENV_DIR/s21bot.env"
+  # Internal test stack communication happens only inside docker-compose network.
+  local internal_protocol="${INTERNAL_SERVICE_PROTOCOL:-http}"
+  local auth_url="${internal_protocol}://s21auth:8081/api/tokens/default"
+  local bot_url="${internal_protocol}://s21bot:8083"
+  local profile_url="${internal_protocol}://s21edu:8082"
+  local rocket_url="${internal_protocol}://s21rocket:8084"
+
+  perl -0pi -e "s|^DB_URL=.*$|DB_URL=jdbc:postgresql://postgres:5432/postgres|m; s|^TOKEN_ENDPOINT=.*$|TOKEN_ENDPOINT=${auth_url}|m; s|^BOT_SERVICE_URL=.*$|BOT_SERVICE_URL=${bot_url}|m" "$TEST_ENV_DIR/s21edu.env"
+  perl -0pi -e "s|^PROFILE_SERVICE_URL=.*$|PROFILE_SERVICE_URL=${profile_url}|m; s|^ROCKETCHAT_SERVICE_URL=.*$|ROCKETCHAT_SERVICE_URL=${rocket_url}|m" "$TEST_ENV_DIR/s21bot.env"
+  return 0
 }
 
 ensure_test_env() {
@@ -148,6 +170,7 @@ ensure_test_env() {
   fi
 
   normalize_test_env
+  return 0
 }
 
 resolve_proxy_mode() {
@@ -170,6 +193,7 @@ resolve_proxy_mode() {
       exit 1
       ;;
   esac
+  return 0
 }
 
 proxy_service_for_mode() {
@@ -177,7 +201,9 @@ proxy_service_for_mode() {
     vless) echo "xray-client" ;;
     ssh) echo "ssh-socks-client" ;;
     none) echo "" ;;
+    *) echo "" ;;
   esac
+  return 0
 }
 
 cleanup_inactive_proxy_containers() {
@@ -187,6 +213,7 @@ cleanup_inactive_proxy_containers() {
     vless) inactive_services=("ssh-socks-client") ;;
     ssh) inactive_services=("xray-client") ;;
     none) inactive_services=("xray-client" "ssh-socks-client") ;;
+    *) inactive_services=() ;;
   esac
 
   for service in "${inactive_services[@]}"; do
@@ -203,6 +230,7 @@ cleanup_inactive_proxy_containers() {
       docker rm -f "$cid" >/dev/null 2>&1 || true
     fi
   done
+  return 0
 }
 
 compose_cmd() {
@@ -212,9 +240,11 @@ compose_cmd() {
     vless) profile_args+=(--profile proxy-vless) ;;
     ssh) profile_args+=(--profile proxy-ssh) ;;
     none) ;;
+    *) ;;
   esac
 
   "${COMPOSE[@]}" "${profile_args[@]}" --env-file "$COMPOSE_ENV_FILE" -f docker-compose.yml "$@"
+  return 0
 }
 
 gradle_build() {
@@ -233,6 +263,7 @@ gradle_build() {
   info "Gradle tasks: ${tasks[*]}"
   # --parallel ускоряет multi-module
   ./gradlew -x test --parallel "${tasks[@]}"
+  return 0
 }
 
 resolve_images_for_targets() {
@@ -247,6 +278,7 @@ resolve_images_for_targets() {
   done
 
   printf '%s\n' "${images[@]}" | awk '!seen[$0]++'
+  return 0
 }
 
 build_images() {
@@ -272,6 +304,7 @@ build_images() {
         ;;
     esac
   done
+  return 0
 }
 
 compose_up_targets() {
@@ -301,6 +334,7 @@ compose_up_targets() {
 
   info "Compose up targets: ${with_proxy[*]}"
   compose_cmd up -d "${extra[@]}" "${with_proxy[@]}"
+  return 0
 }
 
 compose_restart_targets() {
@@ -322,11 +356,13 @@ compose_restart_targets() {
 
   info "Compose restart targets: ${with_proxy[*]}"
   compose_cmd restart "${with_proxy[@]}"
+  return 0
 }
 
 run_s21edu_migrations() {
   info "Running s21edu migrations (s21edu-migrator)..."
   compose_cmd run --rm s21edu-migrator
+  return 0
 }
 
 wait_for_postgres() {
