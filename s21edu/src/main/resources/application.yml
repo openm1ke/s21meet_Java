@@ -100,5 +100,5 @@ campus:
     fixed-delay: PT30S
     participants-max-concurrency: 8
     timeout:
-      clusters: PT20S
-      participants: PT40S
+      global: PT30S
+      per-campus: PT60S

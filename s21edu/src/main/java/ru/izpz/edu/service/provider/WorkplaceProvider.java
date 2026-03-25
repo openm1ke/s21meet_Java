@@ -1,17 +1,19 @@
 package ru.izpz.edu.service.provider;
 
 import ru.izpz.dto.ApiException;
+import ru.izpz.edu.model.Workplace;
+
+import java.util.List;
 
 /**
- * Simple interface for workplace data management
- * Implementations decide which data source to use internally
+ * Interface for fetching workplace data from configured source.
  */
 public interface WorkplaceProvider {
-    
+
     /**
-     * Update participants for a cluster using the configured data source
+     * Fetch participants for a cluster using the configured data source.
      * @param clusterId the cluster ID
      * @throws ApiException if operation fails
      */
-    void updateParticipantsByCluster(Long clusterId) throws ApiException;
+    List<Workplace> fetchParticipantsByCluster(Long clusterId) throws ApiException;
 }

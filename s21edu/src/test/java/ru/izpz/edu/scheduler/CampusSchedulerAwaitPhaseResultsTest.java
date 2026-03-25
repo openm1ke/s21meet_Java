@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -118,7 +119,8 @@ class CampusSchedulerAwaitPhaseResultsTest {
 
         invokeAwaitPhase("clusters", Duration.ofMillis(100), futures);
 
-        verify(schedulerMetricsService).recordPhaseIssue("campus_parser", "clusters", SchedulerErrorReason.EXECUTION_EXCEPTION);
+        verify(schedulerMetricsService, atLeastOnce())
+            .recordPhaseIssue("campus_parser", "clusters", SchedulerErrorReason.EXECUTION_EXCEPTION);
     }
 
     @Test
@@ -140,6 +142,20 @@ class CampusSchedulerAwaitPhaseResultsTest {
 
         assertTrue(future.isDone());
         assertTrue(!future.isCancelled());
+    }
+
+    @Test
+    void buildPhaseOutcome_withIncompleteFuture_marksErrors() throws Exception {
+        CompletableFuture<Object> pending = new CompletableFuture<>();
+        Method buildMethod = CampusScheduler.class.getDeclaredMethod("buildPhaseOutcome", boolean.class, List.class, String.class);
+        buildMethod.setAccessible(true);
+
+        Object outcome = buildMethod.invoke(scheduler, false, List.of(pending), "clusters");
+
+        Method hasErrors = outcome.getClass().getMethod("hasErrors");
+        Method hasSuccessfulCampuses = outcome.getClass().getMethod("hasSuccessfulCampuses");
+        assertTrue((Boolean) hasErrors.invoke(outcome));
+        assertTrue(!(Boolean) hasSuccessfulCampuses.invoke(outcome));
     }
 
     private void invokeAwaitPhase(String phase, Duration timeout, List<CompletableFuture<Object>> futures) throws Exception {

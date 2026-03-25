@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import ru.izpz.edu.client.CampusClient;
 import ru.izpz.edu.config.CampusSchedulerProperties;
-import ru.izpz.edu.model.Cluster;
+import ru.izpz.dto.model.ClusterV1DTO;
 import ru.izpz.edu.service.CampusCatalog;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.SchedulerMetricsService;
@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,14 +78,16 @@ class CampusSchedulerErrorHandlingTest {
     }
 
     @Test
-    void processSingleCluster_runtimeException_recordsExecutionError() throws Exception {
-        Cluster cluster = new Cluster();
-        cluster.setClusterId(123L);
+    void processSingleCampusParticipants_runtimeException_recordsExecutionError() throws Exception {
+        String campusId = "campus-1";
+        ClusterV1DTO cluster = new ClusterV1DTO();
+        cluster.setId(123L);
+        when(campusClient.getClustersByCampus(campusId)).thenReturn(java.util.List.of(cluster));
         doThrow(new IllegalStateException("boom"))
             .when(campusService)
-            .replaceParticipantsByClusterIdWithProvider(cluster.getClusterId());
+            .fetchParticipantsByClusterWithProvider(cluster.getId());
 
-        Object result = invokeProcessSingleCluster(cluster);
+        Object result = invokeProcessSingleCampusParticipants(campusId);
 
         assertFalse((Boolean) success(result));
         verify(metricsService).recordExternalApiError(
@@ -95,16 +98,32 @@ class CampusSchedulerErrorHandlingTest {
         );
     }
 
+    @Test
+    void processSingleCampusParticipants_saveException_returnsFailure() throws Exception {
+        String campusId = "campus-1";
+        ClusterV1DTO cluster = new ClusterV1DTO();
+        cluster.setId(123L);
+        when(campusClient.getClustersByCampus(campusId)).thenReturn(java.util.List.of(cluster));
+        when(campusService.fetchParticipantsByClusterWithProvider(cluster.getId())).thenReturn(java.util.List.of());
+        doThrow(new IllegalStateException("save boom"))
+            .when(campusService)
+            .replaceCampusSnapshotByCampusId(eq(campusId), anyList(), anyList());
+
+        Object result = invokeProcessSingleCampusParticipants(campusId);
+
+        assertFalse((Boolean) success(result));
+    }
+
     private Object invokeProcessSingleCampus(String campusId) throws Exception {
         Method method = CampusScheduler.class.getDeclaredMethod("processSingleCampus", String.class);
         method.setAccessible(true);
         return method.invoke(scheduler, campusId);
     }
 
-    private Object invokeProcessSingleCluster(Cluster cluster) throws Exception {
-        Method method = CampusScheduler.class.getDeclaredMethod("processSingleCluster", Cluster.class);
+    private Object invokeProcessSingleCampusParticipants(String campusId) throws Exception {
+        Method method = CampusScheduler.class.getDeclaredMethod("processSingleCampusParticipants", String.class);
         method.setAccessible(true);
-        return method.invoke(scheduler, cluster);
+        return method.invoke(scheduler, campusId);
     }
 
     private Object success(Object taskResult) throws Exception {

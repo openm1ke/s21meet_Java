@@ -68,16 +68,16 @@
       "description": "Maximum number of concurrent participant tasks for campus scheduler."
     },
     {
-      "name": "campus.scheduler.timeout.clusters",
+      "name": "campus.scheduler.timeout.global",
       "type": "java.lang.String",
-      "defaultValue": "PT20S",
-      "description": "Timeout for campus cluster phase, expressed as ISO-8601 duration."
+      "defaultValue": "PT60S",
+      "description": "Global timeout for campus snapshot refresh phase, expressed as ISO-8601 duration."
     },
     {
-      "name": "campus.scheduler.timeout.participants",
+      "name": "campus.scheduler.timeout.per-campus",
       "type": "java.lang.String",
-      "defaultValue": "PT40S",
-      "description": "Timeout for campus participant phase, expressed as ISO-8601 duration."
+      "defaultValue": "PT20S",
+      "description": "Per-campus timeout for snapshot refresh task, expressed as ISO-8601 duration."
     },
     {
       "name": "event.scheduler.enabled",

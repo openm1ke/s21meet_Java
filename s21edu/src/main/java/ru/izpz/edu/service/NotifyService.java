@@ -1,12 +1,14 @@
 package ru.izpz.edu.service;
 
-import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import ru.izpz.dto.StatusChange;
 import ru.izpz.edu.model.Friends;
 import ru.izpz.edu.model.Online;
+import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.repository.FriendsRepository;
 import ru.izpz.edu.repository.OnlineRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
@@ -15,7 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.time.OffsetDateTime;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,20 +35,24 @@ public class NotifyService {
         this.onlineRepository = onlineRepository;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public List<StatusChange> computeAndPersistChanges() {
         List<String> logins = friendsRepository.findDistinctLogins();
         if (logins.isEmpty()) {
             log.debug("computeAndPersistChanges: no tracked logins");
             return List.of();
         }
+        Set<String> inCampusLogins = workplaceRepository.findAllByLoginIn(logins).stream()
+            .map(Workplace::getLogin)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
 
         List<StatusChange> changes = new ArrayList<>();
         int becameOnline = 0;
         int becameOffline = 0;
 
         for (String login : logins) {
-            boolean inCampus = workplaceRepository.existsByLogin(login);
+            boolean inCampus = inCampusLogins.contains(login);
             Optional<Online> opt = onlineRepository.findByLogin(login);
 
             if (inCampus) {

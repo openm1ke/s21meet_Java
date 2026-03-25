@@ -13,6 +13,7 @@ import ru.izpz.edu.repository.ClusterRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -60,7 +61,6 @@ class CampusPersistenceServiceTest {
     void replaceClusters_shouldDeleteAndSaveClusters() {
         // Given
         List<Cluster> clusters = List.of(testCluster);
-        when(clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId)).thenReturn(List.of());
         
         // When
         campusPersistenceService.replaceClusters(campusId, clusters);
@@ -71,18 +71,11 @@ class CampusPersistenceServiceTest {
     }
 
     @Test
-    void replaceClusters_shouldDeleteOldParticipants_whenExistingClustersPresent() {
-        // Given
-        Cluster existing = new Cluster();
-        existing.setClusterId(42L);
-        when(clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId)).thenReturn(List.of(existing));
-
-        // When
+    void replaceClusters_shouldNotTouchWorkplaces() {
         campusPersistenceService.replaceClusters(campusId, List.of());
 
-        // Then
-        verify(workplaceRepository).deleteByIdClusterIdIn(java.util.Set.of(42L));
         verify(clusterRepository).deleteAllByCampusId(campusId);
+        verify(workplaceRepository, never()).deleteByIdClusterIdIn(anySet());
     }
 
     @Test
@@ -124,6 +117,69 @@ class CampusPersistenceServiceTest {
         // Then
         verify(workplaceRepository).deleteByIdClusterId(clusterId);
         verify(workplaceRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void replaceParticipantsByCampusId_shouldDeleteByCampusClustersAndSaveAll() {
+        Cluster c1 = new Cluster();
+        c1.setClusterId(1L);
+        Cluster c2 = new Cluster();
+        c2.setClusterId(2L);
+        when(clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId)).thenReturn(List.of(c1, c2));
+
+        Workplace w1 = new Workplace();
+        w1.setId(new WorkplaceId(1L, "A", 1));
+        Workplace w2 = new Workplace();
+        w2.setId(new WorkplaceId(2L, "B", 2));
+        List<Workplace> workplaces = List.of(w1, w2);
+
+        campusPersistenceService.replaceParticipantsByCampusId(campusId, workplaces);
+
+        verify(workplaceRepository).deleteByIdClusterIdIn(Set.of(1L, 2L));
+        verify(workplaceRepository).saveAll(workplaces);
+    }
+
+    @Test
+    void replaceParticipantsByCampusId_shouldOnlyDelete_whenCampusHasClustersAndNoWorkplaces() {
+        Cluster c1 = new Cluster();
+        c1.setClusterId(1L);
+        when(clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId)).thenReturn(List.of(c1));
+
+        campusPersistenceService.replaceParticipantsByCampusId(campusId, List.of());
+
+        verify(workplaceRepository).deleteByIdClusterIdIn(Set.of(1L));
+        verify(workplaceRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void replaceParticipantsByCampusId_shouldSkipDelete_whenCampusHasNoClusters() {
+        when(clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId)).thenReturn(List.of());
+
+        campusPersistenceService.replaceParticipantsByCampusId(campusId, List.of());
+
+        verify(workplaceRepository, never()).deleteByIdClusterIdIn(anySet());
+        verify(workplaceRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void replaceCampusSnapshot_shouldReplaceClustersAndWorkplacesInSingleFlow() {
+        Cluster existing = new Cluster();
+        existing.setClusterId(42L);
+        when(clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId)).thenReturn(List.of(existing));
+
+        Cluster newCluster = new Cluster();
+        newCluster.setClusterId(1L);
+        newCluster.setCampusId(campusId);
+        Workplace workplace = new Workplace();
+        workplace.setId(new WorkplaceId(1L, "A", 1));
+        workplace.setLogin("alice");
+
+        campusPersistenceService.replaceCampusSnapshot(campusId, List.of(newCluster), List.of(workplace));
+
+        verify(workplaceRepository).deleteByIdClusterIdIn(Set.of(42L));
+        verify(clusterRepository).deleteAllByCampusId(campusId);
+        verify(clusterRepository).saveAll(List.of(newCluster));
+        verify(workplaceRepository).saveAll(List.of(workplace));
     }
 
     @Test

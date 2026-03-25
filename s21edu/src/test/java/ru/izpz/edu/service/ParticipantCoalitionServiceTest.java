@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.ParticipantCoalitionDto;
+import ru.izpz.dto.ParticipantDto;
 import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.repository.StudentCoalitionRepository;
 import ru.izpz.edu.service.provider.CoalitionProvider;
@@ -67,5 +68,21 @@ class ParticipantCoalitionServiceTest {
         doThrow(new RuntimeException("boom")).when(coalitionProvider).refreshCoalitionByLogin("testuser");
 
         assertDoesNotThrow(() -> participantCoalitionService.refreshByLogin("testuser"));
+    }
+
+    @Test
+    void enrichParticipant_shouldSetCoalition_whenCoalitionExists() {
+        StudentCoalition coalition = new StudentCoalition();
+        coalition.setLogin("testuser");
+        coalition.setCoalitionName("Capybaras");
+        coalition.setMemberCount(1085);
+        coalition.setRank(271);
+        when(studentCoalitionRepository.findById("testuser")).thenReturn(Optional.of(coalition));
+
+        ParticipantDto participant = new ParticipantDto();
+        participantCoalitionService.enrichParticipant(participant, "testuser");
+
+        assertNotNull(participant.getCoalition());
+        assertEquals("Capybaras", participant.getCoalition().getName());
     }
 }
