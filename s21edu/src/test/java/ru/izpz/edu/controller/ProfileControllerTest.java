@@ -162,9 +162,9 @@ class ProfileControllerTest {
         CampusRequest req = CampusRequest.builder().telegramId("123456").build();
 
         CampusDto campus = new CampusDto("Campus", "uuid");
+        CampusService.CampusSnapshot snapshot = new CampusService.CampusSnapshot(List.of(), Map.of("No data", 1L));
         when(profileService.getCampus("123456")).thenReturn(campus);
-        when(campusService.getClusters(campus)).thenReturn(List.of());
-        when(campusService.getProgramStatsByCampusId("uuid")).thenReturn(java.util.Map.of("No data", 1L));
+        when(campusService.getCampusSnapshot(campus)).thenReturn(snapshot);
 
         mockMvc.perform(post("/profile/campus")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -175,8 +175,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.programStats['No data']").value(1));
 
         verify(profileService).getCampus("123456");
-        verify(campusService).getClusters(campus);
-        verify(campusService).getProgramStatsByCampusId("uuid");
+        verify(campusService).getCampusSnapshot(campus);
     }
 
     @Test

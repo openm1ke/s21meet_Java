@@ -5,11 +5,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import ru.izpz.dto.*;
 import ru.izpz.dto.model.ClusterV1DTO;
 import ru.izpz.edu.mapper.CampusMapper;
 import ru.izpz.edu.mapper.ProjectsMapper;
 import ru.izpz.edu.model.Cluster;
+import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.service.provider.ProjectsProvider;
@@ -20,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -53,15 +57,17 @@ class CampusServiceTest {
     private static final Long CLUSTER_ID = 123L;
 
     @Test
-    void replaceParticipantsByClusterIdWithProvider_shouldUseConfiguredProvider() throws ApiException {
+    void fetchParticipantsByClusterWithProvider_shouldUseConfiguredProvider() throws ApiException {
         // Arrange
-        doNothing().when(workplaceProvider).updateParticipantsByCluster(CLUSTER_ID);
+        Workplace workplace = new Workplace();
+        when(workplaceProvider.fetchParticipantsByCluster(CLUSTER_ID)).thenReturn(List.of(workplace));
 
         // Act
-        campusService.replaceParticipantsByClusterIdWithProvider(CLUSTER_ID);
+        List<Workplace> result = campusService.fetchParticipantsByClusterWithProvider(CLUSTER_ID);
 
         // Assert
-        verify(workplaceProvider).updateParticipantsByCluster(CLUSTER_ID);
+        assertEquals(1, result.size());
+        verify(workplaceProvider).fetchParticipantsByCluster(CLUSTER_ID);
     }
 
     @Test
@@ -137,6 +143,29 @@ class CampusServiceTest {
     }
 
     @Test
+    void getCampusSnapshot_shouldReturnClustersAndProgramStats() {
+        Cluster c = new Cluster();
+        c.setName("c");
+        c.setCapacity(10);
+        c.setAvailableCapacity(5);
+        c.setFloor(2);
+        when(persistenceService.findAllByCampusIdOrderByFloorAsc(CAMPUS_ID.toString()))
+            .thenReturn(List.of(c));
+
+        WorkplaceRepository.StageNameCountView stage = mock(WorkplaceRepository.StageNameCountView.class);
+        when(stage.getStageName()).thenReturn("Core");
+        when(stage.getCount()).thenReturn(5L);
+        when(workplaceRepository.countParticipantsByCampusIdAndStageName(CAMPUS_ID.toString()))
+            .thenReturn(List.of(stage));
+
+        CampusDto campus = new CampusDto("name", CAMPUS_ID.toString());
+        CampusService.CampusSnapshot snapshot = campusService.getCampusSnapshot(campus);
+
+        assertEquals(1, snapshot.clusters().size());
+        assertEquals(5L, snapshot.programStats().get("Core"));
+    }
+
+    @Test
     void findAllByOrderByCampusIdAsc_shouldDelegate() {
         // Arrange
         Cluster c = new Cluster();
@@ -148,6 +177,48 @@ class CampusServiceTest {
         // Assert
         assertEquals(1, result.size());
         org.junit.jupiter.api.Assertions.assertSame(c, result.getFirst());
+    }
+
+    @Test
+    void findAllByCampusIdOrderByFloorAsc_shouldDelegate() {
+        Cluster c = new Cluster();
+        when(persistenceService.findAllByCampusIdOrderByFloorAsc("campus-1")).thenReturn(List.of(c));
+
+        List<Cluster> result = campusService.findAllByCampusIdOrderByFloorAsc("campus-1");
+
+        assertEquals(1, result.size());
+        org.junit.jupiter.api.Assertions.assertSame(c, result.getFirst());
+    }
+
+    @Test
+    void replaceParticipantsByCampusId_shouldDelegate() {
+        Workplace workplace = new Workplace();
+        List<Workplace> workplaces = List.of(workplace);
+
+        campusService.replaceParticipantsByCampusId("campus-1", workplaces);
+
+        verify(persistenceService).replaceParticipantsByCampusId("campus-1", workplaces);
+    }
+
+    @Test
+    void replaceCampusSnapshotByCampusId_shouldPersistClustersAndWorkplacesAndMetrics() {
+        ClusterV1DTO dto = new ClusterV1DTO();
+        dto.setId(10L);
+        Cluster mapped = new Cluster();
+        mapped.setClusterId(10L);
+        mapped.setName("Dune");
+        mapped.setCapacity(86);
+        mapped.setAvailableCapacity(20);
+        when(campusMapper.toClusterEntity(dto, "campus-1")).thenReturn(mapped);
+
+        Workplace workplace = new Workplace();
+        workplace.setId(new ru.izpz.edu.model.WorkplaceId(10L, "A", 1));
+        List<Workplace> workplaces = List.of(workplace);
+
+        campusService.replaceCampusSnapshotByCampusId("campus-1", List.of(dto), workplaces);
+
+        verify(persistenceService).replaceCampusSnapshot("campus-1", List.of(mapped), workplaces);
+        verify(schedulerMetricsService).recordClusterPlaces("campus-1", "Dune", 20, 66);
     }
 
     @Test
@@ -205,6 +276,35 @@ class CampusServiceTest {
 
         assertEquals(1, result.size());
         assertEquals(2L, result.get("No data"));
+    }
+
+    @Test
+    void getProgramStatsByCampusId_shouldAggregateSameNormalizedName() {
+        WorkplaceRepository.StageNameCountView nullName = mock(WorkplaceRepository.StageNameCountView.class);
+        when(nullName.getStageName()).thenReturn(null);
+        when(nullName.getCount()).thenReturn(2L);
+
+        WorkplaceRepository.StageNameCountView blankName = mock(WorkplaceRepository.StageNameCountView.class);
+        when(blankName.getStageName()).thenReturn(" ");
+        when(blankName.getCount()).thenReturn(3L);
+
+        when(workplaceRepository.countParticipantsByCampusIdAndStageName("campus-3"))
+                .thenReturn(List.of(nullName, blankName));
+
+        Map<String, Long> result = campusService.getProgramStatsByCampusId("campus-3");
+
+        assertEquals(1, result.size());
+        assertEquals(5L, result.get("No data"));
+    }
+
+    @Test
+    void getCampusSnapshot_shouldUseRepeatableReadTransactionalIsolation() throws NoSuchMethodException {
+        Transactional transactional = CampusService.class
+                .getMethod("getCampusSnapshot", CampusDto.class)
+                .getAnnotation(Transactional.class);
+
+        assertNotNull(transactional);
+        assertEquals(Isolation.REPEATABLE_READ, transactional.isolation());
     }
 
     @Test

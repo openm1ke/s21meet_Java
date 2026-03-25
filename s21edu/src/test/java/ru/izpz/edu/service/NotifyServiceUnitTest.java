@@ -3,6 +3,8 @@ package ru.izpz.edu.service;
 import org.junit.jupiter.api.Test;
 import ru.izpz.dto.StatusChange;
 import ru.izpz.edu.model.Online;
+import ru.izpz.edu.model.Workplace;
+import ru.izpz.edu.model.WorkplaceId;
 import ru.izpz.edu.repository.FriendsRepository;
 import ru.izpz.edu.repository.OnlineRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
@@ -38,7 +40,10 @@ class NotifyServiceUnitTest {
         NotifyService service = new NotifyService(friendsRepository, workplaceRepository, onlineRepository);
 
         when(friendsRepository.findDistinctLogins()).thenReturn(List.of("alice"));
-        when(workplaceRepository.existsByLogin("alice")).thenReturn(true);
+        Workplace workplace = new Workplace();
+        workplace.setLogin("alice");
+        workplace.setId(new WorkplaceId(1L, "A", 1));
+        when(workplaceRepository.findAllByLoginIn(List.of("alice"))).thenReturn(List.of(workplace));
         when(onlineRepository.findByLogin("alice")).thenReturn(Optional.empty());
         when(friendsRepository.findByLoginAndIsSubscribeTrue("alice")).thenReturn(List.of());
 
@@ -60,7 +65,7 @@ class NotifyServiceUnitTest {
         existing.setIsOnline(false);
 
         when(friendsRepository.findDistinctLogins()).thenReturn(List.of("bob"));
-        when(workplaceRepository.existsByLogin("bob")).thenReturn(false);
+        when(workplaceRepository.findAllByLoginIn(List.of("bob"))).thenReturn(List.of());
         when(onlineRepository.findByLogin("bob")).thenReturn(Optional.of(existing));
 
         List<StatusChange> result = service.computeAndPersistChanges();
@@ -77,7 +82,7 @@ class NotifyServiceUnitTest {
         NotifyService service = new NotifyService(friendsRepository, workplaceRepository, onlineRepository);
 
         when(friendsRepository.findDistinctLogins()).thenReturn(List.of("eve"));
-        when(workplaceRepository.existsByLogin("eve")).thenReturn(false);
+        when(workplaceRepository.findAllByLoginIn(List.of("eve"))).thenReturn(List.of());
         when(onlineRepository.findByLogin("eve")).thenReturn(Optional.empty());
 
         List<StatusChange> result = service.computeAndPersistChanges();
@@ -98,7 +103,7 @@ class NotifyServiceUnitTest {
         existing.setIsOnline(true);
 
         when(friendsRepository.findDistinctLogins()).thenReturn(List.of("carol"));
-        when(workplaceRepository.existsByLogin("carol")).thenReturn(false);
+        when(workplaceRepository.findAllByLoginIn(List.of("carol"))).thenReturn(List.of());
         when(onlineRepository.findByLogin("carol")).thenReturn(Optional.of(existing));
         when(friendsRepository.findByLoginAndIsSubscribeTrue("carol")).thenReturn(List.of());
 

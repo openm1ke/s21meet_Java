@@ -531,4 +531,73 @@ class GraphQLServiceTest {
         assertEquals("Stored Project", result.getFirst().name());
         assertEquals(Integer.valueOf(321), result.getFirst().experience());
     }
+
+    @Test
+    void setRefreshTtl_shouldApplyCustomValues() {
+        graphQLService.setCoalitionRefreshTtl(java.time.Duration.ofMinutes(1));
+        graphQLService.setProjectsRefreshTtl(java.time.Duration.ofMinutes(1));
+
+        String login = "fresh";
+        StudentCoalition staleCoalition = new StudentCoalition();
+        staleCoalition.setLogin(login);
+        staleCoalition.setUpdatedAt(OffsetDateTime.now().minusMinutes(2));
+        when(studentCoalitionRepository.findById(login)).thenReturn(Optional.of(staleCoalition));
+        when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
+        when(client.execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)), anyString(), eq(GraphQLStudentCredentialsDataDto.class)))
+            .thenReturn(new GraphQLStudentCredentialsDataDto(null));
+
+        graphQLService.refreshStudentCoalitionByLogin(login);
+        verify(client).execute(eq("getCredentialsByLogin"), eq(Map.of("login", login)), anyString(), eq(GraphQLStudentCredentialsDataDto.class));
+
+        String projectsLogin = "fresh-projects";
+        when(studentProjectRepository.findMaxUpdatedAtByLogin(projectsLogin)).thenReturn(OffsetDateTime.now().minusMinutes(2));
+        when(studentCredentialsRepository.findById(projectsLogin)).thenReturn(Optional.empty());
+        when(client.execute(eq("getCredentialsByLogin"), eq(Map.of("login", projectsLogin)), anyString(), eq(GraphQLStudentCredentialsDataDto.class)))
+            .thenReturn(new GraphQLStudentCredentialsDataDto(null));
+
+        graphQLService.refreshStudentProjectsByLogin(projectsLogin);
+        verify(client).execute(eq("getCredentialsByLogin"), eq(Map.of("login", projectsLogin)), anyString(), eq(GraphQLStudentCredentialsDataDto.class));
+    }
+
+    @Test
+    void getCachedStudentProjectsByLogin_shouldReturnStoredProjects_whenRefreshCallThrows() {
+        String login = "fallback-spy";
+        GraphQLService serviceSpy = spy(graphQLService);
+        doThrow(new RuntimeException("boom")).when(serviceSpy).refreshStudentProjectsByLogin(login);
+
+        StudentProject stored = new StudentProject();
+        stored.setLogin(login);
+        stored.setGoalId("g-spy");
+        stored.setName("Stored Spy Project");
+        stored.setExperience(11);
+        stored.setSnapshot(false);
+        stored.setSortOrder(0);
+        when(studentProjectRepository.findAllByLoginAndSnapshotFalseOrderBySortOrderAsc(login)).thenReturn(List.of(stored));
+
+        List<StudentProjectData> result = serviceSpy.getCachedStudentProjectsByLogin(login);
+
+        assertEquals(1, result.size());
+        assertEquals("g-spy", result.getFirst().goalId());
+        verify(serviceSpy).refreshStudentProjectsByLogin(login);
+    }
+
+    @Test
+    void getCachedStudentProjectsByLogin_shouldReturnStoredProjects_whenRefreshSucceeds() {
+        String login = "cached-success";
+        when(studentProjectRepository.findMaxUpdatedAtByLogin(login)).thenReturn(OffsetDateTime.now());
+
+        StudentProject stored = new StudentProject();
+        stored.setLogin(login);
+        stored.setGoalId("g-ok");
+        stored.setName("Stored OK Project");
+        stored.setExperience(22);
+        stored.setSnapshot(false);
+        stored.setSortOrder(0);
+        when(studentProjectRepository.findAllByLoginAndSnapshotFalseOrderBySortOrderAsc(login)).thenReturn(List.of(stored));
+
+        List<StudentProjectData> result = graphQLService.getCachedStudentProjectsByLogin(login);
+
+        assertEquals(1, result.size());
+        assertEquals("g-ok", result.getFirst().goalId());
+    }
 }

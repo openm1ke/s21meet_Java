@@ -22,12 +22,6 @@ public class CampusPersistenceService {
 
     @Transactional
     public void replaceClusters(String campusId, List<Cluster> clusters) {
-        Set<Long> existingClusterIds = clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId).stream()
-            .map(Cluster::getClusterId)
-            .collect(toSet());
-        if (!existingClusterIds.isEmpty()) {
-            workplaceRepository.deleteByIdClusterIdIn(existingClusterIds);
-        }
         clusterRepository.deleteAllByCampusId(campusId);
         if (!clusters.isEmpty()) clusterRepository.saveAll(clusters);
     }
@@ -36,6 +30,36 @@ public class CampusPersistenceService {
     public void replaceParticipants(long clusterId, List<Workplace> workplaces) {
         workplaceRepository.deleteByIdClusterId(clusterId);
         if (!workplaces.isEmpty()) workplaceRepository.saveAll(workplaces);
+    }
+
+    @Transactional
+    public void replaceParticipantsByCampusId(String campusId, List<Workplace> workplaces) {
+        Set<Long> clusterIds = clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId).stream()
+            .map(Cluster::getClusterId)
+            .collect(toSet());
+        if (!clusterIds.isEmpty()) {
+            workplaceRepository.deleteByIdClusterIdIn(clusterIds);
+        }
+        if (!workplaces.isEmpty()) {
+            workplaceRepository.saveAll(workplaces);
+        }
+    }
+
+    @Transactional
+    public void replaceCampusSnapshot(String campusId, List<Cluster> clusters, List<Workplace> workplaces) {
+        Set<Long> existingClusterIds = clusterRepository.findAllByCampusIdOrderByFloorAsc(campusId).stream()
+            .map(Cluster::getClusterId)
+            .collect(toSet());
+        if (!existingClusterIds.isEmpty()) {
+            workplaceRepository.deleteByIdClusterIdIn(existingClusterIds);
+        }
+        clusterRepository.deleteAllByCampusId(campusId);
+        if (!clusters.isEmpty()) {
+            clusterRepository.saveAll(clusters);
+        }
+        if (!workplaces.isEmpty()) {
+            workplaceRepository.saveAll(workplaces);
+        }
     }
 
     @Transactional(readOnly = true)

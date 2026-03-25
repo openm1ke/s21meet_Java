@@ -20,7 +20,7 @@ public class CampusSchedulerProperties {
     @Getter
     @Setter
     public static class Timeout {
-        private Duration clusters = Duration.ofSeconds(20);
-        private Duration participants = Duration.ofSeconds(40);
+        private Duration global = Duration.ofSeconds(60);
+        private Duration perCampus = Duration.ofSeconds(20);
     }
 }
