@@ -162,12 +162,12 @@ public class GraphQLService {
         this.meterRegistry = meterRegistry;
     }
 
-    @Value("${graphql.coalition.refresh-ttl:PT15M}")
+    @Value("${coalition.refresh-ttl:PT15M}")
     void setCoalitionRefreshTtl(Duration coalitionRefreshTtl) {
         this.coalitionRefreshTtl = coalitionRefreshTtl;
     }
 
-    @Value("${graphql.projects.refresh-ttl:PT15M}")
+    @Value("${projects.refresh-ttl:PT15M}")
     void setProjectsRefreshTtl(Duration projectsRefreshTtl) {
         this.projectsRefreshTtl = projectsRefreshTtl;
     }

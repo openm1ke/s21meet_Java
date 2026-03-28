@@ -69,18 +69,16 @@ profile:
   service.enabled: true
 coalition:
   provider: ${COALITION_PROVIDER:graphql}  # auto|graphql|rest
+  refresh-ttl: ${COALITION_REFRESH_TTL:${GRAPHQL_COALITION_REFRESH_TTL:PT15M}}
   rest:
     fetch-member-count: ${COALITION_REST_FETCH_MEMBER_COUNT:false}
     page-size: ${COALITION_REST_PAGE_SIZE:1000}
 projects:
   provider: ${PROJECTS_PROVIDER:graphql}  # auto|graphql|rest
+  refresh-ttl: ${PROJECTS_REFRESH_TTL:${GRAPHQL_PROJECTS_REFRESH_TTL:PT15M}}
   rest:
     page-size: ${PROJECTS_REST_PAGE_SIZE:1000}
 graphql:
-  coalition:
-    refresh-ttl: ${GRAPHQL_COALITION_REFRESH_TTL:PT15M}
-  projects:
-    refresh-ttl: ${GRAPHQL_PROJECTS_REFRESH_TTL:PT15M}
 event:
   scheduler:
     enabled: true
