@@ -91,13 +91,13 @@
       "description": "Enable or disable sending notifications to bot while keeping online status polling active."
     },
     {
-      "name": "graphql.coalition.refresh-ttl",
+      "name": "coalition.refresh-ttl",
       "type": "java.time.Duration",
       "defaultValue": "PT15M",
-      "description": "TTL for refreshing cached coalition data by login."
+      "description": "TTL for refreshing cached coalition data."
     },
     {
-      "name": "graphql.projects.refresh-ttl",
+      "name": "projects.refresh-ttl",
       "type": "java.time.Duration",
       "defaultValue": "PT15M",
       "description": "TTL for refreshing cached student projects by login."
