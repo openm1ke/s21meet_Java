@@ -6,6 +6,8 @@ import ru.izpz.edu.service.provider.CoalitionProvider;
 import ru.izpz.edu.service.provider.GraphQLCoalitionProvider;
 import ru.izpz.edu.service.provider.RestApiCoalitionProvider;
 
+import java.time.Duration;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -139,6 +141,7 @@ class CoalitionProviderConfigTest {
 
         assertNotNull(properties);
         assertEquals("auto", properties.getProvider());
+        assertEquals(Duration.ofMinutes(15), properties.getRefreshTtl());
         assertNotNull(properties.getRest());
         assertEquals(1000, properties.getRest().getPageSize());
     }

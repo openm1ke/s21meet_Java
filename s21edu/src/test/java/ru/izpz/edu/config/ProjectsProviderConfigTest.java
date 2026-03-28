@@ -6,6 +6,8 @@ import ru.izpz.edu.service.provider.GraphQLProjectsProvider;
 import ru.izpz.edu.service.provider.ProjectsProvider;
 import ru.izpz.edu.service.provider.RestApiProjectsProvider;
 
+import java.time.Duration;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -56,6 +58,7 @@ class ProjectsProviderConfigTest {
         ProjectsProviderConfig.ProjectsProperties properties = config.projectsProperties();
         assertNotNull(properties);
         assertEquals("auto", properties.getProvider());
+        assertEquals(Duration.ofMinutes(15), properties.getRefreshTtl());
         assertNotNull(properties.getRest());
         assertEquals(1000, properties.getRest().getPageSize());
     }

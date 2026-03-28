@@ -7,10 +7,12 @@ import org.springframework.stereotype.Service;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.ParticipantCoalitionDto;
 import ru.izpz.dto.ParticipantDto;
+import ru.izpz.edu.config.CoalitionProviderConfig;
 import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.repository.StudentCoalitionRepository;
 import ru.izpz.edu.service.provider.CoalitionProvider;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 @Slf4j
@@ -21,6 +23,7 @@ public class ParticipantCoalitionService {
 
     private final StudentCoalitionRepository studentCoalitionRepository;
     private final CoalitionProvider coalitionProvider;
+    private final CoalitionProviderConfig.CoalitionProperties coalitionProperties;
 
     public void refreshByLogin(String login) {
         try {
@@ -32,12 +35,12 @@ public class ParticipantCoalitionService {
 
     public Optional<ParticipantCoalitionDto> findCoalitionDto(String login) {
         Optional<StudentCoalition> coalition = studentCoalitionRepository.findById(login);
-        if (coalition.isPresent()) {
-            return coalition.map(this::toDto);
+        if (isRefreshRequired(coalition.orElse(null))) {
+            refreshByLogin(login);
+            coalition = studentCoalitionRepository.findById(login);
         }
 
-        refreshByLogin(login);
-        return studentCoalitionRepository.findById(login).map(this::toDto);
+        return coalition.map(this::toDto);
     }
 
     public void enrichParticipant(ParticipantDto dto, String login) {
@@ -50,5 +53,12 @@ public class ParticipantCoalitionService {
                 coalition.getMemberCount(),
                 coalition.getRank()
         );
+    }
+
+    private boolean isRefreshRequired(StudentCoalition coalition) {
+        if (coalition == null || coalition.getUpdatedAt() == null) {
+            return true;
+        }
+        return coalition.getUpdatedAt().isBefore(OffsetDateTime.now().minus(coalitionProperties.getRefreshTtl()));
     }
 }

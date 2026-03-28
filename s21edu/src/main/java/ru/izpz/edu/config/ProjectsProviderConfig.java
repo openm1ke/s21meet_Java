@@ -13,6 +13,8 @@ import ru.izpz.edu.service.provider.GraphQLProjectsProvider;
 import ru.izpz.edu.service.provider.ProjectsProvider;
 import ru.izpz.edu.service.provider.RestApiProjectsProvider;
 
+import java.time.Duration;
+
 @Slf4j
 @Configuration
 @ConditionalOnProperty(name = "profile.service.enabled", havingValue = "true")
@@ -65,6 +67,7 @@ public class ProjectsProviderConfig {
     @Getter
     public static class ProjectsProperties {
         private String provider = "auto";
+        private Duration refreshTtl = Duration.ofMinutes(15);
         private Rest rest = new Rest();
 
         @Setter
