@@ -2,6 +2,8 @@ package ru.izpz.edu.service;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
@@ -214,6 +216,18 @@ public class GraphQLService {
                 .orElseGet(() -> fetchAndStoreCredentials(login));
     }
 
+    @RateLimiter(name = "graphqlCredentials")
+    @Retry(name = "graphqlCredentials")
+    public GraphQLStudentCredentialsDto fetchAndStoreCredentialsWithLimits(String login) {
+        return fetchAndStoreCredentials(login);
+    }
+
+    @RateLimiter(name = "graphqlCredentials")
+    @Retry(name = "graphqlCredentials")
+    public GraphQLStudentCredentialsDto refreshCredentialsWithLimits(String login) {
+        return fetchAndStoreCredentials(login);
+    }
+
     public String getUserIdByLogin(String login) {
         return Optional.ofNullable(getStudentCredentialsByLogin(login))
                 .map(GraphQLStudentCredentialsDto::userId)
@@ -305,6 +319,12 @@ public class GraphQLService {
                     .tag(TAG_OUTCOME, outcome)
                     .register(meterRegistry));
         }
+    }
+
+    @RateLimiter(name = "graphqlProjects")
+    @Retry(name = "graphqlProjects")
+    public void refreshStudentProjectsByLoginWithLimits(String login) {
+        refreshStudentProjectsByLogin(login);
     }
 
     public void refreshStudentCoalitionByLogin(String login) {

@@ -1,11 +1,10 @@
 package ru.izpz.edu.service.provider;
 
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import io.github.resilience4j.retry.annotation.Retry;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.api.CoalitionApi;
 import ru.izpz.dto.api.ParticipantApi;
@@ -28,7 +27,6 @@ public class RestApiCoalitionProvider implements CoalitionProvider {
     private final CoalitionProviderConfig.CoalitionProperties coalitionProperties;
 
     @Override
-    @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public void refreshCoalitionByLogin(String login) throws ApiException {
         ParticipantCoalitionV1DTO coalitionDto = participantApi.getCoalitionByLogin(login);

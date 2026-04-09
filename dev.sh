@@ -144,30 +144,10 @@ normalize_test_env() {
 ensure_test_env() {
   copy_if_missing "$TEST_ENV_DIR/compose.env.example" "$COMPOSE_ENV_FILE"
   copy_if_missing "$TEST_ENV_DIR/postgres.env.example" "$TEST_ENV_DIR/postgres.env"
-
-  if [[ -f s21auth/.env ]]; then
-    copy_if_missing "s21auth/.env" "$TEST_ENV_DIR/s21auth.env"
-  else
-    copy_if_missing "$TEST_ENV_DIR/s21auth.env.example" "$TEST_ENV_DIR/s21auth.env"
-  fi
-
-  if [[ -f s21edu/.env ]]; then
-    copy_if_missing "s21edu/.env" "$TEST_ENV_DIR/s21edu.env"
-  else
-    copy_if_missing "$TEST_ENV_DIR/s21edu.env.example" "$TEST_ENV_DIR/s21edu.env"
-  fi
-
-  if [[ -f s21bot/.env ]]; then
-    copy_if_missing "s21bot/.env" "$TEST_ENV_DIR/s21bot.env"
-  else
-    copy_if_missing "$TEST_ENV_DIR/s21bot.env.example" "$TEST_ENV_DIR/s21bot.env"
-  fi
-
-  if [[ -f s21rocket/.env ]]; then
-    copy_if_missing "s21rocket/.env" "$TEST_ENV_DIR/s21rocket.env"
-  else
-    copy_if_missing "$TEST_ENV_DIR/s21rocket.env.example" "$TEST_ENV_DIR/s21rocket.env"
-  fi
+  copy_if_missing "$TEST_ENV_DIR/s21auth.env.example" "$TEST_ENV_DIR/s21auth.env"
+  copy_if_missing "$TEST_ENV_DIR/s21edu.env.example" "$TEST_ENV_DIR/s21edu.env"
+  copy_if_missing "$TEST_ENV_DIR/s21bot.env.example" "$TEST_ENV_DIR/s21bot.env"
+  copy_if_missing "$TEST_ENV_DIR/s21rocket.env.example" "$TEST_ENV_DIR/s21rocket.env"
 
   normalize_test_env
   return 0

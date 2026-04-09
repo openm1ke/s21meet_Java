@@ -13,4 +13,11 @@ public interface ProjectsProvider {
      * Returns current participant projects by login.
      */
     List<StudentProjectData> getStudentProjectsByLogin(String login);
+
+    /**
+     * Refreshes cached participant projects by login.
+     */
+    default void refreshStudentProjectsByLogin(String login) {
+        getStudentProjectsByLogin(login);
+    }
 }

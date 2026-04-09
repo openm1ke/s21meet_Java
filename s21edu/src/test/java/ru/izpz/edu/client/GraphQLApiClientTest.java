@@ -47,8 +47,7 @@ class GraphQLApiClientTest {
         HttpStatusCodeException ex = new HttpStatusCodeException(HttpStatus.BAD_REQUEST) {};
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class))).thenThrow(ex);
 
-        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
-                () -> client.execute("op", Map.of(), "query", String.class));
+        assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
         assertEquals(1.0, meterRegistry.find("edu_graphql_requests_total")
                 .tag("operation", "op")
                 .tag("outcome", "error")
@@ -62,8 +61,7 @@ class GraphQLApiClientTest {
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenReturn(ResponseEntity.ok(""));
 
-        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
-                () -> client.execute("op", Map.of(), "query", String.class));
+        assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
     }
 
     @Test
@@ -72,8 +70,7 @@ class GraphQLApiClientTest {
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenReturn(ResponseEntity.ok().body(null));
 
-        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
-                () -> client.execute("op", Map.of(), "query", String.class));
+        assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
     }
 
     @Test
@@ -83,8 +80,7 @@ class GraphQLApiClientTest {
                 .thenReturn(ResponseEntity.ok("notjson"));
         when(objectMapper.readTree(anyString())).thenThrow(new JsonProcessingException("bad") {});
 
-        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
-                () -> client.execute("op", Map.of(), "query", String.class));
+        assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
     }
 
     @Test
@@ -96,8 +92,7 @@ class GraphQLApiClientTest {
         JsonNode errorNode = om.readTree("{\"errors\":[{\"message\":\"boom\"}]}");
         when(objectMapper.readTree(anyString())).thenReturn(errorNode);
 
-        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
-                () -> client.execute("op", Map.of(), "query", String.class));
+        assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
     }
 
     @Test
@@ -138,8 +133,7 @@ class GraphQLApiClientTest {
         when(objectMapper.readTree(anyString()))
                 .thenReturn(new ObjectMapper().createObjectNode().set("data", new ObjectMapper().nullNode()));
 
-        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
-                () -> client.execute("op", Map.of(), "query", String.class));
+        assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
     }
 
     @Test
@@ -150,8 +144,7 @@ class GraphQLApiClientTest {
         when(objectMapper.readTree(anyString()))
                 .thenReturn(new ObjectMapper().createObjectNode().put("meta", 1));
 
-        assertThrows(GraphQLApiClient.GraphQlRemoteException.class,
-                () -> client.execute("op", Map.of(), "query", String.class));
+        assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
     }
 
     @Test
@@ -175,5 +168,9 @@ class GraphQLApiClientTest {
                 .tag("operation", "op")
                 .tag("outcome", "success")
                 .timer());
+    }
+
+    private String executeDefaultOperation() {
+        return client.execute("op", Map.of(), "query", String.class);
     }
 }

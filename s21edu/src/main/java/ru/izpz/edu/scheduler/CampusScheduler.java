@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,8 @@ import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.SchedulerMetricsService;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -40,6 +43,8 @@ public class CampusScheduler {
     private final CampusSchedulerProperties schedulerProperties;
     @Qualifier("campusSchedulerExecutor")
     private final ExecutorService campusSchedulerExecutor;
+    @Value("${campus.workplace.provider:graphql}")
+    private String workplaceProviderType;
 
     private static final String SCHEDULER_NAME = "campus_parser";
     private static final String CAMPUS_API_CLIENT = "campus_api";
@@ -66,9 +71,11 @@ public class CampusScheduler {
                 campusService.refreshParticipantMetrics();
                 schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, SchedulerRunStatus.PARTIAL);
                 log.warn("Цикл парсинга завершен частично: часть кампусов обновлена, часть не успела до таймаута");
+                logCycleSummary("partial_timeout", clustersOutcome, stopWatch);
             } else {
                 schedulerMetricsService.recordRunStatus(SCHEDULER_NAME, SchedulerRunStatus.FAILED);
                 log.error("Цикл парсинга прерван: превышено время обновления снапшота кампусов");
+                logCycleSummary("failed_timeout", clustersOutcome, stopWatch);
             }
             return;
         }
@@ -81,6 +88,7 @@ public class CampusScheduler {
             schedulerMetricsService.recordLastSuccess(SCHEDULER_NAME);
         }
 
+        logCycleSummary(clustersOutcome.hasErrors() ? "partial" : "success", clustersOutcome, stopWatch);
         log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
         log.info("Время обновления: {}", stopWatch.prettyPrint());
     }
@@ -91,7 +99,9 @@ public class CampusScheduler {
         stopWatch.start(PHASE_CAMPUS_SNAPSHOT_REFRESH);
         try {
             List<CompletableFuture<TaskResult>> futures = submitClusterTasks(campuses, campusTimeout);
-            return awaitPhaseResults(PHASE_CAMPUS_SNAPSHOT_REFRESH, clustersTimeout, futures);
+            PhaseOutcome baseOutcome = awaitPhaseResults(PHASE_CAMPUS_SNAPSHOT_REFRESH, clustersTimeout, futures);
+            CampusRunSummary summary = summarizeCampuses(campuses, futures);
+            return new PhaseOutcome(baseOutcome.completed(), baseOutcome.hasErrors(), baseOutcome.hasSuccessfulCampuses(), summary);
         } finally {
             stopWatch.stop();
         }
@@ -140,15 +150,38 @@ public class CampusScheduler {
     }
 
     private TaskResult processSingleCampusParticipants(String campusId, List<ClusterV1DTO> clusters) {
+        List<ClusterV1DTO> campusClusters = clusters == null ? List.of() : clusters;
+        Instant campusStartedAt = Instant.now();
+        int clustersTotal = campusClusters.size();
+        int clustersProcessed = 0;
         List<Workplace> aggregated = new java.util.ArrayList<>();
-        for (ClusterV1DTO cluster : clusters) {
+        for (ClusterV1DTO cluster : campusClusters) {
             TaskResult clusterResult = processSingleCluster(cluster, aggregated);
             if (!clusterResult.success()) {
+                log.warn(
+                    "campus scheduler campus done: campus={}, provider={}, clusters_ok={}/{}, participants_collected={}, status=failed, reason={}",
+                    campusCatalog.campusName(campusId),
+                    workplaceProviderType,
+                    clustersProcessed,
+                    clustersTotal,
+                    aggregated.size(),
+                    clusterResult.errorType()
+                );
                 return clusterResult;
             }
+            clustersProcessed++;
         }
         try {
-            campusService.replaceCampusSnapshotByCampusId(campusId, clusters, aggregated);
+            campusService.replaceCampusSnapshotByCampusId(campusId, campusClusters, aggregated);
+            log.info(
+                "campus scheduler campus done: campus={}, provider={}, clusters_ok={}/{}, participants_updated={}, status=success, elapsed_ms={}",
+                campusCatalog.campusName(campusId),
+                workplaceProviderType,
+                clustersProcessed,
+                clustersTotal,
+                aggregated.size(),
+                Duration.between(campusStartedAt, Instant.now()).toMillis()
+            );
             return TaskResult.successResult();
         } catch (Exception e) {
             log.error("Непредвиденная ошибка сохранения снапшота кампуса {} ({})", campusCatalog.campusName(campusId), campusId, e);
@@ -161,7 +194,7 @@ public class CampusScheduler {
         try {
             accumulator.addAll(campusService.fetchParticipantsByClusterWithProvider(cid));
             schedulerMetricsService.recordExternalApiSuccess(SCHEDULER_NAME, CAMPUS_API_CLIENT, OPERATION_GET_PARTICIPANTS);
-            log.info("Updated participants for cluster {} ({})", c.getName(), cid);
+            log.debug("Updated participants for cluster {} ({})", c.getName(), cid);
             return TaskResult.successResult();
         } catch (ApiException e) {
             schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, CAMPUS_API_CLIENT, OPERATION_GET_PARTICIPANTS, e);
@@ -230,6 +263,65 @@ public class CampusScheduler {
         }
     }
 
+    private CampusRunSummary summarizeCampuses(List<String> campuses, List<CompletableFuture<TaskResult>> futures) {
+        int total = campuses.size();
+        int successful = 0;
+        int failed = 0;
+        int timedOut = 0;
+        List<String> updatedCampuses = new ArrayList<>();
+        List<String> failedCampuses = new ArrayList<>();
+
+        for (int i = 0; i < campuses.size(); i++) {
+            String campusId = campuses.get(i);
+            String campusName = campusCatalog.campusName(campusId);
+            CompletableFuture<TaskResult> future = futures.get(i);
+            CampusSummaryResult result = summarizeCampusResult(future);
+            if (result.success()) {
+                successful++;
+                updatedCampuses.add(campusName);
+            } else {
+                failed++;
+                failedCampuses.add(campusName);
+                if (result.timedOut()) {
+                    timedOut++;
+                }
+            }
+        }
+
+        return new CampusRunSummary(total, successful, failed, timedOut, updatedCampuses, failedCampuses);
+    }
+
+    private CampusSummaryResult summarizeCampusResult(CompletableFuture<TaskResult> future) {
+        if (!future.isDone() || future.isCancelled()) {
+            return CampusSummaryResult.timedOutResult();
+        }
+        try {
+            TaskResult result = future.join();
+            if (result.success()) {
+                return CampusSummaryResult.successResult();
+            }
+            return CampusSummaryResult.failureResult(result.errorType() == SchedulerErrorReason.TIMEOUT);
+        } catch (Exception e) {
+            return CampusSummaryResult.failureResult(false);
+        }
+    }
+
+    private void logCycleSummary(String status, PhaseOutcome outcome, StopWatch stopWatch) {
+        CampusRunSummary summary = outcome.summary();
+        log.info(
+            "campus scheduler cycle summary: provider={}, campuses_total={}, campuses_success={}, campuses_failed={}, campuses_timeout={}, updated_campuses={}, failed_campuses={}, status={}, elapsed_ms={}",
+            workplaceProviderType,
+            summary.total(),
+            summary.successful(),
+            summary.failed(),
+            summary.timedOut(),
+            String.join("|", summary.updatedCampuses()),
+            String.join("|", summary.failedCampuses()),
+            status,
+            stopWatch.getTotalTimeMillis()
+        );
+    }
+
     private record TaskResult(boolean success, SchedulerPhaseRequestStatus status, SchedulerErrorReason errorType) {
         private static TaskResult successResult() {
             return new TaskResult(true, SchedulerPhaseRequestStatus.SUCCESS, SchedulerErrorReason.NONE);
@@ -244,6 +336,36 @@ public class CampusScheduler {
         }
     }
 
-    private record PhaseOutcome(boolean completed, boolean hasErrors, boolean hasSuccessfulCampuses) {
+    private record CampusRunSummary(
+        int total,
+        int successful,
+        int failed,
+        int timedOut,
+        List<String> updatedCampuses,
+        List<String> failedCampuses
+    ) {
+        private static CampusRunSummary empty() {
+            return new CampusRunSummary(0, 0, 0, 0, List.of(), List.of());
+        }
+    }
+
+    private record CampusSummaryResult(boolean success, boolean timedOut) {
+        private static CampusSummaryResult successResult() {
+            return new CampusSummaryResult(true, false);
+        }
+
+        private static CampusSummaryResult failureResult(boolean timedOut) {
+            return new CampusSummaryResult(false, timedOut);
+        }
+
+        private static CampusSummaryResult timedOutResult() {
+            return failureResult(true);
+        }
+    }
+
+    private record PhaseOutcome(boolean completed, boolean hasErrors, boolean hasSuccessfulCampuses, CampusRunSummary summary) {
+        private PhaseOutcome(boolean completed, boolean hasErrors, boolean hasSuccessfulCampuses) {
+            this(completed, hasErrors, hasSuccessfulCampuses, CampusRunSummary.empty());
+        }
     }
 }

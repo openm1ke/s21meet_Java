@@ -16,11 +16,6 @@
       "description": "Enable/disable Participant REST API client bean."
     },
     {
-      "name": "api.project.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Enable/disable Project REST API client bean."
-    },
-    {
       "name": "api.coalition.enabled",
       "type": "java.lang.Boolean",
       "description": "Enable/disable Coalition REST API client bean."
@@ -44,6 +39,24 @@
       "name": "api.client.enabled",
       "type": "java.lang.Boolean",
       "description": "Enable/disable base authorized ApiClient bean."
+    },
+    {
+      "name": "api.client.connect-timeout",
+      "type": "java.time.Duration",
+      "defaultValue": "PT5S",
+      "description": "Connection timeout for outgoing API HTTP clients."
+    },
+    {
+      "name": "api.client.read-timeout",
+      "type": "java.time.Duration",
+      "defaultValue": "PT20S",
+      "description": "Read timeout for outgoing API HTTP clients."
+    },
+    {
+      "name": "api.client.call-timeout",
+      "type": "java.time.Duration",
+      "defaultValue": "PT30S",
+      "description": "Overall call timeout for the authorized OkHttp API client."
     },
     {
       "name": "campus.service.enabled",
@@ -70,13 +83,13 @@
     {
       "name": "campus.scheduler.timeout.global",
       "type": "java.lang.String",
-      "defaultValue": "PT60S",
+      "defaultValue": "PT30S",
       "description": "Global timeout for campus snapshot refresh phase, expressed as ISO-8601 duration."
     },
     {
       "name": "campus.scheduler.timeout.per-campus",
       "type": "java.lang.String",
-      "defaultValue": "PT20S",
+      "defaultValue": "PT60S",
       "description": "Per-campus timeout for snapshot refresh task, expressed as ISO-8601 duration."
     },
     {
@@ -99,8 +112,74 @@
     {
       "name": "projects.refresh-ttl",
       "type": "java.time.Duration",
-      "defaultValue": "PT15M",
+      "defaultValue": "PT30M",
       "description": "TTL for refreshing cached student projects by login."
+    },
+    {
+      "name": "projects.scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Enable or disable scheduled refresh of projects for active student credentials."
+    },
+    {
+      "name": "projects.scheduler.fixed-delay",
+      "type": "java.lang.String",
+      "defaultValue": "PT4H",
+      "description": "Fixed delay for projects scheduler polling, expressed as ISO-8601 duration."
+    },
+    {
+      "name": "projects.scheduler.page-size",
+      "type": "java.lang.Integer",
+      "defaultValue": 1000,
+      "description": "Page size for scanning active logins from student credentials."
+    },
+    {
+      "name": "projects.routing.graphql-school-id",
+      "type": "java.lang.String",
+      "defaultValue": "6bfe3c56-0211-4fe1-9e59-51616caac4dd",
+      "description": "School ID that should use GraphQL projects provider (default MSK). Other schools use REST provider."
+    },
+    {
+      "name": "projects.scheduler.batch-size",
+      "type": "java.lang.Integer",
+      "defaultValue": 20,
+      "description": "Batch size of active logins processed concurrently by projects scheduler."
+    },
+    {
+      "name": "projects.scheduler.graphql-batch-size",
+      "type": "java.lang.Integer",
+      "defaultValue": 20,
+      "description": "Batch size for campuses processed via GraphQL projects provider."
+    },
+    {
+      "name": "projects.scheduler.rest-batch-size",
+      "type": "java.lang.Integer",
+      "defaultValue": 20,
+      "description": "Batch size for campuses processed via REST projects provider."
+    },
+    {
+      "name": "projects.scheduler.task-timeout",
+      "type": "java.lang.String",
+      "defaultValue": "PT75S",
+      "description": "Timeout for a single project refresh task in projects scheduler."
+    },
+    {
+      "name": "projects.scheduler.retry-attempts",
+      "type": "java.lang.Integer",
+      "defaultValue": 1,
+      "description": "Number of attempts for failed or timed out project refresh tasks in a batch."
+    },
+    {
+      "name": "projects.scheduler.retry-backoff",
+      "type": "java.lang.String",
+      "defaultValue": "PT1S",
+      "description": "Backoff delay between project refresh retry attempts."
+    },
+    {
+      "name": "projects.scheduler.concurrency",
+      "type": "java.lang.Integer",
+      "defaultValue": 4,
+      "description": "Thread pool size for projects scheduler."
     },
     {
       "name": "notify.scheduler.enabled",
@@ -114,16 +193,46 @@
       "description": "Fixed delay for notify scheduler polling, expressed as ISO-8601 duration (e.g. PT30S)."
     },
     {
-      "name": "campus.workplace.provider",
-      "type": "java.lang.String",
-      "defaultValue": "rest",
-      "description": "Provider for workplace data: 'rest' for REST API, 'graphql' for GraphQL API."
+      "name": "credentials.scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Enable or disable scheduled synchronization of missing student credentials via GraphQL."
     },
     {
-      "name": "projects.provider",
+      "name": "credentials.scheduler.cron",
       "type": "java.lang.String",
-      "defaultValue": "auto",
-      "description": "Provider for participant projects: 'auto', 'rest', or 'graphql'."
+      "defaultValue": "0 0 2 * * *",
+      "description": "Cron for nightly credentials orchestration (new logins sync, active refresh, inactive refresh)."
+    },
+    {
+      "name": "credentials.scheduler.zone",
+      "type": "java.lang.String",
+      "defaultValue": "Europe/Moscow",
+      "description": "Timezone for credentials scheduler cron."
+    },
+    {
+      "name": "credentials.scheduler.page-size",
+      "type": "java.lang.Integer",
+      "defaultValue": 1000,
+      "description": "Page size for platform API requests when loading campus participant logins."
+    },
+    {
+      "name": "credentials.scheduler.batch-size",
+      "type": "java.lang.Integer",
+      "defaultValue": 200,
+      "description": "Number of missing logins processed concurrently in one batch before awaiting completion."
+    },
+    {
+      "name": "credentials.scheduler.concurrency",
+      "type": "java.lang.Integer",
+      "defaultValue": 12,
+      "description": "Thread pool size for parallel credentials synchronization tasks."
+    },
+    {
+      "name": "campus.workplace.provider",
+      "type": "java.lang.String",
+      "defaultValue": "graphql",
+      "description": "Provider for workplace data: 'rest' for REST API, 'graphql' for GraphQL API."
     },
     {
       "name": "projects.rest.page-size",

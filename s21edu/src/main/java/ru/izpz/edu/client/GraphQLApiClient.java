@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
@@ -36,6 +38,8 @@ public class GraphQLApiClient {
     private final ObjectMapper om;
     private final MeterRegistry meterRegistry;
 
+    @RateLimiter(name = "externalGlobal")
+    @Retry(name = "externalGlobal")
     public <T> T execute(String operationName,
                          Map<String, Object> variables,
                          String query,
@@ -105,8 +109,4 @@ public class GraphQLApiClient {
     }
 
     public record GraphQlRequest(String operationName, Map<String, Object> variables, String query) {}
-    public static class GraphQlRemoteException extends RuntimeException {
-        public GraphQlRemoteException(String m) { super(m); }
-        public GraphQlRemoteException(String m, Throwable c) { super(m, c); }
-    }
 }

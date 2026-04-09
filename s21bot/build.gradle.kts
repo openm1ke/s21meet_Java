@@ -14,7 +14,6 @@ val mockitoVersion: String by project
 val mapstructVersion: String by project
 val squareupOkhttpVersion: String by project
 val apacheCommonsVersion: String by project
-val springDotEnvVersion: String by project
 val telegramBotsVersion: String by project
 val okioJvmVersion: String by project
 val openFeignVersion: String by project
@@ -40,7 +39,6 @@ dependencies {
     implementation("org.telegram:telegrambots-client:$telegramBotsVersion")
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
     implementation("com.squareup.okio:okio-jvm:$okioJvmVersion")
-    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
     implementation("org.springframework.boot:spring-boot-starter-aop")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {

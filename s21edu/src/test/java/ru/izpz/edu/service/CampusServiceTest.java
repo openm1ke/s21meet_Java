@@ -15,7 +15,7 @@ import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.dto.StudentProjectData;
-import ru.izpz.edu.service.provider.ProjectsProvider;
+import ru.izpz.edu.service.provider.CampusRoutingProjectsProvider;
 import ru.izpz.edu.service.provider.WorkplaceProvider;
 
 import java.util.List;
@@ -45,7 +45,7 @@ class CampusServiceTest {
     @Mock
     private WorkplaceProvider workplaceProvider;
     @Mock
-    private ProjectsProvider projectsProvider;
+    private CampusRoutingProjectsProvider campusRoutingProjectsProvider;
 
     @Mock
     private SchedulerMetricsService schedulerMetricsService;
@@ -226,7 +226,7 @@ class CampusServiceTest {
         // Arrange
         StudentProjectData src = new StudentProjectData("g", "n", "d", 1, "dt", 1, 1, "e", "gs", 1, 1);
         ProjectsDto dto = new ProjectsDto("g", "n", "d", 1, "dt", 1, 1, "e", "gs", 1, 1);
-        when(projectsProvider.getStudentProjectsByLogin("login")).thenReturn(List.of(src));
+        when(campusRoutingProjectsProvider.getStudentProjectsByLogin("login")).thenReturn(List.of(src));
         when(projectsMapper.toDto(src)).thenReturn(dto);
 
         // Act
@@ -235,7 +235,7 @@ class CampusServiceTest {
         // Assert
         assertEquals(1, result.size());
         org.junit.jupiter.api.Assertions.assertSame(dto, result.getFirst());
-        verify(projectsProvider).getStudentProjectsByLogin("login");
+        verify(campusRoutingProjectsProvider).getStudentProjectsByLogin("login");
     }
 
     @Test

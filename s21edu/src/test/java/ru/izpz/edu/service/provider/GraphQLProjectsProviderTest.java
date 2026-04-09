@@ -35,4 +35,11 @@ class GraphQLProjectsProviderTest {
         assertEquals(1, result.size());
         verify(graphQLService).getCachedStudentProjectsByLogin("login");
     }
+
+    @Test
+    void refreshStudentProjectsByLogin_shouldDelegateToGraphqlRefreshWithLimits() {
+        provider.refreshStudentProjectsByLogin("login");
+
+        verify(graphQLService).refreshStudentProjectsByLoginWithLimits("login");
+    }
 }

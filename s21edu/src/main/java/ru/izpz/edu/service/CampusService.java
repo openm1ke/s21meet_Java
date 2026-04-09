@@ -16,7 +16,7 @@ import ru.izpz.edu.mapper.ProjectsMapper;
 import ru.izpz.edu.model.Cluster;
 import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.repository.WorkplaceRepository;
-import ru.izpz.edu.service.provider.ProjectsProvider;
+import ru.izpz.edu.service.provider.CampusRoutingProjectsProvider;
 import ru.izpz.edu.service.provider.WorkplaceProvider;
 
 import java.util.Comparator;
@@ -34,7 +34,7 @@ public class CampusService {
     private final CampusMapper campusMapper;
     private final ProjectsMapper projectsMapper;
     private final WorkplaceProvider workplaceProvider;
-    private final ProjectsProvider projectsProvider;
+    private final CampusRoutingProjectsProvider campusRoutingProjectsProvider;
     private final SchedulerMetricsService schedulerMetricsService;
     private final WorkplaceRepository workplaceRepository;
 
@@ -108,7 +108,7 @@ public class CampusService {
     }
 
     public List<ProjectsDto> getStudentProjectsByLogin(String login) {
-        var projects = projectsProvider.getStudentProjectsByLogin(login);
+        var projects = campusRoutingProjectsProvider.getStudentProjectsByLogin(login);
         return projects.stream()
                 .map(projectsMapper::toDto)
                 .toList();

@@ -11,7 +11,6 @@ val gsonVersion: String by project
 val gsonfireVersion: String by project
 val jacksonDatabindNullable: String by project
 val springSecurityCryptoVersion: String by project
-val springDotEnvVersion: String by project
 
 group = "ru.izpz"
 version = "0.0.1-SNAPSHOT"
@@ -28,7 +27,6 @@ dependencies {
     implementation("com.squareup.okio:okio-jvm:$okioJvmVersion")
     implementation("io.gsonfire:gson-fire:$gsonfireVersion")
     implementation("com.google.code.gson:gson:$gsonVersion")
-    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
     // https://mvnrepository.com/artifact/jakarta.annotation/jakarta.annotation-api
     implementation("jakarta.annotation:jakarta.annotation-api:3.0.0")
 

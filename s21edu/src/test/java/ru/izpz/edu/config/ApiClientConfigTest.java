@@ -15,7 +15,6 @@ import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.api.CoalitionApi;
 import ru.izpz.dto.api.EventApi;
 import ru.izpz.dto.api.ParticipantApi;
-import ru.izpz.dto.api.ProjectApi;
 import ru.izpz.edu.service.TokenService;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -74,14 +73,12 @@ class ApiClientConfigTest {
         ClusterApi clusterApi = config.clusterApi(apiClient);
         ParticipantApi participantApi = config.participantApi(apiClient);
         CoalitionApi coalitionApi = config.coalitionApi(apiClient);
-        ProjectApi projectApi = config.projectApi(apiClient);
         EventApi eventApi = config.eventApi(apiClient);
 
         assertSame(apiClient, campusApi.getApiClient());
         assertSame(apiClient, clusterApi.getApiClient());
         assertSame(apiClient, participantApi.getApiClient());
         assertSame(apiClient, coalitionApi.getApiClient());
-        assertSame(apiClient, projectApi.getApiClient());
         assertSame(apiClient, eventApi.getApiClient());
     }
 }
