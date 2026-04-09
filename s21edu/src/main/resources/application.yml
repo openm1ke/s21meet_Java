@@ -26,6 +26,11 @@ spring:
         jdbc:
           time_zone: UTC
         format_sql: false  # Форматировать SQL-запросы для удобства
+  task:
+    scheduling:
+      pool:
+        size: ${SCHEDULER_POOL_SIZE:6}
+      thread-name-prefix: ${SCHEDULER_THREAD_NAME_PREFIX:scheduler-}
 
 edu:
   tokenEndpoint: ${TOKEN_ENDPOINT:}
@@ -35,15 +40,79 @@ bot.service.url: ${BOT_SERVICE_URL:}
 resilience4j:
   ratelimiter:
     instances:
-      platform:
-        limitForPeriod: 30
-        limitRefreshPeriod: 100ms
-        timeoutDuration: 1s
+      externalGlobal:
+        limitForPeriod: ${EXTERNAL_GLOBAL_LIMIT_FOR_PERIOD:4}
+        limitRefreshPeriod: ${EXTERNAL_GLOBAL_LIMIT_REFRESH_PERIOD:1s}
+        timeoutDuration: ${EXTERNAL_GLOBAL_TIMEOUT_DURATION:3s}
+      campusWorkplace:
+        limitForPeriod: ${CAMPUS_WORKPLACE_LIMIT_FOR_PERIOD:2}
+        limitRefreshPeriod: ${CAMPUS_WORKPLACE_LIMIT_REFRESH_PERIOD:1s}
+        timeoutDuration: ${CAMPUS_WORKPLACE_TIMEOUT_DURATION:2s}
+      projectsRest:
+        limitForPeriod: ${PROJECTS_REST_LIMIT_FOR_PERIOD:3}
+        limitRefreshPeriod: ${PROJECTS_REST_LIMIT_REFRESH_PERIOD:1s}
+        timeoutDuration: ${PROJECTS_REST_TIMEOUT_DURATION:20s}
+      graphqlCredentials:
+        limitForPeriod: ${GRAPHQL_CREDENTIALS_LIMIT_FOR_PERIOD:2}
+        limitRefreshPeriod: ${GRAPHQL_CREDENTIALS_LIMIT_REFRESH_PERIOD:1s}
+        timeoutDuration: ${GRAPHQL_CREDENTIALS_TIMEOUT_DURATION:2s}
+      graphqlProjects:
+        limitForPeriod: ${GRAPHQL_PROJECTS_LIMIT_FOR_PERIOD:4}
+        limitRefreshPeriod: ${GRAPHQL_PROJECTS_LIMIT_REFRESH_PERIOD:1s}
+        timeoutDuration: ${GRAPHQL_PROJECTS_TIMEOUT_DURATION:2s}
+      graphqlGlobal:
+        limitForPeriod: ${GRAPHQL_GLOBAL_LIMIT_FOR_PERIOD:6}
+        limitRefreshPeriod: ${GRAPHQL_GLOBAL_LIMIT_REFRESH_PERIOD:1s}
+        timeoutDuration: ${GRAPHQL_GLOBAL_TIMEOUT_DURATION:3s}
   retry:
     instances:
+      externalGlobal:
+        maxAttempts: ${EXTERNAL_GLOBAL_RETRY_MAX_ATTEMPTS:2}
+        waitDuration: ${EXTERNAL_GLOBAL_RETRY_WAIT_DURATION:750ms}
+        enableExponentialBackoff: ${EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - ru.izpz.dto.ApiException
+          - ru.izpz.edu.client.GraphQlRemoteException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
       platform:
-        maxAttempts: 3
-        waitDuration: 200ms
+        maxAttempts: ${PLATFORM_RETRY_MAX_ATTEMPTS:3}
+        waitDuration: ${PLATFORM_RETRY_WAIT_DURATION:500ms}
+        enableExponentialBackoff: ${PLATFORM_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${PLATFORM_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - ru.izpz.dto.ApiException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
+      campusWorkplace:
+        maxAttempts: ${CAMPUS_WORKPLACE_RETRY_MAX_ATTEMPTS:2}
+        waitDuration: ${CAMPUS_WORKPLACE_RETRY_WAIT_DURATION:1s}
+        enableExponentialBackoff: ${CAMPUS_WORKPLACE_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${CAMPUS_WORKPLACE_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - ru.izpz.dto.ApiException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
+      projectsRest:
+        maxAttempts: ${PROJECTS_REST_RETRY_MAX_ATTEMPTS:2}
+        waitDuration: ${PROJECTS_REST_RETRY_WAIT_DURATION:4s}
+        enableExponentialBackoff: ${PROJECTS_REST_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${PROJECTS_REST_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - ru.izpz.dto.ApiException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
+      graphqlCredentials:
+        maxAttempts: ${GRAPHQL_CREDENTIALS_RETRY_MAX_ATTEMPTS:3}
+        waitDuration: ${GRAPHQL_CREDENTIALS_RETRY_WAIT_DURATION:250ms}
+      graphqlProjects:
+        maxAttempts: ${GRAPHQL_PROJECTS_RETRY_MAX_ATTEMPTS:3}
+        waitDuration: ${GRAPHQL_PROJECTS_RETRY_WAIT_DURATION:300ms}
+      graphqlGlobal:
+        maxAttempts: ${GRAPHQL_GLOBAL_RETRY_MAX_ATTEMPTS:2}
+        waitDuration: ${GRAPHQL_GLOBAL_RETRY_WAIT_DURATION:500ms}
+        enableExponentialBackoff: ${GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - ru.izpz.edu.client.GraphQlRemoteException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
 
 logging:
   level:
@@ -52,6 +121,9 @@ logging:
 api:
   client:
     enabled: ${API_CLIENT_ENABLED:true}
+    connect-timeout: ${API_CLIENT_CONNECT_TIMEOUT:PT5S}
+    read-timeout: ${API_CLIENT_READ_TIMEOUT:PT20S}
+    call-timeout: ${API_CLIENT_CALL_TIMEOUT:PT30S}
   graphql:
     enabled: ${GRAPHQL_API_ENABLED:true}
   campus:
@@ -60,8 +132,6 @@ api:
     enabled: ${CLUSTER_API_ENABLED:true}
   participant:
     enabled: ${PARTICIPANT_API_ENABLED:true}
-  project:
-    enabled: ${PROJECT_API_ENABLED:true}
   coalition:
     enabled: ${COALITION_API_ENABLED:true}
 profile:
@@ -74,8 +144,20 @@ coalition:
     fetch-member-count: ${COALITION_REST_FETCH_MEMBER_COUNT:false}
     page-size: ${COALITION_REST_PAGE_SIZE:1000}
 projects:
-  provider: ${PROJECTS_PROVIDER:graphql}  # auto|graphql|rest
-  refresh-ttl: ${PROJECTS_REFRESH_TTL:${GRAPHQL_PROJECTS_REFRESH_TTL:PT15M}}
+  refresh-ttl: ${PROJECTS_REFRESH_TTL:${GRAPHQL_PROJECTS_REFRESH_TTL:PT1H}}
+  routing:
+    graphql-school-id: ${PROJECTS_ROUTING_GRAPHQL_SCHOOL_ID:${PROJECTS_SCHEDULER_GRAPHQL_SCHOOL_ID:6bfe3c56-0211-4fe1-9e59-51616caac4dd}}
+  scheduler:
+    enabled: ${PROJECTS_SCHEDULER_ENABLED:true}
+    fixed-delay: ${PROJECTS_SCHEDULER_FIXED_DELAY:PT4H}
+    page-size: ${PROJECTS_SCHEDULER_PAGE_SIZE:1000}
+    batch-size: ${PROJECTS_SCHEDULER_BATCH_SIZE:20}
+    graphql-batch-size: ${PROJECTS_SCHEDULER_GRAPHQL_BATCH_SIZE:${PROJECTS_SCHEDULER_BATCH_SIZE:20}}
+    rest-batch-size: ${PROJECTS_SCHEDULER_REST_BATCH_SIZE:${PROJECTS_SCHEDULER_BATCH_SIZE:20}}
+    concurrency: ${PROJECTS_SCHEDULER_CONCURRENCY:4}
+    task-timeout: ${PROJECTS_SCHEDULER_TASK_TIMEOUT:PT75S}
+    retry-attempts: ${PROJECTS_SCHEDULER_RETRY_ATTEMPTS:1}
+    retry-backoff: ${PROJECTS_SCHEDULER_RETRY_BACKOFF:PT1S}
   rest:
     page-size: ${PROJECTS_REST_PAGE_SIZE:1000}
 graphql:
@@ -89,6 +171,14 @@ notify:
   scheduler:
     enabled: true
     fixed-delay: PT30S
+credentials:
+  scheduler:
+    enabled: ${CREDENTIALS_SCHEDULER_ENABLED:true}
+    cron: ${CREDENTIALS_SCHEDULER_CRON:0 0 2 * * *}
+    zone: ${CREDENTIALS_SCHEDULER_ZONE:Europe/Moscow}
+    page-size: ${CREDENTIALS_SCHEDULER_PAGE_SIZE:1000}
+    batch-size: ${CREDENTIALS_SCHEDULER_BATCH_SIZE:200}
+    concurrency: ${CREDENTIALS_SCHEDULER_CONCURRENCY:12}
 campus:
   service.enabled: true
   workplace:

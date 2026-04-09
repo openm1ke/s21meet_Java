@@ -19,4 +19,9 @@ public class GraphQLProjectsProvider implements ProjectsProvider {
     public List<StudentProjectData> getStudentProjectsByLogin(String login) {
         return graphQLService.getCachedStudentProjectsByLogin(login);
     }
+
+    @Override
+    public void refreshStudentProjectsByLogin(String login) {
+        graphQLService.refreshStudentProjectsByLoginWithLimits(login);
+    }
 }

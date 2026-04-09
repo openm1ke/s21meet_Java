@@ -11,6 +11,7 @@ import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.model.ClusterV1DTO;
 import ru.izpz.dto.model.ClustersV1DTO;
 import ru.izpz.dto.model.ClusterMapV1DTO;
+import ru.izpz.dto.model.ParticipantLoginsV1DTO;
 import ru.izpz.dto.model.WorkplaceV1DTO;
 import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.service.GraphQLService;
@@ -101,5 +102,25 @@ class CampusClientTest {
 
         assertEquals(1, result.size());
         verify(graphQLService).getStudentProjectsByLogin("login");
+    }
+
+    @Test
+    void getParticipantsByCampus_shouldThrow_whenResponseNull() throws Exception {
+        String campusId = UUID.randomUUID().toString();
+        when(campusApi.getParticipantsByCampusId(UUID.fromString(campusId), 1000L, 0L)).thenReturn(null);
+
+        assertThrows(ApiException.class, () -> campusClient.getParticipantsByCampus(campusId, 1000L, 0L));
+    }
+
+    @Test
+    void getParticipantsByCampus_shouldReturnLogins_whenResponseNotNull() throws Exception {
+        String campusId = UUID.randomUUID().toString();
+        ParticipantLoginsV1DTO response = new ParticipantLoginsV1DTO();
+        response.setParticipants(List.of("u1", "u2"));
+        when(campusApi.getParticipantsByCampusId(UUID.fromString(campusId), 1000L, 0L)).thenReturn(response);
+
+        List<String> result = campusClient.getParticipantsByCampus(campusId, 1000L, 0L);
+
+        assertEquals(List.of("u1", "u2"), result);
     }
 }

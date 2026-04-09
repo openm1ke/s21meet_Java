@@ -14,7 +14,6 @@ val springRetryVersion: String by project
 val apacheCommonsVersion: String by project
 val postgresqlVersion: String by project
 val squareupOkhttpVersion: String by project
-val springDotEnvVersion: String by project
 
 dependencies {
     implementation(project(":common"))
@@ -25,7 +24,6 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign") {
         exclude(group = "org.springframework.security", module = "spring-security-crypto")
     }
-    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
     implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.liquibase:liquibase-core")

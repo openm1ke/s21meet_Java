@@ -9,9 +9,11 @@ import ru.izpz.edu.scheduler.metrics.SchedulerErrorClassifier;
 import ru.izpz.edu.scheduler.metrics.SchedulerErrorReason;
 import ru.izpz.edu.scheduler.metrics.SchedulerPhaseRequestStatus;
 import ru.izpz.edu.scheduler.metrics.SchedulerRunStatus;
+import java.time.Duration;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -296,6 +298,132 @@ class SchedulerMetricsServiceTest {
         );
 
         assertEquals(3.0, groupGauge.value());
+    }
+
+    @Test
+    void setCredentialsSyncInProgress_setsGaugeToOneAndZero() {
+        service.setCredentialsSyncInProgress("credentials_sync", true);
+        Gauge inProgress = gauge(
+            "edu_credentials_sync_in_progress",
+            "scheduler", "credentials_sync"
+        );
+        assertEquals(1.0, inProgress.value());
+
+        service.setCredentialsSyncInProgress("credentials_sync", false);
+        assertEquals(0.0, inProgress.value());
+    }
+
+    @Test
+    void recordCredentialsSyncBatch_recordsCountersSummaryAndTimer() {
+        service.recordCredentialsSyncBatch("credentials_sync", 5, 2, 1, 3, Duration.ofMillis(10));
+
+        Counter batchesCounter = counter(
+            "edu_credentials_sync_batches_total",
+            "scheduler", "credentials_sync"
+        );
+        Counter successCounter = counter(
+            "edu_credentials_sync_requests_total",
+            "scheduler", "credentials_sync",
+            "result", "success"
+        );
+        Counter noDataCounter = counter(
+            "edu_credentials_sync_requests_total",
+            "scheduler", "credentials_sync",
+            "result", "no_data"
+        );
+        Counter failedCounter = counter(
+            "edu_credentials_sync_requests_total",
+            "scheduler", "credentials_sync",
+            "result", "failed"
+        );
+
+        assertEquals(1.0, batchesCounter.count());
+        assertEquals(2.0, successCounter.count());
+        assertEquals(1.0, noDataCounter.count());
+        assertEquals(3.0, failedCounter.count());
+        assertEquals(1L, meterRegistry.find("edu_credentials_sync_batch_size").tags("scheduler", "credentials_sync").summary().count());
+        assertFalse(
+            meterRegistry.find("edu_credentials_sync_batch_duration_seconds").tags("scheduler", "credentials_sync").timer().totalTime(java.util.concurrent.TimeUnit.NANOSECONDS) <= 0
+        );
+    }
+
+    @Test
+    void recordCredentialsSyncBatch_withNonPositiveValuesAndNullDuration_doesNotCreateOutcomeCounters() {
+        service.recordCredentialsSyncBatch("credentials_sync", -10, 0, 0, 0, null);
+
+        Counter successCounter = meterRegistry.find("edu_credentials_sync_requests_total")
+            .tags("scheduler", "credentials_sync", "result", "success")
+            .counter();
+        Counter noDataCounter = meterRegistry.find("edu_credentials_sync_requests_total")
+            .tags("scheduler", "credentials_sync", "result", "no_data")
+            .counter();
+        Counter failedCounter = meterRegistry.find("edu_credentials_sync_requests_total")
+            .tags("scheduler", "credentials_sync", "result", "failed")
+            .counter();
+
+        assertNull(successCounter);
+        assertNull(noDataCounter);
+        assertNull(failedCounter);
+        assertEquals(1L, meterRegistry.find("edu_credentials_sync_batch_size").tags("scheduler", "credentials_sync").summary().count());
+    }
+
+    @Test
+    void recordCredentialsSyncRun_recordsAllOutcomesAndGauges() {
+        service.recordCredentialsSyncRun(
+            "credentials_sync",
+            new SchedulerMetricsService.CredentialsSyncRunStats(0, 0, 0, 0, 0, 0),
+            Duration.ofMillis(1)
+        );
+        service.recordCredentialsSyncRun(
+            "credentials_sync",
+            new SchedulerMetricsService.CredentialsSyncRunStats(10, 5, 2, 3, 1, 1),
+            Duration.ofMillis(2)
+        );
+        service.recordCredentialsSyncRun(
+            "credentials_sync",
+            new SchedulerMetricsService.CredentialsSyncRunStats(10, 5, 2, 5, 0, 0),
+            null
+        );
+
+        Counter skippedCounter = counter(
+            "edu_credentials_sync_runs_total",
+            "scheduler", "credentials_sync",
+            "outcome", "skipped"
+        );
+        Counter partialCounter = counter(
+            "edu_credentials_sync_runs_total",
+            "scheduler", "credentials_sync",
+            "outcome", "partial"
+        );
+        Counter successCounter = counter(
+            "edu_credentials_sync_runs_total",
+            "scheduler", "credentials_sync",
+            "outcome", "success"
+        );
+
+        assertEquals(1.0, skippedCounter.count());
+        assertEquals(1.0, partialCounter.count());
+        assertEquals(1.0, successCounter.count());
+
+        Gauge requestedGauge = gauge(
+            "edu_credentials_sync_last",
+            "scheduler", "credentials_sync",
+            "metric", "requested"
+        );
+        Gauge failedGauge = gauge(
+            "edu_credentials_sync_last",
+            "scheduler", "credentials_sync",
+            "metric", "failed"
+        );
+        Gauge updatedAtGauge = gauge(
+            "edu_credentials_sync_last",
+            "scheduler", "credentials_sync",
+            "metric", "updated_at"
+        );
+
+        assertEquals(5.0, requestedGauge.value());
+        assertEquals(0.0, failedGauge.value());
+        assertTrue(updatedAtGauge.value() > 0);
     }
 
     private Gauge gauge(String name, String... tags) {

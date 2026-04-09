@@ -9,6 +9,7 @@ import ru.izpz.edu.scheduler.metrics.SchedulerPhaseRequestStatus;
 import ru.izpz.edu.scheduler.metrics.SchedulerRunStatus;
 
 import java.time.Instant;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,9 +20,13 @@ public class SchedulerMetricsService {
     private static final String TAG_SCHEDULER = "scheduler";
     private static final String TAG_PHASE = "phase";
     private static final String TAG_RESULT = "result";
+    private static final String TAG_METRIC = "metric";
+    private static final String TAG_OUTCOME = "outcome";
     private static final String TAG_RECIPIENT_TYPE = "recipient_type";
     private static final String TAG_CAMPUS_ID = "campus_id";
     private static final String TAG_CAMPUS_NAME = "campus_name";
+    private static final String RESULT_SUCCESS = "success";
+    private static final String METRIC_CREDENTIALS_SYNC_REQUESTS_TOTAL = "edu_credentials_sync_requests_total";
 
     private final MeterRegistry meterRegistry;
     private final CampusCatalog campusCatalog;
@@ -34,6 +39,8 @@ public class SchedulerMetricsService {
     private final Map<String, AtomicLong> lastSuccessTimestampSeconds = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> lastEventsSavedCounts = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> lastNotifyRecipientCounts = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> credentialsSyncLastValues = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> credentialsSyncInProgress = new ConcurrentHashMap<>();
 
     public SchedulerMetricsService(
         MeterRegistry meterRegistry,
@@ -107,7 +114,7 @@ public class SchedulerMetricsService {
     }
 
     public void recordExternalApiSuccess(String schedulerName, String client, String operation) {
-        recordExternalApiCall(schedulerName, client, operation, "success", SchedulerErrorReason.NONE);
+        recordExternalApiCall(schedulerName, client, operation, RESULT_SUCCESS, SchedulerErrorReason.NONE);
     }
 
     public void recordExternalApiError(String schedulerName, String client, String operation, Throwable error) {
@@ -162,6 +169,82 @@ public class SchedulerMetricsService {
         getLastNotifyRecipientsGauge(schedulerName, "deliveries").set(Math.max(deliveries, 0));
     }
 
+    public void setCredentialsSyncInProgress(String schedulerName, boolean inProgress) {
+        getCredentialsSyncInProgressGauge(schedulerName).set(inProgress ? 1L : 0L);
+    }
+
+    public void recordCredentialsSyncBatch(
+        String schedulerName,
+        int batchSize,
+        int success,
+        int noData,
+        int failed,
+        Duration duration
+    ) {
+        incrementCounter("edu_credentials_sync_batches_total", TAG_SCHEDULER, schedulerName);
+        meterRegistry.summary("edu_credentials_sync_batch_size", TAG_SCHEDULER, schedulerName).record(Math.max(batchSize, 0));
+        meterRegistry.timer("edu_credentials_sync_batch_duration_seconds", TAG_SCHEDULER, schedulerName)
+            .record(duration == null ? Duration.ZERO : duration);
+
+        if (success > 0) {
+            meterRegistry.counter(
+                METRIC_CREDENTIALS_SYNC_REQUESTS_TOTAL,
+                TAG_SCHEDULER, schedulerName,
+                TAG_RESULT, RESULT_SUCCESS
+            ).increment(success);
+        }
+        if (noData > 0) {
+            meterRegistry.counter(
+                METRIC_CREDENTIALS_SYNC_REQUESTS_TOTAL,
+                TAG_SCHEDULER, schedulerName,
+                TAG_RESULT, "no_data"
+            ).increment(noData);
+        }
+        if (failed > 0) {
+            meterRegistry.counter(
+                METRIC_CREDENTIALS_SYNC_REQUESTS_TOTAL,
+                TAG_SCHEDULER, schedulerName,
+                TAG_RESULT, "failed"
+            ).increment(failed);
+        }
+    }
+
+    public void recordCredentialsSyncRun(
+        String schedulerName,
+        CredentialsSyncRunStats stats,
+        Duration duration
+    ) {
+        String outcome;
+        if (stats.requested() == 0) {
+            outcome = "skipped";
+        } else if (stats.failed() > 0) {
+            outcome = "partial";
+        } else {
+            outcome = RESULT_SUCCESS;
+        }
+
+        incrementCounter(
+            "edu_credentials_sync_runs_total",
+            TAG_SCHEDULER, schedulerName,
+            TAG_OUTCOME, outcome
+        );
+
+        meterRegistry.timer(
+                "edu_credentials_sync_run_duration_seconds",
+                TAG_SCHEDULER, schedulerName,
+                TAG_OUTCOME, outcome
+            )
+            .record(duration == null ? Duration.ZERO : duration);
+
+        getCredentialsSyncLastValueGauge(schedulerName, "scanned").set(Math.max(stats.scanned(), 0));
+        getCredentialsSyncLastValueGauge(schedulerName, "requested").set(Math.max(stats.requested(), 0));
+        getCredentialsSyncLastValueGauge(schedulerName, "already_saved").set(Math.max(stats.alreadySaved(), 0));
+        getCredentialsSyncLastValueGauge(schedulerName, RESULT_SUCCESS).set(Math.max(stats.success(), 0));
+        getCredentialsSyncLastValueGauge(schedulerName, "no_data").set(Math.max(stats.noData(), 0));
+        getCredentialsSyncLastValueGauge(schedulerName, "failed").set(Math.max(stats.failed(), 0));
+        getCredentialsSyncLastValueGauge(schedulerName, "updated_at").set(Instant.now().getEpochSecond());
+    }
+
     private Timer phaseTimer(String schedulerName, String phase) {
         return Timer.builder("edu_scheduler_phase_duration_seconds")
             .description("Scheduler phase duration")
@@ -185,9 +268,19 @@ public class SchedulerMetricsService {
             TAG_SCHEDULER, schedulerName,
             "client", client,
             "operation", operation,
-            "outcome", outcome,
+            TAG_OUTCOME, outcome,
             "reason", reason.tag()
         );
+    }
+
+    public record CredentialsSyncRunStats(
+        int scanned,
+        int requested,
+        int alreadySaved,
+        int success,
+        int noData,
+        int failed
+    ) {
     }
 
     private AtomicInteger getClusterPlacesGauge(String campusId, String clusterName, String placeType) {
@@ -315,6 +408,37 @@ public class SchedulerMetricsService {
                 )
                 .description("Unique users and deliveries for the last notify scheduler run")
                 .tags(TAG_SCHEDULER, schedulerName, TAG_RECIPIENT_TYPE, recipientType)
+                .register(meterRegistry);
+            return holder;
+        });
+    }
+
+    private AtomicLong getCredentialsSyncLastValueGauge(String schedulerName, String metric) {
+        String key = schedulerName + "|" + metric;
+        return credentialsSyncLastValues.computeIfAbsent(key, ignored -> {
+            AtomicLong holder = new AtomicLong(0L);
+            io.micrometer.core.instrument.Gauge.builder(
+                    "edu_credentials_sync_last",
+                    holder,
+                    AtomicLong::get
+                )
+                .description("Last credentials sync snapshot values")
+                .tags(TAG_SCHEDULER, schedulerName, TAG_METRIC, metric)
+                .register(meterRegistry);
+            return holder;
+        });
+    }
+
+    private AtomicLong getCredentialsSyncInProgressGauge(String schedulerName) {
+        return credentialsSyncInProgress.computeIfAbsent(schedulerName, ignored -> {
+            AtomicLong holder = new AtomicLong(0L);
+            io.micrometer.core.instrument.Gauge.builder(
+                    "edu_credentials_sync_in_progress",
+                    holder,
+                    AtomicLong::get
+                )
+                .description("Credentials sync scheduler in-progress flag (1 or 0)")
+                .tags(TAG_SCHEDULER, schedulerName)
                 .register(meterRegistry);
             return holder;
         });

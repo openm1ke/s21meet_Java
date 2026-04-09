@@ -13,7 +13,6 @@ apply(plugin = "jacoco")
 val javaWebSocketVersion: String by project
 val jsonVersion: String by project
 val slf4jVersion: String by project
-val springDotEnvVersion: String by project
 
 group = "ru.izpz"
 version = "0.0.1-SNAPSHOT"
@@ -35,8 +34,6 @@ dependencies {
     implementation("org.java-websocket:Java-WebSocket:${javaWebSocketVersion}")
     implementation("org.json:json:${jsonVersion}")
     implementation("org.slf4j:slf4j-api:${slf4jVersion}")
-
-    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }

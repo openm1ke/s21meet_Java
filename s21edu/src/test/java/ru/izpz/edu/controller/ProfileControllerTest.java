@@ -21,6 +21,7 @@ import ru.izpz.edu.service.FriendService;
 import ru.izpz.edu.service.GraphQLService;
 import ru.izpz.edu.service.NotifyService;
 import ru.izpz.edu.service.ProfileService;
+import ru.izpz.edu.service.provider.CampusRoutingProjectsProvider;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -36,7 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
         "profile.api.enabled=true",
-        "spring.task.scheduling.enabled=false"
+        "spring.task.scheduling.enabled=false",
+        "projects.scheduler.enabled=false"
 })
 class ProfileControllerTest {
 
@@ -75,6 +77,8 @@ class ProfileControllerTest {
 
     @MockitoBean
     private ParticipantApi participantApi;
+    @MockitoBean
+    private CampusRoutingProjectsProvider campusRoutingProjectsProvider;
 
     @Test
     void getProfile_shouldReturnOk() throws Exception {
