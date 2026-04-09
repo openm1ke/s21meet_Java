@@ -1,10 +1,10 @@
 package ru.izpz.edu.service.provider;
 
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.model.WorkplaceV1DTO;
@@ -24,8 +24,8 @@ public class RestApiWorkplaceProvider implements WorkplaceProvider {
     private final ClusterApi clusterApi;
     private final CampusMapper campusMapper;
     @Override
-    @RateLimiter(name = "platform")
-    @Retry(name = "platform")
+    @RateLimiter(name = "campusWorkplace")
+    @Retry(name = "campusWorkplace")
     public List<Workplace> fetchParticipantsByCluster(Long clusterId) throws ApiException {
         log.debug("Fetching participants for cluster {} via REST API", clusterId);
         var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);

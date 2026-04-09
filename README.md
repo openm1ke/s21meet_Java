@@ -104,6 +104,91 @@ chmod +x gradlew dev.sh
 ./dev.sh --down               # остановка окружения
 ```
 
+### 5. Ключевые параметры `s21edu` (projects scheduler и внешние лимиты)
+
+Основные параметры лежат в:
+
+- `env/test/s21edu.env` (локально)
+- `env/prod/s21edu.env.example` (шаблон для прода)
+
+Параметры шедулера проектов:
+
+- `PROJECTS_SCHEDULER_ENABLED` — включает/выключает шедулер проектов.
+- `PROJECTS_SCHEDULER_PAGE_SIZE` — сколько логинов считывается за одну страницу из БД.
+- `PROJECTS_SCHEDULER_BATCH_SIZE` — размер батча логинов в одном шаге обработки.
+- `PROJECTS_SCHEDULER_GRAPHQL_BATCH_SIZE` — размер батча для кампусов с GraphQL провайдером проектов.
+- `PROJECTS_SCHEDULER_REST_BATCH_SIZE` — размер батча для кампусов с REST провайдером проектов.
+- `PROJECTS_SCHEDULER_CONCURRENCY` — размер пула потоков шедулера проектов.
+- `PROJECTS_SCHEDULER_TASK_TIMEOUT` — timeout одной задачи обновления проектов по логину.
+- `PROJECTS_SCHEDULER_RETRY_ATTEMPTS` — число попыток для failed/timeout задач.
+- `PROJECTS_SCHEDULER_RETRY_BACKOFF` — пауза между retry-попытками.
+- `PROJECTS_SCHEDULER_GRAPHQL_SCHOOL_ID` — schoolId кампуса, который принудительно идёт через GraphQL provider.
+
+Параметры TTL:
+
+- `PROJECTS_REFRESH_TTL` — единый TTL свежести проектов.
+- `GRAPHQL_PROJECTS_REFRESH_TTL` — fallback TTL для проектов (используется, если `PROJECTS_REFRESH_TTL` не задан).
+- `COALITION_REFRESH_TTL` — TTL обновления коалиций.
+- `GRAPHQL_COALITION_REFRESH_TTL` — fallback TTL коалиций.
+
+Параметры HTTP-клиента:
+
+- `API_CLIENT_CONNECT_TIMEOUT` — timeout установления соединения.
+- `API_CLIENT_READ_TIMEOUT` — timeout чтения ответа.
+- `API_CLIENT_CALL_TIMEOUT` — общий timeout всего HTTP-вызова.
+
+Параметры rate limit/retry для REST проектов:
+
+- `PROJECTS_REST_LIMIT_FOR_PERIOD` — сколько REST-запросов к projects разрешено за период.
+- `PROJECTS_REST_LIMIT_REFRESH_PERIOD` — период rate limiter (обычно `1s`).
+- `PROJECTS_REST_TIMEOUT_DURATION` — сколько ждать слот rate limiter перед ошибкой.
+- `PROJECTS_REST_RETRY_MAX_ATTEMPTS` — число retry попыток при ошибках REST.
+- `PROJECTS_REST_RETRY_WAIT_DURATION` — пауза между retry попытками REST.
+
+Глобальный лимит внешнего API (общий бюджет для REST + GraphQL):
+
+- `EXTERNAL_GLOBAL_LIMIT_FOR_PERIOD` — общий лимит запросов к внешнему API за период.
+- `EXTERNAL_GLOBAL_LIMIT_REFRESH_PERIOD` — период общего лимитера.
+- `EXTERNAL_GLOBAL_TIMEOUT_DURATION` — сколько ждать слот общего лимитера.
+- `EXTERNAL_GLOBAL_RETRY_MAX_ATTEMPTS` — retry попытки для общего лимитера.
+- `EXTERNAL_GLOBAL_RETRY_WAIT_DURATION` — пауза между retry попытками общего лимитера.
+
+Лимит парсинга кампусов/кластеров (workplace):
+
+- `CAMPUS_WORKPLACE_LIMIT_FOR_PERIOD` — лимит запросов workplace-парсинга за период.
+- `CAMPUS_WORKPLACE_LIMIT_REFRESH_PERIOD` — период лимитера workplace-парсинга.
+- `CAMPUS_WORKPLACE_TIMEOUT_DURATION` — ожидание слота для workplace-парсинга.
+- `CAMPUS_WORKPLACE_RETRY_MAX_ATTEMPTS` — retry попытки для workplace-парсинга.
+- `CAMPUS_WORKPLACE_RETRY_WAIT_DURATION` — пауза между retry попытками workplace-парсинга.
+
+Параметры rate limit для GraphQL:
+
+- `GRAPHQL_GLOBAL_LIMIT_FOR_PERIOD` — глобальный лимит на все GraphQL-вызовы `s21edu`.
+- `GRAPHQL_GLOBAL_LIMIT_REFRESH_PERIOD` — период глобального GraphQL limiter.
+- `GRAPHQL_GLOBAL_TIMEOUT_DURATION` — сколько ждать слот глобального limiter.
+- `GRAPHQL_PROJECTS_LIMIT_FOR_PERIOD` — локальный лимит GraphQL вызовов проектов.
+- `GRAPHQL_CREDENTIALS_LIMIT_FOR_PERIOD` — локальный лимит GraphQL вызовов credentials.
+
+Важно: фактический GraphQL throughput определяется как минимум из локального лимита метода и `GRAPHQL_GLOBAL_LIMIT_FOR_PERIOD`.
+
+Текущие рабочие значения в `env/test/s21edu.env`:
+
+- `PROJECTS_SCHEDULER_ENABLED=true`
+- `PROJECTS_SCHEDULER_PAGE_SIZE=1000`
+- `PROJECTS_SCHEDULER_BATCH_SIZE=20`
+- `PROJECTS_SCHEDULER_GRAPHQL_BATCH_SIZE=24`
+- `PROJECTS_SCHEDULER_REST_BATCH_SIZE=14`
+- `PROJECTS_SCHEDULER_CONCURRENCY=7`
+- `PROJECTS_SCHEDULER_TASK_TIMEOUT=PT75S`
+- `PROJECTS_SCHEDULER_RETRY_ATTEMPTS=1`
+- `PROJECTS_SCHEDULER_RETRY_BACKOFF=PT1S`
+- `PROJECTS_REST_LIMIT_FOR_PERIOD=5`
+- `PROJECTS_REST_LIMIT_REFRESH_PERIOD=1s`
+- `EXTERNAL_GLOBAL_LIMIT_FOR_PERIOD=10`
+- `EXTERNAL_GLOBAL_LIMIT_REFRESH_PERIOD=1s`
+- `PROJECTS_REFRESH_TTL=PT1H`
+- `GRAPHQL_PROJECTS_REFRESH_TTL=PT1H`
+
 ## Запуск тестов и покрытие
 
 ```bash

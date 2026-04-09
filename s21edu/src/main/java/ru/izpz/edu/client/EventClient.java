@@ -1,10 +1,9 @@
 package ru.izpz.edu.client;
 
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import io.github.resilience4j.retry.annotation.Retry;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.api.EventApi;
 import ru.izpz.dto.model.EventV1DTO;
@@ -19,7 +18,6 @@ public class EventClient {
 
     private final EventApi eventApi;
 
-    @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public List<EventV1DTO> getEvents(OffsetDateTime from, OffsetDateTime to, String type, Long limit, Long offset) throws ApiException {
         try {

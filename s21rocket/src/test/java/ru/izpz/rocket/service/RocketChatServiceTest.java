@@ -209,6 +209,13 @@ class RocketChatServiceTest {
     }
 
     @Test
+    void createClient_shouldCreateWebSocketClient() {
+        RocketChatWebSocketClient client = rocketChatService.createClient("target-user", "hello", false);
+
+        assertNotNull(client);
+    }
+
+    @Test
     void generateQrCode_shouldReturnErrorResponse_whenExceptionThrown() {
         // Given
         RocketChatService service = new RocketChatService(properties) {

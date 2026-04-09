@@ -8,7 +8,6 @@ plugins {
     id("io.spring.dependency-management")
 }
 
-val springDotEnvVersion: String by project
 val resilience4jVersion: String by project
 
 dependencies {
@@ -19,7 +18,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus")
-    implementation("me.paulschwarz:springboot3-dotenv:${springDotEnvVersion}")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}")
     implementation("io.github.resilience4j:resilience4j-ratelimiter:${resilience4jVersion}")
 

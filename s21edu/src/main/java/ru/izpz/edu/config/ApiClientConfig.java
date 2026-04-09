@@ -2,9 +2,11 @@ package ru.izpz.edu.config;
 
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.dto.ApiClient;
 import ru.izpz.dto.api.CampusApi;
@@ -12,12 +14,21 @@ import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.api.CoalitionApi;
 import ru.izpz.dto.api.EventApi;
 import ru.izpz.dto.api.ParticipantApi;
-import ru.izpz.dto.api.ProjectApi;
+import ru.izpz.edu.client.PlatformApiClient;
 import ru.izpz.edu.service.TokenService;
+
+import java.time.Duration;
 
 @Slf4j
 @Configuration
 public class ApiClientConfig {
+
+    @Value("${api.client.connect-timeout:PT5S}")
+    private Duration connectTimeout = Duration.ofSeconds(5);
+    @Value("${api.client.read-timeout:PT20S}")
+    private Duration readTimeout = Duration.ofSeconds(20);
+    @Value("${api.client.call-timeout:PT30S}")
+    private Duration callTimeout = Duration.ofSeconds(30);
 
     @Bean
     @ConditionalOnProperty(name = "api.client.enabled", havingValue = "true")
@@ -29,13 +40,19 @@ public class ApiClientConfig {
                     .build();
                 return chain.proceed(req);
             })
+            .connectTimeout(connectTimeout)
+            .readTimeout(readTimeout)
+            .callTimeout(callTimeout)
             .build();
-        return new ApiClient(client);
+        return new PlatformApiClient(client);
     }
 
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Math.toIntExact(Math.max(1, connectTimeout.toMillis())));
+        requestFactory.setReadTimeout(Math.toIntExact(Math.max(1, readTimeout.toMillis())));
+        return new RestTemplate(requestFactory);
     }
 
     @Bean
@@ -67,9 +84,4 @@ public class ApiClientConfig {
         return new EventApi(apiClient);
     }
 
-    @Bean
-    @ConditionalOnProperty(name = "api.project.enabled", havingValue = "true")
-    public ProjectApi projectApi(ApiClient apiClient) {
-        return new ProjectApi(apiClient);
-    }
 }

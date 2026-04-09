@@ -1,10 +1,9 @@
 package ru.izpz.edu.client;
 
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import io.github.resilience4j.retry.annotation.Retry;
 import ru.izpz.dto.ApiException;
 import ru.izpz.dto.api.CampusApi;
 import ru.izpz.dto.api.ClusterApi;
@@ -30,7 +29,6 @@ public class CampusClient {
      * @param campusId айди кампуса
      * @throws ApiException исключение
      */
-    @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public List<ClusterV1DTO> getClustersByCampus(String campusId) throws ApiException {
         var response = campusApi.getClustersByCampus(UUID.fromString(campusId));
@@ -47,7 +45,6 @@ public class CampusClient {
      * @param clusterId айди кластера определенного кампуса
      * @throws ApiException исключение
      */
-    @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public List<WorkplaceV1DTO> getParticipantsByCluster(Long clusterId) throws ApiException {
         // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максимум)
@@ -60,15 +57,23 @@ public class CampusClient {
         return response.getClusterMap();
     }
 
-    @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public List<GraphQLService.ClusterSeat> getParticipantsByClusterV2(Long clusterId) {
         return graphQLService.getOccupiedSeats(String.valueOf(clusterId));
     }
 
-    @RateLimiter(name = "platform")
     @Retry(name = "platform")
     public List<StudentProjectData> getStudentProjectsByLogin(String login) {
         return graphQLService.getStudentProjectsByLogin(login);
+    }
+
+    @Retry(name = "platform")
+    public List<String> getParticipantsByCampus(String campusId, long limit, long offset) throws ApiException {
+        var response = campusApi.getParticipantsByCampusId(UUID.fromString(campusId), limit, offset);
+        if (response == null) {
+            log.warn("API вернул null для списка участников кампуса {}", campusId);
+            throw new ApiException("API вернул null для списка участников кампуса " + campusId);
+        }
+        return response.getParticipants() == null ? List.of() : response.getParticipants();
     }
 }
