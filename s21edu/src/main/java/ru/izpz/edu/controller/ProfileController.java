@@ -16,6 +16,7 @@ import ru.izpz.dto.CampusDto;
 import ru.izpz.edu.service.CampusService;
 import ru.izpz.edu.service.EventService;
 import ru.izpz.edu.service.FriendService;
+import ru.izpz.edu.service.ProjectDirectoryService;
 import ru.izpz.edu.service.ProfileService;
 
 import java.util.List;
@@ -32,6 +33,7 @@ public class ProfileController {
     private final CampusService campusService;
     private final FriendService friendsService;
     private final EventService eventService;
+    private final ProjectDirectoryService projectDirectoryService;
 
     @GetMapping
     public ResponseEntity<ProfileDto> getProfile(
@@ -135,5 +137,17 @@ public class ProfileController {
     ResponseEntity<List<ProjectsDto>> getProjects(@RequestParam @NotBlank String login) {
         log.info("Получен запрос на вывод списка провектов для {}", login);
         return ResponseEntity.ok(campusService.getStudentProjectsByLogin(login));
+    }
+
+    @PostMapping("/project-names")
+    ResponseEntity<List<String>> getProjectNames() {
+        log.info("Получен запрос на вывод списка всех проектов");
+        return ResponseEntity.ok(projectDirectoryService.getProjectNames());
+    }
+
+    @PostMapping("/project-executors")
+    ResponseEntity<List<ProjectExecutorDto>> getProjectExecutors(@Valid @RequestBody ProjectExecutorsRequest request) {
+        log.info("Получен запрос на вывод исполнителей проекта {}", request.projectName());
+        return ResponseEntity.ok(projectDirectoryService.getProjectExecutors(request.projectName()));
     }
 }

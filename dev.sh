@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # ---------- config ----------
-APP_SERVICES=(s21auth s21edu s21bot s21rocket)
-BUILDABLE_IMAGES=(s21auth s21edu s21edu-migrator s21bot s21rocket)
+APP_SERVICES=(s21auth s21edu s21bot s21rocket s21web)
+BUILDABLE_IMAGES=(s21auth s21edu s21edu-migrator s21bot s21rocket s21web)
 INFRA_SERVICES=(postgres prometheus grafana)
 TEST_ENV_DIR="env/test"
 COMPOSE_ENV_FILE="$TEST_ENV_DIR/compose.env"
@@ -138,6 +138,7 @@ normalize_test_env() {
 
   perl -0pi -e "s|^DB_URL=.*$|DB_URL=jdbc:postgresql://postgres:5432/postgres|m; s|^TOKEN_ENDPOINT=.*$|TOKEN_ENDPOINT=${auth_url}|m; s|^BOT_SERVICE_URL=.*$|BOT_SERVICE_URL=${bot_url}|m" "$TEST_ENV_DIR/s21edu.env"
   perl -0pi -e "s|^PROFILE_SERVICE_URL=.*$|PROFILE_SERVICE_URL=${profile_url}|m; s|^ROCKETCHAT_SERVICE_URL=.*$|ROCKETCHAT_SERVICE_URL=${rocket_url}|m" "$TEST_ENV_DIR/s21bot.env"
+  perl -0pi -e "s|^PROFILE_SERVICE_URL=.*$|PROFILE_SERVICE_URL=${profile_url}|m" "$TEST_ENV_DIR/s21web.env"
   return 0
 }
 
@@ -148,6 +149,7 @@ ensure_test_env() {
   copy_if_missing "$TEST_ENV_DIR/s21edu.env.example" "$TEST_ENV_DIR/s21edu.env"
   copy_if_missing "$TEST_ENV_DIR/s21bot.env.example" "$TEST_ENV_DIR/s21bot.env"
   copy_if_missing "$TEST_ENV_DIR/s21rocket.env.example" "$TEST_ENV_DIR/s21rocket.env"
+  copy_if_missing "$TEST_ENV_DIR/s21web.env.example" "$TEST_ENV_DIR/s21web.env"
 
   normalize_test_env
   return 0
@@ -270,7 +272,7 @@ build_images() {
 
   for image in "${images[@]}"; do
     case "$image" in
-      s21auth|s21edu|s21bot|s21rocket)
+      s21auth|s21edu|s21bot|s21rocket|s21web)
         info "Docker build: $image"
         docker build -t "${image_repo}/${image}:${image_tag}" "./${image}"
         ;;

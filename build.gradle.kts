@@ -104,7 +104,8 @@ sonarqube {
                 "s21auth/build/reports/jacoco/test/jacocoTestReport.xml," +
                 "s21edu/build/reports/jacoco/test/jacocoTestReport.xml," +
                 "s21bot/build/reports/jacoco/test/jacocoTestReport.xml," +
-                "s21rocket/build/reports/jacoco/test/jacocoTestReport.xml")
+                "s21rocket/build/reports/jacoco/test/jacocoTestReport.xml," +
+                "s21web/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
         property("sonar.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**")
         property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**")
@@ -119,7 +120,8 @@ tasks.register("buildAllJars") {
     dependsOn(
         ":s21auth:bootJar",
         ":s21edu:bootJar",
-        ":s21bot:bootJar"
+        ":s21bot:bootJar",
+        ":s21web:bootJar"
     )
 }
 

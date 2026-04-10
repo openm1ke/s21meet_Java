@@ -1,0 +1,22 @@
+server:
+  port: 8085
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+spring:
+  application:
+    name: s21web
+
+profile:
+  service:
+    url: ${PROFILE_SERVICE_URL:http://localhost:8082}
+
+rate-limit:
+  project-executors:
+    enabled: ${PROJECT_EXECUTORS_RATE_LIMIT_ENABLED:true}
+    limit-for-period: ${PROJECT_EXECUTORS_RATE_LIMIT_FOR_PERIOD:60}
+    refresh-period: ${PROJECT_EXECUTORS_RATE_LIMIT_REFRESH_PERIOD:PT1M}
