@@ -38,8 +38,8 @@ public class GraphQLApiClient {
     private final ObjectMapper om;
     private final MeterRegistry meterRegistry;
 
-    @RateLimiter(name = "externalGlobal")
-    @Retry(name = "externalGlobal")
+    @RateLimiter(name = "graphqlGlobal")
+    @Retry(name = "graphqlGlobal")
     public <T> T execute(String operationName,
                          Map<String, Object> variables,
                          String query,

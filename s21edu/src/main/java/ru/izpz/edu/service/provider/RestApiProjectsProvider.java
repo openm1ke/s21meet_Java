@@ -27,8 +27,7 @@ import java.util.Set;
 @ConditionalOnProperty(name = {"profile.service.enabled", "api.participant.enabled"}, havingValue = "true")
 public class RestApiProjectsProvider implements ProjectsProvider {
 
-    private static final String STATUS_REGISTERED = "REGISTERED";
-    private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+    private static final String STATUS_ASSIGNED = "ASSIGNED";
 
     private final RestProjectsApiFacade restProjectsApiFacade;
     private final ProjectsProviderConfig.ProjectsProperties projectsProperties;
@@ -52,16 +51,14 @@ public class RestApiProjectsProvider implements ProjectsProvider {
             return;
         }
 
-        FetchStatusResult inProgress = fetchByStatus(login, STATUS_IN_PROGRESS);
-        FetchStatusResult registered = fetchByStatus(login, STATUS_REGISTERED);
-        if (!inProgress.success() || !registered.success()) {
-            throw new ProjectsRefreshException("Не удалось получить проекты по одному или нескольким статусам");
+        FetchResult fetched = fetchAllStatuses(login);
+        if (!fetched.success()) {
+            throw new ProjectsRefreshException("Не удалось получить проекты участника");
         }
 
         List<StudentProjectData> result = new ArrayList<>();
         Set<Long> seenIds = new HashSet<>();
-        appendDistinct(result, seenIds, inProgress.projects(), STATUS_IN_PROGRESS);
-        appendDistinct(result, seenIds, registered.projects(), STATUS_REGISTERED);
+        appendDistinct(result, seenIds, fetched.projects());
 
         String userId = studentCredentialsRepository.findById(login)
             .map(StudentCredentials::getUserId)
@@ -81,43 +78,44 @@ public class RestApiProjectsProvider implements ProjectsProvider {
             .orElse(true);
     }
 
-    private FetchStatusResult fetchByStatus(String login, String status) {
+    private FetchResult fetchAllStatuses(String login) {
         long pageSize = Math.max(1, projectsProperties.getRest().getPageSize());
         try {
-            ParticipantProjectsV1DTO response = restProjectsApiFacade.getParticipantProjectsByLogin(login, pageSize, status);
+            ParticipantProjectsV1DTO response = restProjectsApiFacade.getParticipantProjectsByLogin(login, pageSize, null);
             if (response == null || response.getProjects() == null) {
-                return FetchStatusResult.success(List.of());
+                return FetchResult.success(List.of());
             }
-            return FetchStatusResult.success(response.getProjects());
+            return FetchResult.success(response.getProjects());
         } catch (ApiException e) {
-            log.warn("Не удалось получить проекты для {} со статусом {}: {}", login, status, e.getMessage());
-            return FetchStatusResult.failure();
+            log.warn("Не удалось получить проекты для {}: {}", login, e.getMessage());
+            return FetchResult.failure();
         } catch (RuntimeException e) {
-            log.warn("Непредвиденная ошибка получения проектов для {} со статусом {}: {}", login, status, e.getMessage());
-            return FetchStatusResult.failure();
+            log.warn("Непредвиденная ошибка получения проектов для {}: {}", login, e.getMessage());
+            return FetchResult.failure();
         }
     }
 
     private void appendDistinct(
             List<StudentProjectData> target,
             Set<Long> seenIds,
-            List<ParticipantProjectV1DTO> projects,
-            String requestedStatus
+            List<ParticipantProjectV1DTO> projects
     ) {
         for (ParticipantProjectV1DTO project : projects) {
-            if (project != null && project.getId() != null) {
+            if (project != null && project.getId() != null && !isAssigned(project)) {
                 long projectId = project.getId();
                 if (seenIds.add(projectId)) {
-                    target.add(toProjectData(project, requestedStatus));
+                    target.add(toProjectData(project));
                 }
             }
         }
     }
 
-    private StudentProjectData toProjectData(
-            ParticipantProjectV1DTO project,
-            String requestedStatus
-    ) {
+    private boolean isAssigned(ParticipantProjectV1DTO project) {
+        String status = toNullableString(project.getStatus());
+        return STATUS_ASSIGNED.equalsIgnoreCase(status);
+    }
+
+    private StudentProjectData toProjectData(ParticipantProjectV1DTO project) {
         return new StudentProjectData(
                 Long.toString(project.getId()),
                 project.getTitle(),
@@ -127,7 +125,7 @@ public class RestApiProjectsProvider implements ProjectsProvider {
                 project.getFinalPercentage(),
                 null,
                 toNullableString(project.getType()),
-                firstNonBlank(toNullableString(project.getStatus()), requestedStatus),
+                toNullableString(project.getStatus()),
                 project.getTeamMembers() == null ? null : project.getTeamMembers().size(),
                 toInteger(project.getCourseId())
         );
@@ -139,13 +137,6 @@ public class RestApiProjectsProvider implements ProjectsProvider {
 
     private String toNullableString(Object value) {
         return value == null ? null : value.toString();
-    }
-
-    private String firstNonBlank(String first, String second) {
-        if (first != null && !first.isBlank()) {
-            return first;
-        }
-        return second;
     }
 
     private Integer toInteger(Long value) {
@@ -177,13 +168,13 @@ public class RestApiProjectsProvider implements ProjectsProvider {
         );
     }
 
-    private record FetchStatusResult(boolean success, List<ParticipantProjectV1DTO> projects) {
-        private static FetchStatusResult success(List<ParticipantProjectV1DTO> projects) {
-            return new FetchStatusResult(true, projects);
+    private record FetchResult(boolean success, List<ParticipantProjectV1DTO> projects) {
+        private static FetchResult success(List<ParticipantProjectV1DTO> projects) {
+            return new FetchResult(true, projects);
         }
 
-        private static FetchStatusResult failure() {
-            return new FetchStatusResult(false, List.of());
+        private static FetchResult failure() {
+            return new FetchResult(false, List.of());
         }
     }
 

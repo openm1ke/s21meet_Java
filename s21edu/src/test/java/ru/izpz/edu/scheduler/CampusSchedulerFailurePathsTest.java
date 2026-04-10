@@ -33,6 +33,10 @@ import static org.mockito.Mockito.when;
 
 class CampusSchedulerFailurePathsTest {
 
+    private static final String MSK = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
+    private static final String KZN = "7c293c9c-f28c-4b10-be29-560e4b000a34";
+    private static final String NSK = "46e7d965-21e9-4936-bea9-f5ea0d1fddf2";
+
     @Mock
     private CampusClient campusClient;
 
@@ -104,19 +108,28 @@ class CampusSchedulerFailurePathsTest {
     void parseMskKznNsk_perCampusTimeoutAfterPartialSuccess_marksRunAsPartial() throws ApiException {
         schedulerProperties.getTimeout().setGlobal(Duration.ofSeconds(2));
         schedulerProperties.getTimeout().setPerCampus(Duration.ofMillis(20));
-        ClusterV1DTO cluster = new ClusterV1DTO();
-        cluster.setId(100L);
-        cluster.setName("cluster");
-        when(campusClient.getClustersByCampus(anyString())).thenReturn(List.of(cluster));
+        ClusterV1DTO mskCluster = new ClusterV1DTO();
+        mskCluster.setId(100L);
+        mskCluster.setName("cluster-msk");
+        ClusterV1DTO kznCluster = new ClusterV1DTO();
+        kznCluster.setId(101L);
+        kznCluster.setName("cluster-kzn");
+        ClusterV1DTO nskCluster = new ClusterV1DTO();
+        nskCluster.setId(102L);
+        nskCluster.setName("cluster-nsk");
+        when(campusClient.getClustersByCampus(MSK)).thenReturn(List.of(mskCluster));
+        when(campusClient.getClustersByCampus(KZN)).thenReturn(List.of(kznCluster));
+        when(campusClient.getClustersByCampus(NSK)).thenReturn(List.of(nskCluster));
 
-        AtomicInteger callOrdinal = new AtomicInteger();
+        when(campusService.fetchParticipantsByClusterWithProvider(mskCluster.getId())).thenReturn(List.of(new Workplace()));
         doAnswer(invocation -> {
-            if (callOrdinal.getAndIncrement() == 0) {
-                return List.of(new Workplace());
-            }
             blockUntilInterrupted();
             return List.<Workplace>of();
-        }).when(campusService).fetchParticipantsByClusterWithProvider(cluster.getId());
+        }).when(campusService).fetchParticipantsByClusterWithProvider(kznCluster.getId());
+        doAnswer(invocation -> {
+            blockUntilInterrupted();
+            return List.<Workplace>of();
+        }).when(campusService).fetchParticipantsByClusterWithProvider(nskCluster.getId());
 
         scheduler.parseMskKznNsk();
 
@@ -130,19 +143,28 @@ class CampusSchedulerFailurePathsTest {
         schedulerProperties.getTimeout().setGlobal(Duration.ofMillis(120));
         schedulerProperties.getTimeout().setPerCampus(Duration.ofSeconds(5));
 
-        ClusterV1DTO cluster = new ClusterV1DTO();
-        cluster.setId(101L);
-        cluster.setName("cluster-global-timeout");
-        when(campusClient.getClustersByCampus(anyString())).thenReturn(List.of(cluster));
+        ClusterV1DTO mskCluster = new ClusterV1DTO();
+        mskCluster.setId(201L);
+        mskCluster.setName("cluster-msk-global");
+        ClusterV1DTO kznCluster = new ClusterV1DTO();
+        kznCluster.setId(202L);
+        kznCluster.setName("cluster-kzn-global");
+        ClusterV1DTO nskCluster = new ClusterV1DTO();
+        nskCluster.setId(203L);
+        nskCluster.setName("cluster-nsk-global");
+        when(campusClient.getClustersByCampus(MSK)).thenReturn(List.of(mskCluster));
+        when(campusClient.getClustersByCampus(KZN)).thenReturn(List.of(kznCluster));
+        when(campusClient.getClustersByCampus(NSK)).thenReturn(List.of(nskCluster));
 
-        AtomicInteger callOrdinal = new AtomicInteger();
+        when(campusService.fetchParticipantsByClusterWithProvider(mskCluster.getId())).thenReturn(List.of(new Workplace()));
         doAnswer(invocation -> {
-            if (callOrdinal.getAndIncrement() == 0) {
-                return List.of(new Workplace());
-            }
             blockUntilInterrupted();
             return List.<Workplace>of();
-        }).when(campusService).fetchParticipantsByClusterWithProvider(cluster.getId());
+        }).when(campusService).fetchParticipantsByClusterWithProvider(kznCluster.getId());
+        doAnswer(invocation -> {
+            blockUntilInterrupted();
+            return List.<Workplace>of();
+        }).when(campusService).fetchParticipantsByClusterWithProvider(nskCluster.getId());
 
         scheduler.parseMskKznNsk();
 

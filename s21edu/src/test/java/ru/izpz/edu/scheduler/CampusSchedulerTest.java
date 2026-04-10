@@ -28,8 +28,8 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -96,18 +96,18 @@ class CampusSchedulerTest {
         ArgumentCaptor<String> campusIdCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List> clustersCaptor = ArgumentCaptor.forClass(List.class);
 
-        verify(campusClient, timeout(1000)).getClustersByCampus(MSK);
-        verify(campusClient, timeout(1000)).getClustersByCampus(KZN);
-        verify(campusClient, timeout(1000)).getClustersByCampus(NSK);
+        verify(campusClient).getClustersByCampus(MSK);
+        verify(campusClient).getClustersByCampus(KZN);
+        verify(campusClient).getClustersByCampus(NSK);
 
-        verify(campusService, timeout(1000).times(3)).replaceCampusSnapshotByCampusId(campusIdCaptor.capture(), clustersCaptor.capture(), anyList());
+        verify(campusService, times(3)).replaceCampusSnapshotByCampusId(campusIdCaptor.capture(), clustersCaptor.capture(), anyList());
 
-        verify(campusService, timeout(1000)).fetchParticipantsByClusterWithProvider(1L);
-        verify(campusService, timeout(1000)).fetchParticipantsByClusterWithProvider(2L);
-        verify(campusService, timeout(1000)).fetchParticipantsByClusterWithProvider(3L);
-        verify(campusService, timeout(1000)).replaceCampusSnapshotByCampusId(eq(MSK), anyList(), argThat(list -> list.size() == 1));
-        verify(campusService, timeout(1000)).replaceCampusSnapshotByCampusId(eq(KZN), anyList(), argThat(list -> list.size() == 1));
-        verify(campusService, timeout(1000)).replaceCampusSnapshotByCampusId(eq(NSK), anyList(), argThat(list -> list.size() == 1));
+        verify(campusService).fetchParticipantsByClusterWithProvider(1L);
+        verify(campusService).fetchParticipantsByClusterWithProvider(2L);
+        verify(campusService).fetchParticipantsByClusterWithProvider(3L);
+        verify(campusService).replaceCampusSnapshotByCampusId(eq(MSK), anyList(), argThat(list -> list.size() == 1));
+        verify(campusService).replaceCampusSnapshotByCampusId(eq(KZN), anyList(), argThat(list -> list.size() == 1));
+        verify(campusService).replaceCampusSnapshotByCampusId(eq(NSK), anyList(), argThat(list -> list.size() == 1));
 
         List<String> campusIds = campusIdCaptor.getAllValues();
         org.junit.jupiter.api.Assertions.assertTrue(campusIds.containsAll(List.of(MSK, KZN, NSK)));
@@ -136,15 +136,15 @@ class CampusSchedulerTest {
         ArgumentCaptor<String> campusIdCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List> clustersCaptor = ArgumentCaptor.forClass(List.class);
 
-        verify(campusClient, timeout(1000)).getClustersByCampus(MSK);
-        verify(campusClient, timeout(1000)).getClustersByCampus(KZN);
-        verify(campusClient, timeout(1000)).getClustersByCampus(NSK);
+        verify(campusClient).getClustersByCampus(MSK);
+        verify(campusClient).getClustersByCampus(KZN);
+        verify(campusClient).getClustersByCampus(NSK);
 
-        verify(campusService, timeout(1000).times(2)).replaceCampusSnapshotByCampusId(campusIdCaptor.capture(), clustersCaptor.capture(), anyList());
+        verify(campusService, times(2)).replaceCampusSnapshotByCampusId(campusIdCaptor.capture(), clustersCaptor.capture(), anyList());
 
-        verify(campusService, timeout(1000)).fetchParticipantsByClusterWithProvider(1L);
-        verify(campusService, timeout(1000)).fetchParticipantsByClusterWithProvider(3L);
-        verify(campusService, timeout(1000).times(2)).replaceCampusSnapshotByCampusId(anyString(), anyList(), anyList());
+        verify(campusService).fetchParticipantsByClusterWithProvider(1L);
+        verify(campusService).fetchParticipantsByClusterWithProvider(3L);
+        verify(campusService, times(2)).replaceCampusSnapshotByCampusId(anyString(), anyList(), anyList());
 
         List<String> campusIds = campusIdCaptor.getAllValues();
         org.junit.jupiter.api.Assertions.assertTrue(campusIds.containsAll(List.of(MSK, NSK)));

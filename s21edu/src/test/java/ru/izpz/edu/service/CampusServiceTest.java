@@ -224,8 +224,8 @@ class CampusServiceTest {
     @Test
     void getStudentProjectsByLogin_shouldMapViaProjectsMapper() {
         // Arrange
-        StudentProjectData src = new StudentProjectData("g", "n", "d", 1, "dt", 1, 1, "e", "gs", 1, 1);
-        ProjectsDto dto = new ProjectsDto("g", "n", "d", 1, "dt", 1, 1, "e", "gs", 1, 1);
+        StudentProjectData src = new StudentProjectData("g", "n", "d", 1, "dt", 1, 1, "e", "IN_PROGRESS", 1, 1);
+        ProjectsDto dto = new ProjectsDto("g", "n", "d", 1, "dt", 1, 1, "e", "IN_PROGRESS", 1, 1);
         when(campusRoutingProjectsProvider.getStudentProjectsByLogin("login")).thenReturn(List.of(src));
         when(projectsMapper.toDto(src)).thenReturn(dto);
 
@@ -236,6 +236,45 @@ class CampusServiceTest {
         assertEquals(1, result.size());
         org.junit.jupiter.api.Assertions.assertSame(dto, result.getFirst());
         verify(campusRoutingProjectsProvider).getStudentProjectsByLogin("login");
+    }
+
+    @Test
+    void getStudentProjectsByLogin_shouldFilterOutStatusesNotVisibleForProfile() {
+        StudentProjectData inProgress = new StudentProjectData("1", "p1", "d", 1, "dt", 1, 1, "e", "IN_PROGRESS", 1, 1);
+        StudentProjectData registered = new StudentProjectData("2", "p2", "d", 1, "dt", 1, 1, "e", "REGISTERED", 1, 1);
+        StudentProjectData inReviews = new StudentProjectData("3", "p3", "d", 1, "dt", 1, 1, "e", "IN_REVIEWS", 1, 1);
+        StudentProjectData accepted = new StudentProjectData("4", "p4", "d", 1, "dt", 1, 1, "e", "ACCEPTED", 1, 1);
+        StudentProjectData assigned = new StudentProjectData("5", "p5", "d", 1, "dt", 1, 1, "e", "ASSIGNED", 1, 1);
+        when(campusRoutingProjectsProvider.getStudentProjectsByLogin("login"))
+            .thenReturn(List.of(inProgress, registered, inReviews, accepted, assigned));
+        when(projectsMapper.toDto(inProgress)).thenReturn(new ProjectsDto("1", "p1", "d", 1, "dt", 1, 1, "e", "IN_PROGRESS", 1, 1));
+        when(projectsMapper.toDto(registered)).thenReturn(new ProjectsDto("2", "p2", "d", 1, "dt", 1, 1, "e", "REGISTERED", 1, 1));
+        when(projectsMapper.toDto(inReviews)).thenReturn(new ProjectsDto("3", "p3", "d", 1, "dt", 1, 1, "e", "IN_REVIEWS", 1, 1));
+
+        List<ProjectsDto> result = campusService.getStudentProjectsByLogin("login");
+
+        assertEquals(3, result.size());
+        assertEquals("1", result.get(0).goalId());
+        assertEquals("2", result.get(1).goalId());
+        assertEquals("3", result.get(2).goalId());
+        verify(projectsMapper, never()).toDto(accepted);
+        verify(projectsMapper, never()).toDto(assigned);
+    }
+
+    @Test
+    void getStudentProjectsByLogin_shouldAllowInReviewAndSkipNullStatus() {
+        StudentProjectData inReview = new StudentProjectData("6", "p6", "d", 1, "dt", 1, 1, "e", "IN_REVIEW", 1, 1);
+        StudentProjectData nullStatus = new StudentProjectData("7", "p7", "d", 1, "dt", 1, 1, "e", null, 1, 1);
+
+        when(campusRoutingProjectsProvider.getStudentProjectsByLogin("login"))
+            .thenReturn(List.of(inReview, nullStatus));
+        when(projectsMapper.toDto(inReview)).thenReturn(new ProjectsDto("6", "p6", "d", 1, "dt", 1, 1, "e", "IN_REVIEW", 1, 1));
+
+        List<ProjectsDto> result = campusService.getStudentProjectsByLogin("login");
+
+        assertEquals(1, result.size());
+        assertEquals("6", result.getFirst().goalId());
+        verify(projectsMapper, never()).toDto(nullStatus);
     }
 
     @Test

@@ -104,90 +104,126 @@ chmod +x gradlew dev.sh
 ./dev.sh --down               # остановка окружения
 ```
 
-### 5. Ключевые параметры `s21edu` (projects scheduler и внешние лимиты)
+### 5. Параметры окружения (сверено с `application.yml`)
 
-Основные параметры лежат в:
+Все параметры берутся из:
 
-- `env/test/s21edu.env` (локально)
-- `env/prod/s21edu.env.example` (шаблон для прода)
+- `env/test/*.env.example` — шаблоны для локального/тестового окружения.
+- `env/prod/*.env.example` — шаблоны для прод-окружения.
 
-Параметры шедулера проектов:
+#### `compose.env` (оркестрация Docker Compose)
 
-- `PROJECTS_SCHEDULER_ENABLED` — включает/выключает шедулер проектов.
-- `PROJECTS_SCHEDULER_PAGE_SIZE` — сколько логинов считывается за одну страницу из БД.
-- `PROJECTS_SCHEDULER_BATCH_SIZE` — размер батча логинов в одном шаге обработки.
-- `PROJECTS_SCHEDULER_GRAPHQL_BATCH_SIZE` — размер батча для кампусов с GraphQL провайдером проектов.
-- `PROJECTS_SCHEDULER_REST_BATCH_SIZE` — размер батча для кампусов с REST провайдером проектов.
-- `PROJECTS_SCHEDULER_CONCURRENCY` — размер пула потоков шедулера проектов.
-- `PROJECTS_SCHEDULER_TASK_TIMEOUT` — timeout одной задачи обновления проектов по логину.
-- `PROJECTS_SCHEDULER_RETRY_ATTEMPTS` — число попыток для failed/timeout задач.
-- `PROJECTS_SCHEDULER_RETRY_BACKOFF` — пауза между retry-попытками.
-- `PROJECTS_SCHEDULER_GRAPHQL_SCHOOL_ID` — schoolId кампуса, который принудительно идёт через GraphQL provider.
+- `APP_ENV` — выбирает набор env-файлов (`test` или `prod`).
+- `TZ` — timezone контейнеров.
+- `IMAGE_REPO`, `IMAGE_TAG` — реестр и тег Docker-образов сервисов.
+- `PROXY_MODE` — профиль прокси (`vless`/`ssh`) для Telegram.
+- `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD` — учетка Grafana.
+- `POSTGRES_BIND_ADDR`, `S21AUTH_BIND_ADDR`, `S21EDU_BIND_ADDR`, `S21BOT_BIND_ADDR`, `S21ROCKET_BIND_ADDR`, `S21WEB_BIND_ADDR`, `PROMETHEUS_BIND_ADDR`, `GRAFANA_BIND_ADDR` — на каком адресе хоста публиковать порты сервисов.
+- `XRAY_CONFIG_FILE` — путь к конфигу xray-клиента.
+- `SSH_TUNNEL_HOST`, `SSH_TUNNEL_PORT`, `SSH_TUNNEL_USER`, `SSH_TUNNEL_SOCKS_PORT` — параметры SSH SOCKS туннеля.
+- `SSH_TUNNEL_KEY_FILE`, `SSH_TUNNEL_KNOWN_HOSTS_FILE` — пути к ключу и known_hosts для SSH-туннеля.
 
-Параметры TTL:
+#### `postgres.env`
 
-- `PROJECTS_REFRESH_TTL` — единый TTL свежести проектов.
-- `GRAPHQL_PROJECTS_REFRESH_TTL` — fallback TTL для проектов (используется, если `PROJECTS_REFRESH_TTL` не задан).
-- `COALITION_REFRESH_TTL` — TTL обновления коалиций.
-- `GRAPHQL_COALITION_REFRESH_TTL` — fallback TTL коалиций.
+- `POSTGRES_DB` — имя базы.
+- `POSTGRES_USER` — пользователь базы.
+- `POSTGRES_PASSWORD` — пароль пользователя.
 
-Параметры HTTP-клиента:
+#### `s21auth.env`
 
-- `API_CLIENT_CONNECT_TIMEOUT` — timeout установления соединения.
-- `API_CLIENT_READ_TIMEOUT` — timeout чтения ответа.
-- `API_CLIENT_CALL_TIMEOUT` — общий timeout всего HTTP-вызова.
+- `EDU_LOGIN`, `EDU_PASS` — учетные данные внешнего API кампуса.
+- `CRYPTO_KEY_BASE64` — ключ шифрования/дешифрования токена.
+- `TOKEN_URI` — endpoint выдачи токена во внешнем API.
 
-Параметры rate limit/retry для REST проектов:
+#### `s21bot.env`
 
-- `PROJECTS_REST_LIMIT_FOR_PERIOD` — сколько REST-запросов к projects разрешено за период.
-- `PROJECTS_REST_LIMIT_REFRESH_PERIOD` — период rate limiter (обычно `1s`).
-- `PROJECTS_REST_TIMEOUT_DURATION` — сколько ждать слот rate limiter перед ошибкой.
-- `PROJECTS_REST_RETRY_MAX_ATTEMPTS` — число retry попыток при ошибках REST.
-- `PROJECTS_REST_RETRY_WAIT_DURATION` — пауза между retry попытками REST.
+- `BOT_TOKEN` — токен Telegram-бота.
+- `BOT_ADMIN` — Telegram id администратора.
+- `BOT_GROUP` — id/username целевой группы.
+- `BOT_GROUP_INVITE_LINK` — инвайт-ссылка в группу.
+- `BOT_PROXY_ENABLED`, `BOT_PROXY_TYPE`, `BOT_PROXY_HOST`, `BOT_PROXY_PORT` — параметры прокси для Telegram API.
+- `PROFILE_SERVICE_URL` — URL сервиса профилей (`s21edu`).
+- `ROCKETCHAT_SERVICE_URL` — URL сервиса Rocket.Chat (`s21rocket`).
 
-Глобальный лимит внешнего API (общий бюджет для REST + GraphQL):
+#### `s21rocket.env`
 
-- `EXTERNAL_GLOBAL_LIMIT_FOR_PERIOD` — общий лимит запросов к внешнему API за период.
-- `EXTERNAL_GLOBAL_LIMIT_REFRESH_PERIOD` — период общего лимитера.
-- `EXTERNAL_GLOBAL_TIMEOUT_DURATION` — сколько ждать слот общего лимитера.
-- `EXTERNAL_GLOBAL_RETRY_MAX_ATTEMPTS` — retry попытки для общего лимитера.
-- `EXTERNAL_GLOBAL_RETRY_WAIT_DURATION` — пауза между retry попытками общего лимитера.
+- `ROCKET_CHAT_TOKEN` — токен бота Rocket.Chat.
+- `ROCKET_CHAT_URL` — URL Rocket.Chat websocket/api.
+- `ROCKET_CHAT_QR_BOT` — username бота для QR-верификации.
+- `ROCKET_CHAT_QR_TIMEOUT` — timeout ожидания QR (сек).
+- `ROCKET_CHAT_MESSAGE_TIMEOUT` — timeout отправки сообщения (сек).
 
-Лимит парсинга кампусов/кластеров (workplace):
+#### `s21web.env`
 
-- `CAMPUS_WORKPLACE_LIMIT_FOR_PERIOD` — лимит запросов workplace-парсинга за период.
-- `CAMPUS_WORKPLACE_LIMIT_REFRESH_PERIOD` — период лимитера workplace-парсинга.
-- `CAMPUS_WORKPLACE_TIMEOUT_DURATION` — ожидание слота для workplace-парсинга.
-- `CAMPUS_WORKPLACE_RETRY_MAX_ATTEMPTS` — retry попытки для workplace-парсинга.
-- `CAMPUS_WORKPLACE_RETRY_WAIT_DURATION` — пауза между retry попытками workplace-парсинга.
+- `PROFILE_SERVICE_URL` — URL `s21edu` для API веб-модуля.
 
-Параметры rate limit для GraphQL:
+#### `s21edu.env` (основная бизнес-конфигурация)
 
-- `GRAPHQL_GLOBAL_LIMIT_FOR_PERIOD` — глобальный лимит на все GraphQL-вызовы `s21edu`.
-- `GRAPHQL_GLOBAL_LIMIT_REFRESH_PERIOD` — период глобального GraphQL limiter.
-- `GRAPHQL_GLOBAL_TIMEOUT_DURATION` — сколько ждать слот глобального limiter.
-- `GRAPHQL_PROJECTS_LIMIT_FOR_PERIOD` — локальный лимит GraphQL вызовов проектов.
-- `GRAPHQL_CREDENTIALS_LIMIT_FOR_PERIOD` — локальный лимит GraphQL вызовов credentials.
+Подключение к БД и сервисам:
 
-Важно: фактический GraphQL throughput определяется как минимум из локального лимита метода и `GRAPHQL_GLOBAL_LIMIT_FOR_PERIOD`.
+- `DB_URL`, `DB_USER`, `DB_PASSWORD` — JDBC URL и креды БД.
+- `TOKEN_ENDPOINT` — URL `s21auth` для получения токена.
+- `BOT_SERVICE_URL` — URL `s21bot` для уведомлений.
+- `DDL_AUTO` — режим Hibernate schema validation/update.
 
-Текущие рабочие значения в `env/test/s21edu.env`:
+Флаги и таймауты API:
 
-- `PROJECTS_SCHEDULER_ENABLED=true`
-- `PROJECTS_SCHEDULER_PAGE_SIZE=1000`
-- `PROJECTS_SCHEDULER_BATCH_SIZE=20`
-- `PROJECTS_SCHEDULER_GRAPHQL_BATCH_SIZE=24`
-- `PROJECTS_SCHEDULER_REST_BATCH_SIZE=14`
-- `PROJECTS_SCHEDULER_CONCURRENCY=7`
-- `PROJECTS_SCHEDULER_TASK_TIMEOUT=PT75S`
-- `PROJECTS_SCHEDULER_RETRY_ATTEMPTS=1`
-- `PROJECTS_SCHEDULER_RETRY_BACKOFF=PT1S`
-- `PROJECTS_REST_LIMIT_FOR_PERIOD=5`
-- `PROJECTS_REST_LIMIT_REFRESH_PERIOD=1s`
-- `EXTERNAL_GLOBAL_LIMIT_FOR_PERIOD=10`
-- `EXTERNAL_GLOBAL_LIMIT_REFRESH_PERIOD=1s`
-- `PROJECTS_REFRESH_TTL=PT1H`
-- `GRAPHQL_PROJECTS_REFRESH_TTL=PT1H`
+- `API_CLIENT_ENABLED` — включает HTTP client к внешнему API.
+- `API_CLIENT_CONNECT_TIMEOUT`, `API_CLIENT_READ_TIMEOUT`, `API_CLIENT_CALL_TIMEOUT` — connect/read/call timeout.
+- `GRAPHQL_API_ENABLED`, `CAMPUS_API_ENABLED`, `CLUSTER_API_ENABLED`, `PARTICIPANT_API_ENABLED`, `COALITION_API_ENABLED` — включение отдельных внешних API направлений.
+
+Провайдеры и TTL:
+
+- `COALITION_PROVIDER` — выбор провайдера коалиций (`auto|graphql|rest`).
+- `COALITION_REFRESH_TTL` — TTL данных коалиций.
+- `COALITION_REST_FETCH_MEMBER_COUNT` — догружать ли count участников через REST.
+- `COALITION_REST_PAGE_SIZE` — page size REST-коалиций.
+- `PROJECTS_REFRESH_TTL` — TTL проектов.
+- `GRAPHQL_COALITION_REFRESH_TTL`, `GRAPHQL_PROJECTS_REFRESH_TTL` — fallback TTL (если базовые TTL не заданы).
+- `PROJECTS_ROUTING_GRAPHQL_SCHOOL_ID` — campus/school id, принудительно идущий через GraphQL для проектов.
+- `PROJECTS_REST_PAGE_SIZE` — page size REST-проектов.
+- `CAMPUS_WORKPLACE_PROVIDER` — провайдер workplace (`graphql` или `rest`).
+
+Настройки scheduler-пулов:
+
+- `SCHEDULER_POOL_SIZE`, `SCHEDULER_THREAD_NAME_PREFIX` — общий spring scheduling pool.
+- `PROJECTS_SCHEDULER_ENABLED`, `PROJECTS_SCHEDULER_INITIAL_DELAY`, `PROJECTS_SCHEDULER_FIXED_DELAY` — включение и период запуска sync проектов.
+- `PROJECTS_SCHEDULER_MAX_LOGINS_PER_RUN` — лимит логинов за один прогон.
+- `PROJECTS_SCHEDULER_PAGE_SIZE` — размер выборки stale credentials из БД.
+- `PROJECTS_SCHEDULER_BATCH_SIZE` — базовый размер батча.
+- `PROJECTS_SCHEDULER_GRAPHQL_BATCH_SIZE`, `PROJECTS_SCHEDULER_REST_BATCH_SIZE` — батчи для GraphQL/REST кампусов.
+- `PROJECTS_SCHEDULER_CONCURRENCY` — параллелизм задач обновления проектов.
+- `PROJECTS_SCHEDULER_TASK_TIMEOUT` — timeout одной задачи.
+- `PROJECTS_SCHEDULER_RETRY_ATTEMPTS`, `PROJECTS_SCHEDULER_RETRY_BACKOFF` — retry и backoff для failed/timeout обновлений.
+- `PROJECTS_SCHEDULER_GRAPHQL_SCHOOL_ID` — legacy fallback id для GraphQL routing (используется как запасной источник).
+- `CREDENTIALS_SCHEDULER_ENABLED`, `CREDENTIALS_SCHEDULER_CRON`, `CREDENTIALS_SCHEDULER_ZONE` — включение и расписание sync credentials.
+- `CREDENTIALS_SCHEDULER_PAGE_SIZE`, `CREDENTIALS_SCHEDULER_BATCH_SIZE`, `CREDENTIALS_SCHEDULER_CONCURRENCY` — параметры batch обработки credentials.
+
+Rate limit / retry resilience4j:
+
+- `PLATFORM_RETRY_MAX_ATTEMPTS`, `PLATFORM_RETRY_WAIT_DURATION`, `PLATFORM_RETRY_EXPONENTIAL_BACKOFF`, `PLATFORM_RETRY_EXPONENTIAL_MULTIPLIER` — общий retry внешнего platform API.
+- `EXTERNAL_GLOBAL_LIMIT_FOR_PERIOD`, `EXTERNAL_GLOBAL_LIMIT_REFRESH_PERIOD`, `EXTERNAL_GLOBAL_TIMEOUT_DURATION` — глобальный limiter на внешний API.
+- `EXTERNAL_GLOBAL_RETRY_MAX_ATTEMPTS`, `EXTERNAL_GLOBAL_RETRY_WAIT_DURATION`, `EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF`, `EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER` — retry для глобального external limiter.
+- `CAMPUS_WORKPLACE_LIMIT_FOR_PERIOD`, `CAMPUS_WORKPLACE_LIMIT_REFRESH_PERIOD`, `CAMPUS_WORKPLACE_TIMEOUT_DURATION` — limiter workplace-парсинга.
+- `CAMPUS_WORKPLACE_RETRY_MAX_ATTEMPTS`, `CAMPUS_WORKPLACE_RETRY_WAIT_DURATION`, `CAMPUS_WORKPLACE_RETRY_EXPONENTIAL_BACKOFF`, `CAMPUS_WORKPLACE_RETRY_EXPONENTIAL_MULTIPLIER` — retry workplace-парсинга.
+- `GRAPHQL_CREDENTIALS_LIMIT_FOR_PERIOD`, `GRAPHQL_CREDENTIALS_LIMIT_REFRESH_PERIOD`, `GRAPHQL_CREDENTIALS_TIMEOUT_DURATION` — limiter GraphQL credentials.
+- `GRAPHQL_CREDENTIALS_RETRY_MAX_ATTEMPTS`, `GRAPHQL_CREDENTIALS_RETRY_WAIT_DURATION` — retry GraphQL credentials.
+- `GRAPHQL_PROJECTS_LIMIT_FOR_PERIOD`, `GRAPHQL_PROJECTS_LIMIT_REFRESH_PERIOD`, `GRAPHQL_PROJECTS_TIMEOUT_DURATION` — limiter GraphQL projects.
+- `GRAPHQL_PROJECTS_RETRY_MAX_ATTEMPTS`, `GRAPHQL_PROJECTS_RETRY_WAIT_DURATION` — retry GraphQL projects.
+- `GRAPHQL_GLOBAL_LIMIT_FOR_PERIOD`, `GRAPHQL_GLOBAL_LIMIT_REFRESH_PERIOD`, `GRAPHQL_GLOBAL_TIMEOUT_DURATION` — общий limiter всех GraphQL вызовов.
+- `GRAPHQL_GLOBAL_RETRY_MAX_ATTEMPTS`, `GRAPHQL_GLOBAL_RETRY_WAIT_DURATION`, `GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF`, `GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER` — retry GraphQL global limiter.
+- `PROJECTS_REST_LIMIT_FOR_PERIOD`, `PROJECTS_REST_LIMIT_REFRESH_PERIOD`, `PROJECTS_REST_TIMEOUT_DURATION` — limiter REST-проектов.
+- `PROJECTS_REST_RETRY_MAX_ATTEMPTS`, `PROJECTS_REST_RETRY_WAIT_DURATION`, `PROJECTS_REST_RETRY_EXPONENTIAL_BACKOFF`, `PROJECTS_REST_RETRY_EXPONENTIAL_MULTIPLIER` — retry REST-проектов.
+
+#### Результат сверки `env` ↔ `application.yml`
+
+- Все обязательные переменные из `application.yml` покрыты шаблонами `env/test|prod/*.env.example`.
+- Переменные `DB_NAME`, `DB_PORT` присутствуют в `s21edu.env.example`, но напрямую не читаются `application.yml` (используются косвенно, если собираете `DB_URL` из частей).
+- Для `s21web` есть опциональные параметры с дефолтами в `application.yml`, которых нет в env-шаблоне:
+  - `PROJECT_EXECUTORS_RATE_LIMIT_ENABLED`
+  - `PROJECT_EXECUTORS_RATE_LIMIT_FOR_PERIOD`
+  - `PROJECT_EXECUTORS_RATE_LIMIT_REFRESH_PERIOD`
+  По умолчанию фильтр включен и лимит составляет `60` запросов за `PT1M`.
 
 ## Запуск тестов и покрытие
 
