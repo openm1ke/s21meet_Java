@@ -20,6 +20,7 @@ import ru.izpz.edu.service.EventService;
 import ru.izpz.edu.service.FriendService;
 import ru.izpz.edu.service.GraphQLService;
 import ru.izpz.edu.service.NotifyService;
+import ru.izpz.edu.service.ProjectDirectoryService;
 import ru.izpz.edu.service.ProfileService;
 import ru.izpz.edu.service.provider.CampusRoutingProjectsProvider;
 
@@ -59,6 +60,8 @@ class ProfileControllerTest {
 
     @MockitoBean
     private EventService eventService;
+    @MockitoBean
+    private ProjectDirectoryService projectDirectoryService;
 
     @MockitoBean
     private CampusClient campusClient;
@@ -287,5 +290,59 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$[0].goalId").value("g"));
 
         verify(campusService).getStudentProjectsByLogin("login");
+    }
+
+    @Test
+    void getProjectNames_shouldReturnOk() throws Exception {
+        when(projectDirectoryService.getProjectNames()).thenReturn(List.of("C2_SimpleBashUtils", "C3_s21_stringplus"));
+
+        mockMvc.perform(post("/profile/project-names"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("C2_SimpleBashUtils"))
+                .andExpect(jsonPath("$[1]").value("C3_s21_stringplus"));
+
+        verify(projectDirectoryService).getProjectNames();
+    }
+
+    @Test
+    void getProjectExecutors_shouldReturnOk() throws Exception {
+        ProjectExecutorsRequest request = new ProjectExecutorsRequest("C2_SimpleBashUtils");
+        ProjectExecutorDto executor = new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", "cluster=11, row=A, place=5");
+        when(projectDirectoryService.getProjectExecutors("C2_SimpleBashUtils")).thenReturn(List.of(executor));
+
+        mockMvc.perform(post("/profile/project-executors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].login").value("mike"))
+                .andExpect(jsonPath("$[0].campusName").value("Kazan"))
+                .andExpect(jsonPath("$[0].projectStatus").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$[0].campusPlace").value("cluster=11, row=A, place=5"));
+
+        verify(projectDirectoryService).getProjectExecutors("C2_SimpleBashUtils");
+    }
+
+    @Test
+    void getProjectExecutors_shouldReturnBadRequest_whenProjectNameBlank() throws Exception {
+        ProjectExecutorsRequest request = new ProjectExecutorsRequest(" ");
+
+        mockMvc.perform(post("/profile/project-executors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(projectDirectoryService, never()).getProjectExecutors(anyString());
+    }
+
+    @Test
+    void getProjectExecutors_shouldReturnBadRequest_whenProjectNameTooLong() throws Exception {
+        ProjectExecutorsRequest request = new ProjectExecutorsRequest("a".repeat(121));
+
+        mockMvc.perform(post("/profile/project-executors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(projectDirectoryService, never()).getProjectExecutors(anyString());
     }
 }

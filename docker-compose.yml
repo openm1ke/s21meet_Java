@@ -114,6 +114,26 @@ services:
     networks:
       - s21meet-network
 
+  s21web:
+    image: ${IMAGE_REPO:-s21meet}/s21web:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    depends_on:
+      s21edu:
+        condition: service_healthy
+    env_file:
+      - ./env/${APP_ENV:-test}/s21web.env
+    environment:
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "${S21WEB_BIND_ADDR:-127.0.0.1}:8085:8085"
+    networks:
+      - s21meet-network
+
   xray-client:
     profiles: ["proxy-vless"]
     image: ghcr.io/xtls/xray-core:latest

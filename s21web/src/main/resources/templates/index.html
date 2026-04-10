@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проекты Школы 21</title>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            color: #111827;
+        }
+        main {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+        h1 {
+            margin: 0 0 16px;
+            font-size: 28px;
+            line-height: 1.2;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        select {
+            width: 100%;
+            max-width: 460px;
+            padding: 10px;
+            font-size: 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: #fff;
+        }
+        .hint {
+            margin-top: 10px;
+            color: #4b5563;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #fff;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+        .empty {
+            margin-top: 20px;
+            color: #6b7280;
+        }
+        .pagination-controls {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+        .pagination-controls label {
+            margin: 0;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        #pageSizeSelect {
+            width: auto;
+            min-width: 70px;
+            max-width: none;
+            padding: 6px 8px;
+            font-size: 14px;
+        }
+        .pagination {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .pagination button {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            color: #111827;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .pagination button[disabled] {
+            opacity: 0.5;
+            cursor: default;
+        }
+        .pagination button.active {
+            background: #111827;
+            color: #fff;
+            border-color: #111827;
+        }
+        .pagination .ellipsis {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 4px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Исполнители проектов</h1>
+    <label for="projectSelect">Выберите проект</label>
+    <p class="hint" th:if="${loadError}" th:text="${loadError}"></p>
+    <select id="projectSelect">
+        <option value="">-- выберите проект --</option>
+        <option th:each="projectName : ${projectNames}"
+                th:value="${projectName}"
+                th:text="${projectName}">
+        </option>
+    </select>
+    <p class="hint">После выбора проекта список исполнителей загрузится автоматически.</p>
+
+    <div id="emptyState" class="empty">Исполнители не выбраны.</div>
+    <table id="resultTable" hidden>
+        <thead>
+        <tr>
+            <th>Логин</th>
+            <th>Кампус</th>
+            <th>Статус проекта</th>
+            <th>Место в кампусе</th>
+        </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+    </table>
+    <div id="paginationSection" hidden>
+        <div class="pagination-controls">
+            <label for="pageSizeSelect">Записей на странице:</label>
+            <select id="pageSizeSelect">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span id="pageInfo" class="hint"></span>
+        </div>
+        <div id="paginationButtons" class="pagination"></div>
+    </div>
+</main>
+
+<script>
+    const projectSelect = document.getElementById("projectSelect");
+    const resultTable = document.getElementById("resultTable");
+    const resultBody = document.getElementById("resultBody");
+    const emptyState = document.getElementById("emptyState");
+    const paginationSection = document.getElementById("paginationSection");
+    const pageSizeSelect = document.getElementById("pageSizeSelect");
+    const pageInfo = document.getElementById("pageInfo");
+    const paginationButtons = document.getElementById("paginationButtons");
+    let currentRows = [];
+    let currentPage = 1;
+    let pageSize = Number(pageSizeSelect.value);
+
+    function getTotalPages() {
+        return Math.max(1, Math.ceil(currentRows.length / pageSize));
+    }
+
+    function renderPagination(totalPages) {
+        paginationButtons.innerHTML = "";
+        pageInfo.textContent = `Страница ${currentPage} из ${totalPages} • Всего записей: ${currentRows.length}`;
+
+        if (totalPages <= 1) {
+            return;
+        }
+
+        const prev = document.createElement("button");
+        prev.type = "button";
+        prev.textContent = "Назад";
+        prev.disabled = currentPage === 1;
+        prev.addEventListener("click", () => {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                renderRows();
+            }
+        });
+        paginationButtons.appendChild(prev);
+
+        const addPageButton = (page) => {
+            const pageButton = document.createElement("button");
+            pageButton.type = "button";
+            pageButton.textContent = String(page);
+            if (page === currentPage) {
+                pageButton.classList.add("active");
+                pageButton.disabled = true;
+            }
+            pageButton.addEventListener("click", () => {
+                currentPage = page;
+                renderRows();
+            });
+            paginationButtons.appendChild(pageButton);
+        };
+
+        const addEllipsis = () => {
+            const ellipsis = document.createElement("span");
+            ellipsis.className = "ellipsis";
+            ellipsis.textContent = "...";
+            paginationButtons.appendChild(ellipsis);
+        };
+
+        const blockStart = Math.floor((currentPage - 1) / 5) * 5 + 1;
+        const blockEnd = Math.min(blockStart + 4, totalPages);
+        const lastPagesStart = Math.max(totalPages - 2, 1);
+
+        for (let page = blockStart; page <= blockEnd; page += 1) {
+            addPageButton(page);
+        }
+
+        if (lastPagesStart > blockEnd + 1) {
+            addEllipsis();
+        }
+
+        for (let page = Math.max(lastPagesStart, blockEnd + 1); page <= totalPages; page += 1) {
+            addPageButton(page);
+        }
+
+        const next = document.createElement("button");
+        next.type = "button";
+        next.textContent = "Вперед";
+        next.disabled = currentPage === totalPages;
+        next.addEventListener("click", () => {
+            if (currentPage < totalPages) {
+                currentPage += 1;
+                renderRows();
+            }
+        });
+        paginationButtons.appendChild(next);
+    }
+
+    function renderRows() {
+        resultBody.innerHTML = "";
+        if (!currentRows.length) {
+            resultTable.hidden = true;
+            paginationSection.hidden = true;
+            emptyState.textContent = "Для выбранного проекта исполнители не найдены.";
+            return;
+        }
+
+        const totalPages = getTotalPages();
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize;
+        const pageRows = currentRows.slice(from, to);
+
+        pageRows.forEach((row) => {
+            const tr = document.createElement("tr");
+            const loginTd = document.createElement("td");
+            loginTd.textContent = row.login ?? "";
+            tr.appendChild(loginTd);
+
+            const campusTd = document.createElement("td");
+            campusTd.textContent = row.campusName ?? "";
+            tr.appendChild(campusTd);
+
+            const statusTd = document.createElement("td");
+            statusTd.textContent = row.projectStatus ?? "";
+            tr.appendChild(statusTd);
+
+            const placeTd = document.createElement("td");
+            placeTd.textContent = row.campusPlace ?? "";
+            tr.appendChild(placeTd);
+            resultBody.appendChild(tr);
+        });
+
+        emptyState.textContent = "";
+        resultTable.hidden = false;
+        paginationSection.hidden = false;
+        renderPagination(totalPages);
+    }
+
+    pageSizeSelect.addEventListener("change", () => {
+        pageSize = Number(pageSizeSelect.value);
+        currentPage = 1;
+        renderRows();
+    });
+
+    projectSelect.addEventListener("change", async () => {
+        const projectName = projectSelect.value;
+        if (!projectName) {
+            resultTable.hidden = true;
+            paginationSection.hidden = true;
+            currentRows = [];
+            currentPage = 1;
+            emptyState.textContent = "Исполнители не выбраны.";
+            return;
+        }
+
+        emptyState.textContent = "Загрузка...";
+        resultTable.hidden = true;
+
+        const response = await fetch(`/api/projects/executors`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ projectName })
+        });
+
+        if (!response.ok) {
+            paginationSection.hidden = true;
+            emptyState.textContent = "Ошибка загрузки данных.";
+            return;
+        }
+
+        currentRows = await response.json();
+        currentPage = 1;
+        renderRows();
+    });
+</script>
+</body>
+</html>
