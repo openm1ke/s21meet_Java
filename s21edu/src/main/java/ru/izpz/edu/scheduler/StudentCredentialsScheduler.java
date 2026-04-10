@@ -45,7 +45,10 @@ public class StudentCredentialsScheduler {
     @Value("${credentials.scheduler.batch-size:200}")
     private int batchSize;
 
-    @Scheduled(cron = "${credentials.scheduler.cron:0 0 2 * * *}", zone = "${credentials.scheduler.zone:Europe/Moscow}")
+    @Scheduled(
+        initialDelayString = "${credentials.scheduler.initial-delay:PT0S}",
+        fixedDelayString = "${credentials.scheduler.fixed-delay:PT12H}"
+    )
     public void runNightlySync() {
         if (pageSize <= 0 || batchSize <= 0) {
             log.warn(

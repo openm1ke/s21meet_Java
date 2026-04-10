@@ -11,8 +11,20 @@ import java.util.Collection;
 import java.util.List;
 
 public interface StudentCredentialsRepository extends JpaRepository<StudentCredentials, String> {
+    interface LoginSchoolIdView {
+        String getLogin();
+        String getSchoolId();
+    }
+
     @Query("select sc.login from StudentCredentials sc where sc.login in :logins")
     List<String> findExistingLogins(@Param("logins") Collection<String> logins);
+
+    @Query("""
+        select sc.login as login, sc.schoolId as schoolId
+        from StudentCredentials sc
+        where sc.login in :logins
+        """)
+    List<LoginSchoolIdView> findSchoolIdsByLogins(@Param("logins") Collection<String> logins);
 
     @Query("""
         select sc

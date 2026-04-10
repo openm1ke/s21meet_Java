@@ -199,16 +199,16 @@
       "description": "Enable or disable scheduled synchronization of missing student credentials via GraphQL."
     },
     {
-      "name": "credentials.scheduler.cron",
+      "name": "credentials.scheduler.initial-delay",
       "type": "java.lang.String",
-      "defaultValue": "0 0 2 * * *",
-      "description": "Cron for nightly credentials orchestration (new logins sync, active refresh, inactive refresh)."
+      "defaultValue": "PT0S",
+      "description": "Initial delay before first credentials synchronization run, expressed as ISO-8601 duration."
     },
     {
-      "name": "credentials.scheduler.zone",
+      "name": "credentials.scheduler.fixed-delay",
       "type": "java.lang.String",
-      "defaultValue": "Europe/Moscow",
-      "description": "Timezone for credentials scheduler cron."
+      "defaultValue": "PT12H",
+      "description": "Fixed delay between credentials synchronization runs, expressed as ISO-8601 duration."
     },
     {
       "name": "credentials.scheduler.page-size",
