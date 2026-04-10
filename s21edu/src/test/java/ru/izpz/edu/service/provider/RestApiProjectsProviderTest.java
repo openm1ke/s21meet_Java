@@ -15,10 +15,8 @@ import ru.izpz.edu.repository.StudentCredentialsRepository;
 import ru.izpz.edu.repository.StudentProjectRepository;
 import ru.izpz.edu.service.StudentProjectRefreshService;
 
-import java.lang.reflect.Method;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,10 +24,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class RestApiProjectsProviderTest {
@@ -75,28 +74,30 @@ class RestApiProjectsProviderTest {
             cachedProjects.set(toEntities(login, userId, projects));
             maxUpdatedAt.set(OffsetDateTime.now());
             return null;
-        }).when(studentProjectRefreshService).replaceProjects(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyList());
+        }).when(studentProjectRefreshService).replaceProjects(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.anyList()
+        );
     }
 
     @Test
-    void getStudentProjectsByLogin_shouldMergeInProgressAndRegistered() throws ApiException {
-        ParticipantProjectV1DTO inProgressProject = new ParticipantProjectV1DTO();
-        inProgressProject.setId(100L);
-        inProgressProject.setTitle("CPP1");
+    void getStudentProjectsByLogin_shouldFetchAllStatusesWithSingleRequest() throws ApiException {
+        ParticipantProjectV1DTO p1 = new ParticipantProjectV1DTO();
+        p1.setId(100L);
+        p1.setTitle("CPP1");
+        p1.setStatus(ParticipantProjectV1DTO.StatusEnum.IN_PROGRESS);
 
-        ParticipantProjectV1DTO registeredProject = new ParticipantProjectV1DTO();
-        registeredProject.setId(101L);
-        registeredProject.setTitle("CPP2");
+        ParticipantProjectV1DTO p2 = new ParticipantProjectV1DTO();
+        p2.setId(101L);
+        p2.setTitle("CPP2");
+        p2.setStatus(ParticipantProjectV1DTO.StatusEnum.REGISTERED);
 
-        ParticipantProjectsV1DTO inProgressResponse = new ParticipantProjectsV1DTO();
-        inProgressResponse.setProjects(List.of(inProgressProject));
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of(registeredProject));
+        ParticipantProjectsV1DTO response = new ParticipantProjectsV1DTO();
+        response.setProjects(List.of(p1, p2));
 
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-                .thenReturn(inProgressResponse);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-                .thenReturn(registeredResponse);
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenReturn(response);
 
         List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
 
@@ -108,30 +109,50 @@ class RestApiProjectsProviderTest {
         assertNull(result.get(0).description());
         assertNull(result.get(0).experience());
         assertNull(result.get(0).laboriousness());
-        assertNull(result.get(1).description());
-        assertNull(result.get(1).experience());
-        assertNull(result.get(1).laboriousness());
+        verify(restProjectsApiFacade).getParticipantProjectsByLogin("login", 1000L, null);
+    }
+
+    @Test
+    void getStudentProjectsByLogin_shouldSkipAssigned() throws ApiException {
+        ParticipantProjectV1DTO assigned = new ParticipantProjectV1DTO();
+        assigned.setId(10L);
+        assigned.setTitle("Assigned");
+        assigned.setStatus(ParticipantProjectV1DTO.StatusEnum.ASSIGNED);
+
+        ParticipantProjectV1DTO inProgress = new ParticipantProjectV1DTO();
+        inProgress.setId(11L);
+        inProgress.setTitle("InProgress");
+        inProgress.setStatus(ParticipantProjectV1DTO.StatusEnum.IN_PROGRESS);
+
+        ParticipantProjectsV1DTO response = new ParticipantProjectsV1DTO();
+        response.setProjects(List.of(assigned, inProgress));
+
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenReturn(response);
+
+        List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
+
+        assertEquals(1, result.size());
+        assertEquals("11", result.getFirst().goalId());
     }
 
     @Test
     void getStudentProjectsByLogin_shouldSkipDuplicatesByProjectId() throws ApiException {
-        ParticipantProjectV1DTO inProgressProject = new ParticipantProjectV1DTO();
-        inProgressProject.setId(100L);
-        inProgressProject.setTitle("CPP1");
+        ParticipantProjectV1DTO p1 = new ParticipantProjectV1DTO();
+        p1.setId(100L);
+        p1.setTitle("CPP1");
+        p1.setStatus(ParticipantProjectV1DTO.StatusEnum.IN_PROGRESS);
 
-        ParticipantProjectV1DTO registeredDuplicate = new ParticipantProjectV1DTO();
-        registeredDuplicate.setId(100L);
-        registeredDuplicate.setTitle("CPP1");
+        ParticipantProjectV1DTO duplicate = new ParticipantProjectV1DTO();
+        duplicate.setId(100L);
+        duplicate.setTitle("CPP1-dup");
+        duplicate.setStatus(ParticipantProjectV1DTO.StatusEnum.REGISTERED);
 
-        ParticipantProjectsV1DTO inProgressResponse = new ParticipantProjectsV1DTO();
-        inProgressResponse.setProjects(List.of(inProgressProject));
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of(registeredDuplicate));
+        ParticipantProjectsV1DTO response = new ParticipantProjectsV1DTO();
+        response.setProjects(List.of(p1, duplicate));
 
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-                .thenReturn(inProgressResponse);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-                .thenReturn(registeredResponse);
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenReturn(response);
 
         List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
 
@@ -140,87 +161,70 @@ class RestApiProjectsProviderTest {
     }
 
     @Test
-    void getStudentProjectsByLogin_shouldKeepCacheWhenStatusRequestFails() throws ApiException {
-        ParticipantProjectV1DTO registeredProject = new ParticipantProjectV1DTO();
-        registeredProject.setId(101L);
-        registeredProject.setTitle("CPP2");
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of(registeredProject));
-
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-                .thenThrow(new ApiException("boom"));
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-                .thenReturn(registeredResponse);
+    void getStudentProjectsByLogin_shouldKeepCacheWhenRequestFails() throws ApiException {
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenThrow(new ApiException("boom"));
 
         List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
 
         assertTrue(result.isEmpty());
-        verify(restProjectsApiFacade).getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS");
-        verify(restProjectsApiFacade).getParticipantProjectsByLogin("login", 1000L, "REGISTERED");
-        verify(studentProjectRefreshService, never())
-            .replaceProjects(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyList());
+        verify(studentProjectRefreshService, never()).replaceProjects(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.anyList()
+        );
     }
 
     @Test
-    void getStudentProjectsByLogin_shouldKeepCacheWhenStatusRequestThrowsRuntimeException() throws ApiException {
-        ParticipantProjectV1DTO registeredProject = new ParticipantProjectV1DTO();
-        registeredProject.setId(101L);
-        registeredProject.setTitle("CPP2");
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of(registeredProject));
-
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-                .thenThrow(new IllegalStateException("runtime-boom"));
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-                .thenReturn(registeredResponse);
+    void getStudentProjectsByLogin_shouldKeepCacheWhenRuntimeError() throws ApiException {
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenThrow(new IllegalStateException("runtime-boom"));
 
         List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
 
         assertTrue(result.isEmpty());
-        verify(studentProjectRefreshService, never())
-            .replaceProjects(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyList());
+        verify(studentProjectRefreshService, never()).replaceProjects(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.anyList()
+        );
     }
 
     @Test
-    void getStudentProjectsByLogin_shouldKeepProjectWithoutDetailsEnrichment() throws ApiException {
-        ParticipantProjectV1DTO inProgressProject = new ParticipantProjectV1DTO();
-        inProgressProject.setId(100L);
-        inProgressProject.setTitle("CPP1");
-
-        ParticipantProjectsV1DTO inProgressResponse = new ParticipantProjectsV1DTO();
-        inProgressResponse.setProjects(List.of(inProgressProject));
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of());
-
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-                .thenReturn(inProgressResponse);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-                .thenReturn(registeredResponse);
+    void getStudentProjectsByLogin_shouldHandleNullResponseAndNullProjectsList() throws ApiException {
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenReturn(null);
 
         List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
+        assertTrue(result.isEmpty());
 
-        assertEquals(1, result.size());
-        assertEquals("100", result.getFirst().goalId());
-        assertNull(result.getFirst().description());
-        assertNull(result.getFirst().experience());
-        assertNull(result.getFirst().laboriousness());
+        maxUpdatedAt.set(null);
+        ParticipantProjectsV1DTO withNullProjects = new ParticipantProjectsV1DTO();
+        withNullProjects.setProjects(null);
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenReturn(withNullProjects);
+
+        result = provider.getStudentProjectsByLogin("login");
+        assertTrue(result.isEmpty());
     }
 
     @Test
-    void getStudentProjectsByLogin_shouldSkipNullProjectAndContinue() throws ApiException {
+    void getStudentProjectsByLogin_shouldSkipNullProjectAndNullId() throws ApiException {
         ParticipantProjectV1DTO valid = new ParticipantProjectV1DTO();
         valid.setId(200L);
         valid.setTitle("CPP");
+        valid.setStatus(ParticipantProjectV1DTO.StatusEnum.REGISTERED);
 
-        ParticipantProjectsV1DTO inProgressResponse = new ParticipantProjectsV1DTO();
-        inProgressResponse.setProjects(new java.util.ArrayList<>(java.util.Arrays.asList(null, valid)));
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of());
+        ParticipantProjectV1DTO noId = new ParticipantProjectV1DTO();
+        noId.setId(null);
+        noId.setTitle("Broken");
+        noId.setStatus(ParticipantProjectV1DTO.StatusEnum.IN_PROGRESS);
 
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-            .thenReturn(inProgressResponse);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-            .thenReturn(registeredResponse);
+        ParticipantProjectsV1DTO response = new ParticipantProjectsV1DTO();
+        response.setProjects(new ArrayList<>(java.util.Arrays.asList(null, noId, valid)));
+
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenReturn(response);
 
         List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
 
@@ -229,44 +233,28 @@ class RestApiProjectsProviderTest {
     }
 
     @Test
-    void getStudentProjectsByLogin_shouldReturnEmpty_whenResponsesAreNull() throws ApiException {
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-                .thenReturn(null);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-                .thenReturn(new ParticipantProjectsV1DTO());
-
-        List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
-
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
-    void getStudentProjectsByLogin_shouldUseFallbackStatusAndClampCourseId() throws ApiException {
+    void getStudentProjectsByLogin_shouldMapCourseIdAndDateAndMembers() throws ApiException {
         ParticipantProjectV1DTO project = new ParticipantProjectV1DTO();
         project.setId(200L);
         project.setTitle("Exam");
         project.setType(null);
-        project.setStatus(null);
+        project.setStatus(ParticipantProjectV1DTO.StatusEnum.ACCEPTED);
         project.setFinalPercentage(95);
         project.setCompletionDateTime(OffsetDateTime.parse("2026-03-24T10:00:00Z"));
-        project.setTeamMembers(Collections.emptyList());
+        project.setTeamMembers(List.of());
         project.setCourseId(Long.MAX_VALUE);
 
-        ParticipantProjectsV1DTO inProgressResponse = new ParticipantProjectsV1DTO();
-        inProgressResponse.setProjects(List.of(project));
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of());
+        ParticipantProjectsV1DTO response = new ParticipantProjectsV1DTO();
+        response.setProjects(List.of(project));
 
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-                .thenReturn(inProgressResponse);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-                .thenReturn(registeredResponse);
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+            .thenReturn(response);
 
         List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
 
         assertEquals(1, result.size());
         StudentProjectData data = result.getFirst();
-        assertEquals("IN_PROGRESS", data.goalStatus());
+        assertEquals("ACCEPTED", data.goalStatus());
         assertNull(data.executionType());
         assertEquals(Integer.valueOf(0), data.amountMembers());
         assertEquals(Integer.valueOf(Integer.MAX_VALUE), data.localCourseId());
@@ -300,125 +288,32 @@ class RestApiProjectsProviderTest {
             cachedProjects.set(toEntities(login, userId, projects));
             maxUpdatedAt.set(OffsetDateTime.now());
             return null;
-        }).when(studentProjectRefreshService).replaceProjects(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyList());
+        }).when(studentProjectRefreshService).replaceProjects(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.anyList()
+        );
 
         ParticipantProjectsV1DTO response = new ParticipantProjectsV1DTO();
         response.setProjects(List.of());
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1L, "IN_PROGRESS")).thenReturn(response);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1L, "REGISTERED")).thenReturn(response);
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1L, null)).thenReturn(response);
 
         List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
 
         assertTrue(result.isEmpty());
-        verify(restProjectsApiFacade).getParticipantProjectsByLogin("login", 1L, "IN_PROGRESS");
-        verify(restProjectsApiFacade).getParticipantProjectsByLogin("login", 1L, "REGISTERED");
+        verify(restProjectsApiFacade).getParticipantProjectsByLogin("login", 1L, null);
     }
 
     @Test
     void getStudentProjectsByLogin_shouldSkipRefreshWhenCacheIsFresh() throws ApiException {
         ParticipantProjectsV1DTO response = new ParticipantProjectsV1DTO();
         response.setProjects(List.of());
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS")).thenReturn(response);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED")).thenReturn(response);
+        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null)).thenReturn(response);
 
         provider.getStudentProjectsByLogin("login");
         provider.getStudentProjectsByLogin("login");
 
-        verify(restProjectsApiFacade).getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS");
-        verify(restProjectsApiFacade).getParticipantProjectsByLogin("login", 1000L, "REGISTERED");
-    }
-
-    @Test
-    void getStudentProjectsByLogin_shouldSkipProjectWithNullId() throws ApiException {
-        ParticipantProjectV1DTO noId = new ParticipantProjectV1DTO();
-        noId.setId(null);
-        noId.setTitle("Broken");
-
-        ParticipantProjectV1DTO valid = new ParticipantProjectV1DTO();
-        valid.setId(401L);
-        valid.setTitle("Valid");
-
-        ParticipantProjectsV1DTO inProgressResponse = new ParticipantProjectsV1DTO();
-        inProgressResponse.setProjects(List.of(noId, valid));
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of());
-
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-            .thenReturn(inProgressResponse);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-            .thenReturn(registeredResponse);
-
-        List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
-
-        assertEquals(1, result.size());
-        assertEquals("401", result.getFirst().goalId());
-    }
-
-    @Test
-    void getStudentProjectsByLogin_shouldContinueWhenResponseContainsNullProjectsList() throws ApiException {
-        ParticipantProjectV1DTO registeredProject = new ParticipantProjectV1DTO();
-        registeredProject.setId(501L);
-        registeredProject.setTitle("Registered");
-
-        ParticipantProjectsV1DTO inProgressResponse = new ParticipantProjectsV1DTO();
-        inProgressResponse.setProjects(null);
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of(registeredProject));
-
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-            .thenReturn(inProgressResponse);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-            .thenReturn(registeredResponse);
-
-        List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
-
-        assertEquals(1, result.size());
-        assertEquals("501", result.getFirst().goalId());
-    }
-
-    @Test
-    void getStudentProjectsByLogin_shouldPreferProjectStatusAndHandleMinAndNormalCourseId() throws ApiException {
-        ParticipantProjectV1DTO minProject = new ParticipantProjectV1DTO();
-        minProject.setId(301L);
-        minProject.setTitle("MinCourse");
-        minProject.setType(ParticipantProjectV1DTO.TypeEnum.GROUP);
-        minProject.setStatus(ParticipantProjectV1DTO.StatusEnum.ACCEPTED);
-        minProject.setCourseId(Long.MIN_VALUE);
-
-        ParticipantProjectV1DTO normalProject = new ParticipantProjectV1DTO();
-        normalProject.setId(302L);
-        normalProject.setTitle("NormalCourse");
-        normalProject.setType(ParticipantProjectV1DTO.TypeEnum.INDIVIDUAL);
-        normalProject.setStatus(ParticipantProjectV1DTO.StatusEnum.FAILED);
-        normalProject.setCourseId(42L);
-
-        ParticipantProjectsV1DTO inProgressResponse = new ParticipantProjectsV1DTO();
-        inProgressResponse.setProjects(List.of(minProject, normalProject));
-        ParticipantProjectsV1DTO registeredResponse = new ParticipantProjectsV1DTO();
-        registeredResponse.setProjects(List.of());
-
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "IN_PROGRESS"))
-                .thenReturn(inProgressResponse);
-        when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, "REGISTERED"))
-                .thenReturn(registeredResponse);
-
-        List<StudentProjectData> result = provider.getStudentProjectsByLogin("login");
-
-        assertEquals(2, result.size());
-        assertEquals("ACCEPTED", result.get(0).goalStatus());
-        assertEquals(Integer.valueOf(Integer.MIN_VALUE), result.get(0).localCourseId());
-        assertEquals("FAILED", result.get(1).goalStatus());
-        assertEquals(Integer.valueOf(42), result.get(1).localCourseId());
-    }
-
-    @Test
-    void firstNonBlank_shouldFallbackWhenFirstIsBlank() throws Exception {
-        Method method = RestApiProjectsProvider.class.getDeclaredMethod("firstNonBlank", String.class, String.class);
-        method.setAccessible(true);
-
-        Object result = method.invoke(provider, " ", "REGISTERED");
-
-        assertEquals("REGISTERED", result);
+        verify(restProjectsApiFacade, times(1)).getParticipantProjectsByLogin("login", 1000L, null);
     }
 
     private List<StudentProject> toEntities(String login, String userId, List<StudentProjectData> projects) {

@@ -46,8 +46,8 @@ public class StudentCredentialsScheduler {
     private int batchSize;
 
     @Scheduled(
-        initialDelayString = "${credentials.scheduler.initial-delay:PT0S}",
-        fixedDelayString = "${credentials.scheduler.fixed-delay:PT12H}"
+        cron = "${credentials.scheduler.cron:0 0 2 * * *}",
+        zone = "${credentials.scheduler.zone:Europe/Moscow}"
     )
     public void runNightlySync() {
         if (pageSize <= 0 || batchSize <= 0) {
@@ -60,9 +60,11 @@ public class StudentCredentialsScheduler {
         }
 
         Instant startedAt = Instant.now();
+        long totalCredentialsBefore = studentCredentialsRepository.count();
         schedulerMetricsService.setCredentialsSyncInProgress(SCHEDULER_NAME, true);
         try {
             PhaseStats syncPhase = syncAllLoginsFromCampus();
+            long totalCredentialsAfter = studentCredentialsRepository.count();
 
             Duration elapsed = Duration.between(startedAt, Instant.now());
             schedulerMetricsService.recordCredentialsSyncRun(
@@ -78,16 +80,7 @@ public class StudentCredentialsScheduler {
                 elapsed
             );
 
-            log.info(
-                "credentials nightly sync завершен: scanned={}, requested={}, already_saved={}, success={}, no_data={}, failed={}, elapsed={}s",
-                syncPhase.scanned,
-                syncPhase.requested,
-                syncPhase.alreadySaved,
-                syncPhase.success,
-                syncPhase.noData,
-                syncPhase.failed,
-                elapsed.toSeconds()
-            );
+            log.info(renderRunSummary(syncPhase, elapsed, totalCredentialsBefore, totalCredentialsAfter));
         } finally {
             schedulerMetricsService.setCredentialsSyncInProgress(SCHEDULER_NAME, false);
         }
@@ -214,14 +207,15 @@ public class StudentCredentialsScheduler {
                 batchElapsed
             );
             log.info(
-                "credentials phase {} batch processed: batch={}, size={}, success={}, no_data={}, failed={}, elapsed_ms={}",
-                phaseTag,
-                batchNumber,
-                batch.size(),
-                batchSuccess,
-                batchNoData,
-                batchFailed,
-                batchElapsed.toMillis()
+                renderBatchSummary(
+                    phaseTag,
+                    batchNumber,
+                    batch.size(),
+                    batchSuccess,
+                    batchNoData,
+                    batchFailed,
+                    batchElapsed
+                )
             );
         }
         return new BatchCounters(success, noData, failed);
@@ -250,5 +244,64 @@ public class StudentCredentialsScheduler {
     }
 
     private record CampusScanResult(int scanned, int requested, int alreadySaved, int success, int noData, int failed) {
+    }
+
+    private String renderBatchSummary(
+        String phaseTag,
+        int batchNumber,
+        int batchSizeValue,
+        int batchSuccess,
+        int batchNoData,
+        int batchFailed,
+        Duration batchElapsed
+    ) {
+        return """
+            ==================== CREDENTIALS SCHEDULER BATCH ====================
+            phase=%s
+            batch=%d
+            batch_size=%d
+            result: added=%d, updated=%d, no_data=%d, failed=%d
+            timing: elapsed_ms=%d
+            =====================================================================
+            """.formatted(
+            phaseTag,
+            batchNumber,
+            batchSizeValue,
+            batchSuccess,
+            0,
+            batchNoData,
+            batchFailed,
+            batchElapsed.toMillis()
+        );
+    }
+
+    private String renderRunSummary(
+        PhaseStats syncPhase,
+        Duration elapsed,
+        long totalCredentialsBefore,
+        long totalCredentialsAfter
+    ) {
+        return """
+            ==================== CREDENTIALS SCHEDULER SUMMARY ====================
+            db_totals: before=%d, after=%d, delta=%d
+            scanned: total=%d
+            requested: total=%d
+            skipped_existing: total=%d
+            result: added=%d, updated=%d, no_data=%d, failed=%d
+            timing: elapsed_s=%d
+            =========================================================================
+            """.formatted(
+            totalCredentialsBefore,
+            totalCredentialsAfter,
+            totalCredentialsAfter - totalCredentialsBefore,
+            syncPhase.scanned,
+            syncPhase.requested,
+            syncPhase.alreadySaved,
+            syncPhase.success,
+            0,
+            syncPhase.noData,
+            syncPhase.failed,
+            elapsed.toSeconds()
+        );
     }
 }

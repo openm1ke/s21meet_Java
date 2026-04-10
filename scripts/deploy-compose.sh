@@ -17,6 +17,9 @@ PROXY_MODE=""
 PROXY_SERVICE=""
 INACTIVE_PROXY_SERVICES=()
 
+: "${TZ:=Europe/Moscow}"
+export TZ
+
 if [[ ! -f "$COMPOSE_ENV_FILE" ]]; then
   echo "Compose env file not found: $COMPOSE_ENV_FILE"
   exit 1

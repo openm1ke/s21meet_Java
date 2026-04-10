@@ -30,6 +30,11 @@ import java.util.Map;
 @ConditionalOnProperty(name = "campus.service.enabled", havingValue = "true")
 public class CampusService {
 
+    private static final String STATUS_REGISTERED = "REGISTERED";
+    private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+    private static final String STATUS_IN_REVIEW = "IN_REVIEW";
+    private static final String STATUS_IN_REVIEWS = "IN_REVIEWS";
+
     private final CampusPersistenceService persistenceService;
     private final CampusMapper campusMapper;
     private final ProjectsMapper projectsMapper;
@@ -110,8 +115,19 @@ public class CampusService {
     public List<ProjectsDto> getStudentProjectsByLogin(String login) {
         var projects = campusRoutingProjectsProvider.getStudentProjectsByLogin(login);
         return projects.stream()
+                .filter(project -> isVisibleForProfile(project.goalStatus()))
                 .map(projectsMapper::toDto)
                 .toList();
+    }
+
+    private boolean isVisibleForProfile(String status) {
+        if (status == null) {
+            return false;
+        }
+        return STATUS_IN_PROGRESS.equalsIgnoreCase(status)
+            || STATUS_REGISTERED.equalsIgnoreCase(status)
+            || STATUS_IN_REVIEW.equalsIgnoreCase(status)
+            || STATUS_IN_REVIEWS.equalsIgnoreCase(status);
     }
 
     /**

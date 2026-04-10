@@ -156,7 +156,8 @@ public class CampusScheduler {
         int clustersProcessed = 0;
         List<Workplace> aggregated = new java.util.ArrayList<>();
         for (ClusterV1DTO cluster : campusClusters) {
-            TaskResult clusterResult = processSingleCluster(cluster, aggregated);
+            ClusterTaskOutcome outcome = processSingleCluster(cluster);
+            TaskResult clusterResult = outcome.result();
             if (!clusterResult.success()) {
                 log.warn(
                     "campus scheduler campus done: campus={}, provider={}, clusters_ok={}/{}, participants_collected={}, status=failed, reason={}",
@@ -169,6 +170,7 @@ public class CampusScheduler {
                 );
                 return clusterResult;
             }
+            aggregated.addAll(outcome.workplaces());
             clustersProcessed++;
         }
         try {
@@ -189,21 +191,21 @@ public class CampusScheduler {
         }
     }
 
-    private TaskResult processSingleCluster(ClusterV1DTO c, List<Workplace> accumulator) {
+    private ClusterTaskOutcome processSingleCluster(ClusterV1DTO c) {
         long cid = c.getId();
         try {
-            accumulator.addAll(campusService.fetchParticipantsByClusterWithProvider(cid));
+            List<Workplace> workplaces = campusService.fetchParticipantsByClusterWithProvider(cid);
             schedulerMetricsService.recordExternalApiSuccess(SCHEDULER_NAME, CAMPUS_API_CLIENT, OPERATION_GET_PARTICIPANTS);
             log.debug("Updated participants for cluster {} ({})", c.getName(), cid);
-            return TaskResult.successResult();
+            return new ClusterTaskOutcome(TaskResult.successResult(), workplaces);
         } catch (ApiException e) {
             schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, CAMPUS_API_CLIENT, OPERATION_GET_PARTICIPANTS, e);
             log.error("Ошибка получения участников для кластера {}", cid, e);
-            return TaskResult.errorResult(SchedulerErrorReason.API_EXCEPTION);
+            return new ClusterTaskOutcome(TaskResult.errorResult(SchedulerErrorReason.API_EXCEPTION), List.of());
         } catch (Exception e) {
             schedulerMetricsService.recordExternalApiError(SCHEDULER_NAME, CAMPUS_API_CLIENT, OPERATION_GET_PARTICIPANTS, e);
             log.error("Непредвиденная ошибка получения участников для кластера {}", cid, e);
-            return TaskResult.errorResult(SchedulerErrorReason.EXECUTION_EXCEPTION);
+            return new ClusterTaskOutcome(TaskResult.errorResult(SchedulerErrorReason.EXECUTION_EXCEPTION), List.of());
         }
     }
 
@@ -334,6 +336,9 @@ public class CampusScheduler {
         private static TaskResult errorResult(SchedulerErrorReason errorType) {
             return new TaskResult(false, SchedulerPhaseRequestStatus.FAILED, errorType);
         }
+    }
+
+    private record ClusterTaskOutcome(TaskResult result, List<Workplace> workplaces) {
     }
 
     private record CampusRunSummary(

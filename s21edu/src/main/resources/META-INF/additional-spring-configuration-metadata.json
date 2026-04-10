@@ -77,13 +77,13 @@
     {
       "name": "campus.scheduler.participants-max-concurrency",
       "type": "java.lang.Integer",
-      "defaultValue": 8,
+      "defaultValue": 6,
       "description": "Maximum number of concurrent participant tasks for campus scheduler."
     },
     {
       "name": "campus.scheduler.timeout.global",
       "type": "java.lang.String",
-      "defaultValue": "PT30S",
+      "defaultValue": "PT45S",
       "description": "Global timeout for campus snapshot refresh phase, expressed as ISO-8601 duration."
     },
     {
@@ -112,7 +112,7 @@
     {
       "name": "projects.refresh-ttl",
       "type": "java.time.Duration",
-      "defaultValue": "PT30M",
+      "defaultValue": "PT45M",
       "description": "TTL for refreshing cached student projects by login."
     },
     {
@@ -122,10 +122,22 @@
       "description": "Enable or disable scheduled refresh of projects for active student credentials."
     },
     {
+      "name": "projects.scheduler.initial-delay",
+      "type": "java.lang.String",
+      "defaultValue": "PT0S",
+      "description": "Initial delay before first projects scheduler run, expressed as ISO-8601 duration."
+    },
+    {
       "name": "projects.scheduler.fixed-delay",
       "type": "java.lang.String",
-      "defaultValue": "PT4H",
+      "defaultValue": "PT15M",
       "description": "Fixed delay for projects scheduler polling, expressed as ISO-8601 duration."
+    },
+    {
+      "name": "projects.scheduler.max-logins-per-run",
+      "type": "java.lang.Integer",
+      "defaultValue": 9000,
+      "description": "Maximum number of stale logins processed by projects scheduler in a single run."
     },
     {
       "name": "projects.scheduler.page-size",
@@ -178,7 +190,7 @@
     {
       "name": "projects.scheduler.concurrency",
       "type": "java.lang.Integer",
-      "defaultValue": 4,
+      "defaultValue": 3,
       "description": "Thread pool size for projects scheduler."
     },
     {
@@ -199,16 +211,16 @@
       "description": "Enable or disable scheduled synchronization of missing student credentials via GraphQL."
     },
     {
-      "name": "credentials.scheduler.initial-delay",
+      "name": "credentials.scheduler.cron",
       "type": "java.lang.String",
-      "defaultValue": "PT0S",
-      "description": "Initial delay before first credentials synchronization run, expressed as ISO-8601 duration."
+      "defaultValue": "0 0 2 * * *",
+      "description": "Cron expression for credentials synchronization schedule."
     },
     {
-      "name": "credentials.scheduler.fixed-delay",
+      "name": "credentials.scheduler.zone",
       "type": "java.lang.String",
-      "defaultValue": "PT12H",
-      "description": "Fixed delay between credentials synchronization runs, expressed as ISO-8601 duration."
+      "defaultValue": "Europe/Moscow",
+      "description": "Time zone used to evaluate credentials scheduler cron expression."
     },
     {
       "name": "credentials.scheduler.page-size",
@@ -225,7 +237,7 @@
     {
       "name": "credentials.scheduler.concurrency",
       "type": "java.lang.Integer",
-      "defaultValue": 12,
+      "defaultValue": 4,
       "description": "Thread pool size for parallel credentials synchronization tasks."
     },
     {
