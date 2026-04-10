@@ -106,7 +106,7 @@ wait_for_postgres_healthy() {
 
 case "$STRATEGY" in
   rolling)
-    app_services=(s21auth s21edu s21rocket s21bot)
+    app_services=(s21auth s21edu s21rocket s21bot s21web)
     if [[ -n "$PROXY_SERVICE" ]]; then
       app_services+=("$PROXY_SERVICE")
     fi
@@ -120,7 +120,7 @@ case "$STRATEGY" in
     "${compose_cmd[@]}" up -d --remove-orphans "${app_services[@]}"
     ;;
   recreate-all)
-    app_services=(s21auth s21edu s21rocket s21bot)
+    app_services=(s21auth s21edu s21rocket s21bot s21web)
     if [[ -n "$PROXY_SERVICE" ]]; then
       app_services+=("$PROXY_SERVICE")
     fi
