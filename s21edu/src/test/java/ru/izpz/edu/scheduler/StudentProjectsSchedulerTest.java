@@ -24,6 +24,7 @@ import java.util.concurrent.locks.LockSupport;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -73,9 +74,7 @@ class StudentProjectsSchedulerTest {
         StudentCredentials kzn = credential("a2", "u2", kznId);
 
         when(campusCatalog.targetCampusIds()).thenReturn(List.of(mskId, kznId, nskId));
-        when(campusRoutingProjectsProvider.providerTypeForSchoolId(mskId)).thenReturn("graphql");
-        when(campusRoutingProjectsProvider.providerTypeForSchoolId(kznId)).thenReturn("rest");
-        when(campusRoutingProjectsProvider.providerTypeForSchoolId(nskId)).thenReturn("rest");
+        when(campusRoutingProjectsProvider.providerTypeForSchoolId()).thenReturn("graphql", "rest", "rest");
         when(studentCredentialsRepository.countActiveCredentialsBySchoolId(mskId)).thenReturn(1L);
         when(studentCredentialsRepository.countActiveCredentialsBySchoolId(kznId)).thenReturn(1L);
         when(studentCredentialsRepository.countActiveCredentialsBySchoolId(nskId)).thenReturn(0L);
@@ -139,7 +138,7 @@ class StudentProjectsSchedulerTest {
 
         when(campusCatalog.targetCampusIds()).thenReturn(List.of(mskId));
         when(campusCatalog.campusName(mskId)).thenReturn("MSK");
-        when(campusRoutingProjectsProvider.providerTypeForSchoolId(mskId)).thenReturn("graphql");
+        when(campusRoutingProjectsProvider.providerTypeForSchoolId()).thenReturn("graphql");
         when(studentCredentialsRepository.countActiveCredentialsBySchoolId(mskId)).thenReturn(2L);
         when(studentCredentialsRepository.countStaleActiveCredentialsBySchoolId(eq(mskId), any(OffsetDateTime.class))).thenReturn(2L);
         when(studentCredentialsRepository.findStaleActiveCredentialsAfterBySchoolId(eq(""), eq(mskId), any(OffsetDateTime.class), any(Pageable.class)))
@@ -169,7 +168,7 @@ class StudentProjectsSchedulerTest {
 
         when(campusCatalog.targetCampusIds()).thenReturn(List.of(mskId));
         when(campusCatalog.campusName(mskId)).thenReturn("MSK");
-        when(campusRoutingProjectsProvider.providerTypeForSchoolId(mskId)).thenReturn("graphql");
+        when(campusRoutingProjectsProvider.providerTypeForSchoolId()).thenReturn("graphql");
         when(studentCredentialsRepository.countActiveCredentialsBySchoolId(mskId)).thenReturn(1L);
         when(studentCredentialsRepository.countStaleActiveCredentialsBySchoolId(eq(mskId), any(OffsetDateTime.class))).thenReturn(1L);
         when(studentCredentialsRepository.findStaleActiveCredentialsAfterBySchoolId(eq(""), eq(mskId), any(OffsetDateTime.class), any(Pageable.class)))
@@ -201,7 +200,7 @@ class StudentProjectsSchedulerTest {
 
         when(campusCatalog.targetCampusIds()).thenReturn(List.of(mskId));
         when(campusCatalog.campusName(mskId)).thenReturn("MSK");
-        when(campusRoutingProjectsProvider.providerTypeForSchoolId(mskId)).thenReturn("rest");
+        when(campusRoutingProjectsProvider.providerTypeForSchoolId()).thenReturn("rest");
         when(studentCredentialsRepository.countActiveCredentialsBySchoolId(mskId)).thenReturn(3L);
         when(studentCredentialsRepository.countStaleActiveCredentialsBySchoolId(eq(mskId), any(OffsetDateTime.class))).thenReturn(3L);
         when(studentCredentialsRepository.findStaleActiveCredentialsAfterBySchoolId(eq(""), eq(mskId), any(OffsetDateTime.class), any(Pageable.class)))
@@ -216,6 +215,38 @@ class StudentProjectsSchedulerTest {
         verify(campusRoutingProjectsProvider).refreshStudentProjects(c1);
         verify(campusRoutingProjectsProvider).refreshStudentProjects(c2);
         verify(campusRoutingProjectsProvider).refreshStudentProjects(c3);
+    }
+
+    @Test
+    void refreshActiveProjects_shouldRespectMaxLoginsPerRunBudget() {
+        String mskId = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
+        StudentCredentials first = credential("a1", "u1", mskId);
+        StudentCredentials second = credential("a2", "u2", mskId);
+
+        ReflectionTestUtils.setField(scheduler, "pageSize", 100);
+        ReflectionTestUtils.setField(scheduler, "batchSize", 1);
+        ReflectionTestUtils.setField(scheduler, "graphQlBatchSize", 1);
+        ReflectionTestUtils.setField(scheduler, "restBatchSize", 1);
+        ReflectionTestUtils.setField(scheduler, "maxLoginsPerRun", 1);
+
+        when(campusCatalog.targetCampusIds()).thenReturn(List.of(mskId));
+        when(campusCatalog.campusName(mskId)).thenReturn("MSK");
+        when(campusRoutingProjectsProvider.providerTypeForSchoolId()).thenReturn("graphql");
+        when(studentCredentialsRepository.countActiveCredentialsBySchoolId(mskId)).thenReturn(2L);
+        when(studentCredentialsRepository.countStaleActiveCredentialsBySchoolId(eq(mskId), any(OffsetDateTime.class))).thenReturn(2L);
+        when(studentCredentialsRepository.findStaleActiveCredentialsAfterBySchoolId(
+            eq(""),
+            eq(mskId),
+            any(OffsetDateTime.class),
+            argThat(pageable -> pageable.getPageSize() == 1)
+        )).thenReturn(List.of(first));
+        when(campusRoutingProjectsProvider.refreshStudentProjects(first))
+            .thenReturn(CampusRoutingProjectsProvider.RefreshResult.SUCCESS);
+
+        scheduler.refreshActiveProjects();
+
+        verify(campusRoutingProjectsProvider).refreshStudentProjects(first);
+        verify(campusRoutingProjectsProvider, never()).refreshStudentProjects(second);
     }
 
     private StudentCredentials credential(String login, String userId, String schoolId) {

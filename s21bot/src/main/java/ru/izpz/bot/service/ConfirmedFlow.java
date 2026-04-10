@@ -134,12 +134,10 @@ public class ConfirmedFlow {
         StringBuilder result = new StringBuilder("🖥️ Мои активные проекты 💼\n\n");
         for (int i = 0; i < projects.size(); i++) {
             ProjectsDto project = projects.get(i);
-            String xp = project.experience() == null ? "-" : project.experience().toString();
-            result.append(String.format("%d. %s %s (%sxp)%n",
+            result.append(String.format("%d. %s %s%n",
                     i + 1,
                     projectEmoji(project),
-                    safeString(project.name(), "-"),
-                    xp));
+                    safeString(project.name(), "-")));
         }
         return result.toString().trim();
     }

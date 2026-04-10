@@ -149,12 +149,14 @@ projects:
     graphql-school-id: ${PROJECTS_ROUTING_GRAPHQL_SCHOOL_ID:${PROJECTS_SCHEDULER_GRAPHQL_SCHOOL_ID:6bfe3c56-0211-4fe1-9e59-51616caac4dd}}
   scheduler:
     enabled: ${PROJECTS_SCHEDULER_ENABLED:true}
-    fixed-delay: ${PROJECTS_SCHEDULER_FIXED_DELAY:PT4H}
+    initial-delay: ${PROJECTS_SCHEDULER_INITIAL_DELAY:PT10M}
+    fixed-delay: ${PROJECTS_SCHEDULER_FIXED_DELAY:PT15M}
+    max-logins-per-run: ${PROJECTS_SCHEDULER_MAX_LOGINS_PER_RUN:9000}
     page-size: ${PROJECTS_SCHEDULER_PAGE_SIZE:1000}
     batch-size: ${PROJECTS_SCHEDULER_BATCH_SIZE:20}
     graphql-batch-size: ${PROJECTS_SCHEDULER_GRAPHQL_BATCH_SIZE:${PROJECTS_SCHEDULER_BATCH_SIZE:20}}
     rest-batch-size: ${PROJECTS_SCHEDULER_REST_BATCH_SIZE:${PROJECTS_SCHEDULER_BATCH_SIZE:20}}
-    concurrency: ${PROJECTS_SCHEDULER_CONCURRENCY:4}
+    concurrency: ${PROJECTS_SCHEDULER_CONCURRENCY:3}
     task-timeout: ${PROJECTS_SCHEDULER_TASK_TIMEOUT:PT75S}
     retry-attempts: ${PROJECTS_SCHEDULER_RETRY_ATTEMPTS:1}
     retry-backoff: ${PROJECTS_SCHEDULER_RETRY_BACKOFF:PT1S}
@@ -174,11 +176,11 @@ notify:
 credentials:
   scheduler:
     enabled: ${CREDENTIALS_SCHEDULER_ENABLED:true}
-    initial-delay: ${CREDENTIALS_SCHEDULER_INITIAL_DELAY:PT0S}
-    fixed-delay: ${CREDENTIALS_SCHEDULER_FIXED_DELAY:PT12H}
+    cron: ${CREDENTIALS_SCHEDULER_CRON:0 0 2 * * *}
+    zone: ${CREDENTIALS_SCHEDULER_ZONE:Europe/Moscow}
     page-size: ${CREDENTIALS_SCHEDULER_PAGE_SIZE:1000}
     batch-size: ${CREDENTIALS_SCHEDULER_BATCH_SIZE:200}
-    concurrency: ${CREDENTIALS_SCHEDULER_CONCURRENCY:12}
+    concurrency: ${CREDENTIALS_SCHEDULER_CONCURRENCY:4}
 campus:
   service.enabled: true
   workplace:
@@ -186,7 +188,7 @@ campus:
   scheduler:
     enabled: true
     fixed-delay: PT30S
-    participants-max-concurrency: 8
+    participants-max-concurrency: 6
     timeout:
-      global: PT30S
+      global: PT45S
       per-campus: PT60S

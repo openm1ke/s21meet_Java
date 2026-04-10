@@ -4,7 +4,7 @@ services:
     image: postgres:15
     restart: unless-stopped
     environment:
-      TZ: UTC
+      TZ: ${TZ:-Europe/Moscow}
     env_file:
       - ./env/${APP_ENV:-test}/postgres.env
     healthcheck:
@@ -25,7 +25,8 @@ services:
     env_file:
       - ./env/${APP_ENV:-test}/s21auth.env
     environment:
-      TZ: UTC
+      TZ: ${TZ:-Europe/Moscow}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Europe/Moscow}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
       interval: 10s
@@ -45,7 +46,8 @@ services:
     env_file:
       - ./env/${APP_ENV:-test}/s21edu.env
     environment:
-      TZ: UTC
+      TZ: ${TZ:-Europe/Moscow}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Europe/Moscow}
       SPRING_LIQUIBASE_ENABLED: false
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
@@ -62,6 +64,9 @@ services:
     restart: "no"
     env_file:
       - ./env/${APP_ENV:-test}/s21edu.env
+    environment:
+      TZ: ${TZ:-Europe/Moscow}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Europe/Moscow}
     entrypoint:
       - /bin/sh
       - -ec
@@ -86,7 +91,8 @@ services:
     env_file:
       - ./env/${APP_ENV:-test}/s21bot.env
     environment:
-      TZ: UTC
+      TZ: ${TZ:-Europe/Moscow}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Europe/Moscow}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health || exit 1"]
       interval: 10s
@@ -103,7 +109,8 @@ services:
     env_file:
       - ./env/${APP_ENV:-test}/s21rocket.env
     environment:
-      TZ: UTC
+      TZ: ${TZ:-Europe/Moscow}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Europe/Moscow}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health || exit 1"]
       interval: 10s
@@ -123,7 +130,8 @@ services:
     env_file:
       - ./env/${APP_ENV:-test}/s21web.env
     environment:
-      TZ: UTC
+      TZ: ${TZ:-Europe/Moscow}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Europe/Moscow}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health || exit 1"]
       interval: 10s
@@ -196,6 +204,7 @@ services:
     image: grafana/grafana:11.2.0
     restart: unless-stopped
     environment:
+      TZ: ${TZ:-Europe/Moscow}
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:

@@ -364,9 +364,10 @@ class ConfirmedFlowTest {
 
         verify(messageSender).sendMessage(eq(chatId), argThat(t ->
                 t.contains("🖥️ Мои активные проекты 💼")
-                        && t.contains("1. 👨🏻‍💻 AP4_Info21 v2.0 Web_Jv (10xp)")
-                        && t.contains("2. ✍️ DevOps Exam (200xp)")
-                        && t.contains("3. 👥 BE4_GRPCAuth (600xp)")), eq(null));
+                        && t.contains("1. 👨🏻‍💻 AP4_Info21 v2.0 Web_Jv")
+                        && t.contains("2. ✍️ DevOps Exam")
+                        && t.contains("3. 👥 BE4_GRPCAuth")
+                        && !t.contains("xp)")), eq(null));
     }
 
     @Test
