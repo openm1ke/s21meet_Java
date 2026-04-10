@@ -68,7 +68,7 @@ jobs:
           fi
 
       - name: Build jars
-        run: ./gradlew :s21auth:bootJar :s21edu:bootJar :s21bot:bootJar :s21rocket:bootJar
+        run: ./gradlew :s21auth:bootJar :s21edu:bootJar :s21bot:bootJar :s21rocket:bootJar :s21web:bootJar
 
       - name: Resolve image metadata
         id: meta
@@ -168,3 +168,12 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.image_repo }}/s21rocket:${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.image_repo }}/s21rocket:latest
+
+      - name: Build and push s21web
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ./s21web
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_repo }}/s21web:${{ steps.meta.outputs.image_tag }}
+            ${{ steps.meta.outputs.image_repo }}/s21web:latest
