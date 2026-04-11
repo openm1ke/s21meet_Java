@@ -107,8 +107,16 @@ sonarqube {
                 "s21rocket/build/reports/jacoco/test/jacocoTestReport.xml," +
                 "s21web/build/reports/jacoco/test/jacocoTestReport.xml")
         property("sonar.scm.disabled", "true")
-        property("sonar.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**")
-        property("sonar.coverage.exclusions", "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**")
+        property(
+            "sonar.exclusions",
+            "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**, " +
+                "**/src/main/resources/static/js/**"
+        )
+        property(
+            "sonar.coverage.exclusions",
+            "**/generated/**, **/openapi/**, **/common/**, **/dto/**, **/model/**, **/entity/**, " +
+                "**/src/main/resources/static/js/**"
+        )
         property("sonar.gradle.scanAll", "true")
     }
 }

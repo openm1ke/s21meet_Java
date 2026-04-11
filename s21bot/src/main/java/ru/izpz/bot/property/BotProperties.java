@@ -8,6 +8,7 @@ public record BotProperties(
         Long admin,
         Long group,
         String groupInviteLink,
+        String webAppUrl,
         ProxyProperties proxy
 ) {
     public record ProxyProperties(

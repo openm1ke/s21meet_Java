@@ -20,3 +20,12 @@ rate-limit:
     enabled: ${PROJECT_EXECUTORS_RATE_LIMIT_ENABLED:true}
     limit-for-period: ${PROJECT_EXECUTORS_RATE_LIMIT_FOR_PERIOD:60}
     refresh-period: ${PROJECT_EXECUTORS_RATE_LIMIT_REFRESH_PERIOD:PT1M}
+
+telegram:
+  webapp:
+    auth:
+      enabled: ${TELEGRAM_WEBAPP_AUTH_ENABLED:true}
+      bot-token: ${BOT_TOKEN:}
+      max-age: ${TELEGRAM_WEBAPP_MAX_AGE:PT1H}
+      header-name: ${TELEGRAM_WEBAPP_HEADER:X-Telegram-Init-Data}
+      path-prefix: /api/projects

@@ -3,12 +3,14 @@ package ru.izpz.web.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.izpz.dto.ProjectExecutorDto;
 import ru.izpz.dto.ProjectExecutorsRequest;
+import ru.izpz.web.security.TelegramInitDataValidator;
 import ru.izpz.web.service.ProjectDirectoryFacade;
 
 import java.util.List;
@@ -18,10 +20,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProjectDirectoryApiController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ProjectDirectoryApiControllerTest {
 
     @Autowired
@@ -32,6 +36,20 @@ class ProjectDirectoryApiControllerTest {
 
     @MockitoBean
     private ProjectDirectoryFacade projectDirectoryFacade;
+
+    @MockitoBean
+    private TelegramInitDataValidator telegramInitDataValidator;
+
+    @Test
+    void getProjectNames_shouldReturnOk() throws Exception {
+        when(projectDirectoryFacade.getProjectNames()).thenReturn(List.of("C2_SimpleBashUtils"));
+
+        mockMvc.perform(get("/api/projects/names"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("C2_SimpleBashUtils"));
+
+        verify(projectDirectoryFacade).getProjectNames();
+    }
 
     @Test
     void getProjectExecutors_shouldReturnOk() throws Exception {
