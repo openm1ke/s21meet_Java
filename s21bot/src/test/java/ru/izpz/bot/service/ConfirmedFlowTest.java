@@ -47,6 +47,9 @@ class ConfirmedFlowTest {
     @Mock
     private MetricsService metricsService;
 
+    @Mock
+    private TelegramWebAppMenuService telegramWebAppMenuService;
+
     @InjectMocks
     private ConfirmedFlow confirmedFlow;
 

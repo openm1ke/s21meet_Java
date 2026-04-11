@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Проекты Школы 21</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
             color-scheme: light;
@@ -119,15 +120,10 @@
 <main>
     <h1>Исполнители проектов</h1>
     <label for="projectSelect">Выберите проект</label>
-    <p class="hint" th:if="${loadError}" th:text="${loadError}"></p>
     <select id="projectSelect">
         <option value="">-- выберите проект --</option>
-        <option th:each="projectName : ${projectNames}"
-                th:value="${projectName}"
-                th:text="${projectName}">
-        </option>
     </select>
-    <p class="hint">После выбора проекта список исполнителей загрузится автоматически.</p>
+    <p id="hintText" class="hint">После выбора проекта список исполнителей загрузится автоматически.</p>
 
     <div id="emptyState" class="empty">Исполнители не выбраны.</div>
     <table id="resultTable" hidden>
@@ -156,11 +152,12 @@
     </div>
 </main>
 
-<script>
+<script type="module">
     const projectSelect = document.getElementById("projectSelect");
     const resultTable = document.getElementById("resultTable");
     const resultBody = document.getElementById("resultBody");
     const emptyState = document.getElementById("emptyState");
+    const hintText = document.getElementById("hintText");
     const paginationSection = document.getElementById("paginationSection");
     const pageSizeSelect = document.getElementById("pageSizeSelect");
     const pageInfo = document.getElementById("pageInfo");
@@ -168,6 +165,53 @@
     let currentRows = [];
     let currentPage = 1;
     let pageSize = Number(pageSizeSelect.value);
+    const TELEGRAM_HEADER_NAME = "X-Telegram-Init-Data";
+    const telegramInitData = globalThis.Telegram?.WebApp?.initData ?? "";
+
+    if (globalThis.Telegram?.WebApp) {
+        globalThis.Telegram.WebApp.ready();
+        globalThis.Telegram.WebApp.expand();
+    }
+
+    function createTelegramHeaders(includeJsonContentType) {
+        const headers = {};
+        if (includeJsonContentType) {
+            headers["Content-Type"] = "application/json";
+        }
+        if (telegramInitData) {
+            headers[TELEGRAM_HEADER_NAME] = telegramInitData;
+        }
+        return headers;
+    }
+
+    async function loadProjectNames() {
+        if (!telegramInitData) {
+            hintText.textContent = "Откройте эту страницу через Telegram-кнопку Web App.";
+            emptyState.textContent = "Доступ разрешен только из Telegram Web App.";
+            return;
+        }
+
+        emptyState.textContent = "Загрузка проектов...";
+        const response = await fetch("/api/projects/names", {
+            method: "GET",
+            headers: createTelegramHeaders(false)
+        });
+
+        if (!response.ok) {
+            hintText.textContent = "Не удалось пройти проверку Telegram Web App.";
+            emptyState.textContent = "Ошибка загрузки списка проектов.";
+            return;
+        }
+
+        const projectNames = await response.json();
+        projectNames.forEach((projectName) => {
+            const option = document.createElement("option");
+            option.value = projectName;
+            option.textContent = projectName;
+            projectSelect.appendChild(option);
+        });
+        emptyState.textContent = "Исполнители не выбраны.";
+    }
 
     function getTotalPages() {
         return Math.max(1, Math.ceil(currentRows.length / pageSize));
@@ -310,9 +354,7 @@
 
         const response = await fetch(`/api/projects/executors`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: createTelegramHeaders(true),
             body: JSON.stringify({ projectName })
         });
 
@@ -326,6 +368,8 @@
         currentPage = 1;
         renderRows();
     });
+
+    await loadProjectNames();
 </script>
 </body>
 </html>

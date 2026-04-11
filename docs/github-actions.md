@@ -29,13 +29,9 @@
 - Ручной деплой в тестовое окружение.
 - Использует стратегию `recreate-all` и профиль `infra`.
 
-- `Deploy Prod` (`.github/workflows/deploy-prod.yml`)
-- Ручной деплой в production.
-- Использует стратегию `rolling`.
-
 ## Необходимые переменные и секреты GitHub
 
-Переменные окружения (`test`/`prod`):
+Переменные окружения (`test`):
 
 - `DEPLOY_HOST` — адрес сервера.
 - `DEPLOY_USER` — пользователь SSH.
@@ -66,9 +62,8 @@ Workflow деплоя копируют:
 Runtime env-файлы должны существовать на сервере заранее:
 
 - `env/test/compose.env`, `env/test/*.env` для test
-- `env/prod/compose.env`, `env/prod/*.env` для prod
 - `XRAY_CONFIG_FILE` из `compose.env` должен указывать на существующий `xray` config
-  (например `env/test/xray/config.json` или `env/prod/xray/config.json`).
+  (например `env/test/xray/config.json`).
   Можно начать с `env/*/xray/config.json.example` и заменить на рабочий конфиг.
 
 ## Типовой процесс релиза
@@ -78,4 +73,3 @@ Runtime env-файлы должны существовать на сервере
 3. Merge PR в `master` -> `Build Images` и публикация образов в GHCR.
 4. После merge PR в `master` workflow `Build Images` автоматически синхронизирует `develop` из `master`.
 5. Ручной запуск `Deploy Test` с нужным `image_tag`.
-6. После проверки — `Deploy Prod` с тем же `image_tag`.

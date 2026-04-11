@@ -43,7 +43,7 @@ class BotConfigTest {
     void botSession_registersBotAndReturnsSession() throws Exception {
         BotConfig config = new BotConfig();
         SimpleBot simpleBot = new SimpleBot(messageProcessor);
-        BotProperties properties = new BotProperties("test-token", 1L, 1L, "https://example.org/invite", null);
+        BotProperties properties = new BotProperties("test-token", 1L, 1L, "https://example.org/invite", "https://example.org/webapp", null);
 
         when(botsApplication.registerBot("test-token", simpleBot)).thenReturn(botSession);
         when(botSession.isRunning()).thenReturn(true);
@@ -63,7 +63,7 @@ class BotConfigTest {
     @Test
     void botsApplication_createsInstance() {
         BotConfig config = new BotConfig();
-        BotProperties properties = new BotProperties("test-token", 1L, 1L, "https://example.org/invite", null);
+        BotProperties properties = new BotProperties("test-token", 1L, 1L, "https://example.org/invite", "https://example.org/webapp", null);
         okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
         assertNotNull(config.botsApplication(metricsService, okHttpClient));
     }
@@ -76,6 +76,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 new BotProperties.ProxyProperties(false, "SOCKS", "xray-client", 1080)
         );
 
@@ -96,6 +97,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 null
         );
 
@@ -115,6 +117,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", 1080)
         );
 
@@ -139,6 +142,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 new BotProperties.ProxyProperties(true, "HTTP", "xray-client", 3128)
         );
 
@@ -163,6 +167,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 new BotProperties.ProxyProperties(true, "", "xray-client", 1080)
         );
 
@@ -184,6 +189,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 new BotProperties.ProxyProperties(true, "SOCKS", "", 0)
         );
 
@@ -198,6 +204,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", null)
         );
 
@@ -212,6 +219,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", -1)
         );
 
@@ -226,6 +234,7 @@ class BotConfigTest {
                 1L,
                 1L,
                 "https://example.org/invite",
+                "https://example.org/webapp",
                 new BotProperties.ProxyProperties(true, "INVALID", "xray-client", 1080)
         );
 

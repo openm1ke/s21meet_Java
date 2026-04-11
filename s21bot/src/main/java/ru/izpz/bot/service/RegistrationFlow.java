@@ -34,6 +34,7 @@ public class RegistrationFlow {
     private final MessageSender messageSender;
     private final TelegramKeyboardFactory telegramKeyboardFactory;
     private final MetricsService metricsService;
+    private final TelegramWebAppMenuService telegramWebAppMenuService;
 
     public void startOnboarding(Long chatId) {
         InlineKeyboardMarkup keyboard = telegramKeyboardFactory.createInlineKeyboardMarkup(telegramButtons.getRegistrationButton(), 1);
@@ -45,6 +46,7 @@ public class RegistrationFlow {
             var code = profileService.getVerificationCode(profile.s21login());
             if (code.getSecretCode().equals(text)) {
                 profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
+                telegramWebAppMenuService.ensureMenuButton(chatId);
                 messageSender.sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
             } else {
                 messageSender.sendMessage(chatId, "Введенный код не совпадает!", telegramKeyboardFactory.removeReplyKeyboard());

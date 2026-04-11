@@ -14,6 +14,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRem
 import ru.izpz.dto.StatusChange;
 
 import java.io.Serializable;
+import java.util.Objects;
 import java.util.List;
 import java.util.Optional;
 
@@ -98,6 +99,6 @@ public class MessageSender {
     }
 
     public <T extends Serializable> Optional<T> execute(BotApiMethod<T> method) {
-        return telegramExecutorService.execute(method);
+        return Objects.requireNonNull(telegramExecutorService.execute(method), "Telegram execute result must not be null");
     }
 }
