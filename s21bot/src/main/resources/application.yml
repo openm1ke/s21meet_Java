@@ -16,6 +16,7 @@ bot:
   admin: ${BOT_ADMIN}
   group: ${BOT_GROUP}
   group-invite-link: ${BOT_GROUP_INVITE_LINK}
+  web-app-url: ${BOT_WEB_APP_URL:https://localhost:8085/}
   proxy:
     enabled: ${BOT_PROXY_ENABLED:false}
     type: ${BOT_PROXY_TYPE:SOCKS}

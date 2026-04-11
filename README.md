@@ -55,7 +55,6 @@ s21meet_Java/
 ├── s21rocket/
 ├── env/
 │   ├── test/*.env.example
-│   └── prod/*.env.example
 ├── monitoring/
 ├── scripts/
 ├── docker-compose.yml
@@ -82,7 +81,6 @@ chmod +x gradlew dev.sh
 Примеры env-файлов уже есть в репозитории:
 
 - `env/test/*.env.example`
-- `env/prod/*.env.example`
 
 Для локального запуска через `dev.sh` файлы из `*.example` будут созданы автоматически при первом старте.
 
@@ -109,16 +107,19 @@ chmod +x gradlew dev.sh
 Все параметры берутся из:
 
 - `env/test/*.env.example` — шаблоны для локального/тестового окружения.
-- `env/prod/*.env.example` — шаблоны для прод-окружения.
 
 #### `compose.env` (оркестрация Docker Compose)
 
-- `APP_ENV` — выбирает набор env-файлов (`test` или `prod`).
+- `APP_ENV` — имя окружения для env-файлов (в текущей схеме используется `test`).
 - `TZ` — timezone контейнеров.
 - `IMAGE_REPO`, `IMAGE_TAG` — реестр и тег Docker-образов сервисов.
 - `PROXY_MODE` — профиль прокси (`vless`/`ssh`) для Telegram.
 - `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD` — учетка Grafana.
 - `POSTGRES_BIND_ADDR`, `S21AUTH_BIND_ADDR`, `S21EDU_BIND_ADDR`, `S21BOT_BIND_ADDR`, `S21ROCKET_BIND_ADDR`, `S21WEB_BIND_ADDR`, `PROMETHEUS_BIND_ADDR`, `GRAFANA_BIND_ADDR` — на каком адресе хоста публиковать порты сервисов.
+- `WEB_EDGE_HTTP_BIND_ADDR`, `WEB_EDGE_HTTPS_BIND_ADDR` — bind-адреса reverse-proxy `web-edge` (Caddy) на портах 80/443.
+- `WEB_PUBLIC_DOMAIN` — домен, который `web-edge` обслуживает по HTTPS и проксирует в `s21web`.
+- `WEB_TLS_MODE` — режим TLS для `web-edge`: `off` (локальный tunnel-режим), `internal` (локальный HTTPS с self-signed) или `acme` (Let's Encrypt для деплоя).
+- `WEB_TLS_EMAIL` — email для ACME-регистрации (обязателен при `WEB_TLS_MODE=acme`).
 - `XRAY_CONFIG_FILE` — путь к конфигу xray-клиента.
 - `SSH_TUNNEL_HOST`, `SSH_TUNNEL_PORT`, `SSH_TUNNEL_USER`, `SSH_TUNNEL_SOCKS_PORT` — параметры SSH SOCKS туннеля.
 - `SSH_TUNNEL_KEY_FILE`, `SSH_TUNNEL_KNOWN_HOSTS_FILE` — пути к ключу и known_hosts для SSH-туннеля.
@@ -141,6 +142,7 @@ chmod +x gradlew dev.sh
 - `BOT_ADMIN` — Telegram id администратора.
 - `BOT_GROUP` — id/username целевой группы.
 - `BOT_GROUP_INVITE_LINK` — инвайт-ссылка в группу.
+- `BOT_WEB_APP_URL` — публичный HTTPS URL Web App (должен совпадать с доменом `WEB_PUBLIC_DOMAIN`).
 - `BOT_PROXY_ENABLED`, `BOT_PROXY_TYPE`, `BOT_PROXY_HOST`, `BOT_PROXY_PORT` — параметры прокси для Telegram API.
 - `PROFILE_SERVICE_URL` — URL сервиса профилей (`s21edu`).
 - `ROCKETCHAT_SERVICE_URL` — URL сервиса Rocket.Chat (`s21rocket`).
@@ -156,6 +158,8 @@ chmod +x gradlew dev.sh
 #### `s21web.env`
 
 - `PROFILE_SERVICE_URL` — URL `s21edu` для API веб-модуля.
+- `BOT_TOKEN` — токен Telegram-бота для проверки `initData` из Mini App.
+- `TELEGRAM_WEBAPP_AUTH_ENABLED` — включение проверки подписи запросов Telegram Web App.
 
 #### `s21edu.env` (основная бизнес-конфигурация)
 
@@ -217,13 +221,32 @@ Rate limit / retry resilience4j:
 
 #### Результат сверки `env` ↔ `application.yml`
 
-- Все обязательные переменные из `application.yml` покрыты шаблонами `env/test|prod/*.env.example`.
+- Все обязательные переменные из `application.yml` покрыты шаблонами `env/test/*.env.example`.
 - Переменные `DB_NAME`, `DB_PORT` присутствуют в `s21edu.env.example`, но напрямую не читаются `application.yml` (используются косвенно, если собираете `DB_URL` из частей).
 - Для `s21web` есть опциональные параметры с дефолтами в `application.yml`, которых нет в env-шаблоне:
   - `PROJECT_EXECUTORS_RATE_LIMIT_ENABLED`
   - `PROJECT_EXECUTORS_RATE_LIMIT_FOR_PERIOD`
   - `PROJECT_EXECUTORS_RATE_LIMIT_REFRESH_PERIOD`
   По умолчанию фильтр включен и лимит составляет `60` запросов за `PT1M`.
+
+### HTTPS для `s21web` через `web-edge` (Caddy)
+
+- В `docker-compose.yml` добавлен сервис `web-edge`, который принимает HTTPS на 443 и проксирует в `s21web:8085`.
+- Для локальной разработки: `WEB_TLS_MODE=internal`, `WEB_PUBLIC_DOMAIN=localhost`.
+- Для деплоя: `WEB_TLS_MODE=acme`, `WEB_PUBLIC_DOMAIN=<ваш_домен>`, `WEB_TLS_EMAIL=<email>`.
+- `BOT_WEB_APP_URL` в `s21bot.env` должен быть вида `https://<тот_же_домен>/`.
+- Для Telegram Mini App домен нужно зарегистрировать в BotFather через `/setdomain`.
+
+#### Актуальные параметры для текущего деплоя (`s21meet.ru`)
+
+- `env/test/compose.env`:
+  - `WEB_PUBLIC_DOMAIN=s21meet.ru`
+  - `WEB_TLS_MODE=acme`
+  - `WEB_TLS_EMAIL=admin@s21meet.ru` (замените на рабочий email)
+- `env/test/s21bot.env`:
+  - `BOT_WEB_APP_URL=https://s21meet.ru/`
+- `env/test/s21web.env`:
+  - `TELEGRAM_WEBAPP_AUTH_ENABLED=true`
 
 ## Запуск тестов и покрытие
 
@@ -245,7 +268,7 @@ Rate limit / retry resilience4j:
 - `Secret Scan PR` — сканирование репозитория на секреты (`gitleaks`).
 - `Build Images` — сборка и публикация Docker-образов в GHCR на `master`.
 - `Sonar Push` — запуск Sonar-анализа на `master`.
-- `Deploy Test` / `Deploy Prod` — ручные deploy workflow.
+- `Deploy Test` — ручной deploy workflow.
 
 ### Версионирование образов
 

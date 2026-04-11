@@ -4,6 +4,8 @@ set -euo pipefail
 # ---------- config ----------
 APP_SERVICES=(s21auth s21edu s21bot s21rocket s21web)
 BUILDABLE_IMAGES=(s21auth s21edu s21edu-migrator s21bot s21rocket s21web)
+WEB_EDGE_SERVICE="web-edge"
+RUNTIME_ONLY_SERVICES=("$WEB_EDGE_SERVICE")
 INFRA_SERVICES=(postgres prometheus grafana)
 TEST_ENV_DIR="env/test"
 COMPOSE_ENV_FILE="$TEST_ENV_DIR/compose.env"
@@ -42,6 +44,7 @@ Usage:
   ./dev.sh infra           # start infra only
   ./dev.sh s21edu          # build+up only s21edu
   ./dev.sh s21edu s21bot   # build+up only listed services
+  ./dev.sh s21web          # build+up s21web + web-edge (HTTPS reverse proxy)
 
 Options:
   --full        # like old behavior: down + build all + up all (slow but clean)
@@ -232,8 +235,14 @@ compose_cmd() {
 gradle_build() {
   local services=("$@")
   local tasks=()
+  local buildable_set
+
+  buildable_set="$(printf '%s\n' "${BUILDABLE_IMAGES[@]}")"
 
   for s in "${services[@]}"; do
+    if ! printf '%s\n' "$buildable_set" | rg -qx "$s"; then
+      continue
+    fi
     # предполагаем, что gradle subproject = service name
     if [[ "$CLEAN" -eq 1 ]]; then
       tasks+=(":${s}:clean")
@@ -241,6 +250,11 @@ gradle_build() {
     # сначала bootJar (spring boot), если вдруг не spring-boot — сменишь на :$s:build
     tasks+=(":${s}:bootJar")
   done
+
+  if [[ ${#tasks[@]} -eq 0 ]]; then
+    info "No buildable services in selection, skipping Gradle build"
+    return 0
+  fi
 
   info "Gradle tasks: ${tasks[*]}"
   # --parallel ускоряет multi-module
@@ -251,8 +265,14 @@ gradle_build() {
 resolve_images_for_targets() {
   local requested=("$@")
   local images=()
+  local buildable_set
+
+  buildable_set="$(printf '%s\n' "${BUILDABLE_IMAGES[@]}")"
 
   for s in "${requested[@]}"; do
+    if ! printf '%s\n' "$buildable_set" | rg -qx "$s"; then
+      continue
+    fi
     images+=("$s")
     if [[ "$s" == "s21edu" ]]; then
       images+=("s21edu-migrator")
@@ -293,6 +313,8 @@ compose_up_targets() {
   local services=("$@")
   local with_proxy=("${services[@]}")
   local has_bot=0
+  local has_web=0
+  local has_web_edge=0
   local proxy_service=""
 
   local extra=()
@@ -305,6 +327,8 @@ compose_up_targets() {
 
   for s in "${services[@]}"; do
     [[ "$s" == "s21bot" ]] && has_bot=1
+    [[ "$s" == "s21web" ]] && has_web=1
+    [[ "$s" == "$WEB_EDGE_SERVICE" ]] && has_web_edge=1
   done
 
   if [[ "$has_bot" -eq 1 ]]; then
@@ -312,6 +336,10 @@ compose_up_targets() {
     if [[ -n "$proxy_service" ]]; then
       with_proxy+=("$proxy_service")
     fi
+  fi
+
+  if [[ "$has_web" -eq 1 && "$has_web_edge" -eq 0 ]]; then
+    with_proxy+=("$WEB_EDGE_SERVICE")
   fi
 
   info "Compose up targets: ${with_proxy[*]}"
@@ -323,10 +351,14 @@ compose_restart_targets() {
   local services=("$@")
   local with_proxy=("${services[@]}")
   local has_bot=0
+  local has_web=0
+  local has_web_edge=0
   local proxy_service=""
 
   for s in "${services[@]}"; do
     [[ "$s" == "s21bot" ]] && has_bot=1
+    [[ "$s" == "s21web" ]] && has_web=1
+    [[ "$s" == "$WEB_EDGE_SERVICE" ]] && has_web_edge=1
   done
 
   if [[ "$has_bot" -eq 1 ]]; then
@@ -334,6 +366,10 @@ compose_restart_targets() {
     if [[ -n "$proxy_service" ]]; then
       with_proxy+=("$proxy_service")
     fi
+  fi
+
+  if [[ "$has_web" -eq 1 && "$has_web_edge" -eq 0 ]]; then
+    with_proxy+=("$WEB_EDGE_SERVICE")
   fi
 
   info "Compose restart targets: ${with_proxy[*]}"
@@ -400,6 +436,7 @@ if [[ "$FULL" -eq 1 ]]; then
   run_s21edu_migrations
 
   FULL_UP_TARGETS=("${INFRA_SERVICES[@]}" "${APP_SERVICES[@]}")
+  FULL_UP_TARGETS+=("$WEB_EDGE_SERVICE")
   proxy_service="$(proxy_service_for_mode)"
   if [[ -n "$proxy_service" ]]; then
     FULL_UP_TARGETS+=("$proxy_service")

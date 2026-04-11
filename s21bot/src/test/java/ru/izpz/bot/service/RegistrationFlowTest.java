@@ -54,6 +54,9 @@ class RegistrationFlowTest {
     @Mock
     private MetricsService metricsService;
 
+    @Mock
+    private TelegramWebAppMenuService telegramWebAppMenuService;
+
     @InjectMocks
     private RegistrationFlow registrationFlow;
 

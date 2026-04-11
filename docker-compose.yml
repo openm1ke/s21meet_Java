@@ -142,6 +142,55 @@ services:
     networks:
       - s21meet-network
 
+  web-edge:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    depends_on:
+      s21web:
+        condition: service_healthy
+    environment:
+      WEB_PUBLIC_DOMAIN: ${WEB_PUBLIC_DOMAIN:-localhost}
+      WEB_TLS_MODE: ${WEB_TLS_MODE:-internal}
+      WEB_TLS_EMAIL: ${WEB_TLS_EMAIL:-}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        if [ "$${WEB_TLS_MODE:-internal}" = "acme" ]; then
+          if [ -z "$${WEB_TLS_EMAIL}" ]; then
+            echo "WEB_TLS_EMAIL is required when WEB_TLS_MODE=acme" >&2
+            exit 1
+          fi
+          printf '%s\n' \
+            "$${WEB_PUBLIC_DOMAIN} {" \
+            "  tls $${WEB_TLS_EMAIL}" \
+            "  reverse_proxy s21web:8085" \
+            "}" \
+            >/etc/caddy/Caddyfile
+        elif [ "$${WEB_TLS_MODE:-internal}" = "off" ]; then
+          printf '%s\n' \
+            "http://$${WEB_PUBLIC_DOMAIN} {" \
+            "  reverse_proxy s21web:8085" \
+            "}" \
+            >/etc/caddy/Caddyfile
+        else
+          printf '%s\n' \
+            "$${WEB_PUBLIC_DOMAIN} {" \
+            "  tls internal" \
+            "  reverse_proxy s21web:8085" \
+            "}" \
+            >/etc/caddy/Caddyfile
+        fi
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    ports:
+      - "${WEB_EDGE_HTTP_BIND_ADDR:-127.0.0.1}:80:80"
+      - "${WEB_EDGE_HTTPS_BIND_ADDR:-127.0.0.1}:443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - s21meet-network
+
   xray-client:
     profiles: ["proxy-vless"]
     image: ghcr.io/xtls/xray-core:latest
@@ -223,3 +272,5 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  caddy_data:
+  caddy_config:

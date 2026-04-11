@@ -32,6 +32,7 @@ public class ConfirmedFlow {
     private final TelegramKeyboardFactory telegramKeyboardFactory;
     private final CallbackHandler callbackHandler;
     private final MetricsService metricsService;
+    private final TelegramWebAppMenuService telegramWebAppMenuService;
 
     public void startConfirmed(Long chatId, ProfileDto profile, String text) {
         // проверка подписан ли на канал
@@ -40,6 +41,8 @@ public class ConfirmedFlow {
             messageSender.sendMessage(chatId, "Подпишитесь на канал", keyboard);
             return;
         }
+
+        telegramWebAppMenuService.ensureMenuButton(chatId);
 
         if (SlashCommandEnum.contains(text)) {
             SlashCommandEnum.fromText(text).ifPresent(command -> handleSlashCommand(chatId, profile, command));
