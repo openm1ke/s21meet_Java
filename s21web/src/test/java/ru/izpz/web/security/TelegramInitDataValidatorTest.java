@@ -13,7 +13,9 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -140,6 +142,63 @@ class TelegramInitDataValidatorTest {
                 Security.addProvider(provider);
             }
         }
+    }
+
+    @Test
+    void extractTelegramId_returnsIdWhenPresentInUserPayload() {
+        TelegramInitDataValidator validator = new TelegramInitDataValidator(BOT_TOKEN, Duration.ofHours(1));
+        String initData = sign(Map.of(
+            "auth_date", String.valueOf(Instant.now().getEpochSecond()),
+            "query_id", "AAGAAQ",
+            "user", "{\"id\":123456,\"first_name\":\"Mike\"}"
+        ));
+
+        String telegramId = validator.extractTelegramId(initData);
+
+        assertEquals("123456", telegramId);
+    }
+
+    @Test
+    void extractTelegramId_returnsNullWhenUserMissingOrInvalid() {
+        TelegramInitDataValidator validator = new TelegramInitDataValidator(BOT_TOKEN, Duration.ofHours(1));
+        String withoutUser = sign(Map.of(
+            "auth_date", String.valueOf(Instant.now().getEpochSecond()),
+            "query_id", "AAGAAQ"
+        ));
+        String invalidUser = sign(Map.of(
+            "auth_date", String.valueOf(Instant.now().getEpochSecond()),
+            "query_id", "AAGAAQ",
+            "user", "{\"id\":\"abc\"}"
+        ));
+
+        assertNull(validator.extractTelegramId(withoutUser));
+        assertNull(validator.extractTelegramId(invalidUser));
+    }
+
+    @Test
+    void extractTelegramId_returnsNullForEmptyInitDataAndMalformedUserPayload() {
+        TelegramInitDataValidator validator = new TelegramInitDataValidator(BOT_TOKEN, Duration.ofHours(1));
+        String malformedUser = sign(Map.of(
+            "auth_date", String.valueOf(Instant.now().getEpochSecond()),
+            "query_id", "AAGAAQ",
+            "user", "{\"id\":"
+        ));
+        String missingId = sign(Map.of(
+            "auth_date", String.valueOf(Instant.now().getEpochSecond()),
+            "query_id", "AAGAAQ",
+            "user", "{\"first_name\":\"Mike\"}"
+        ));
+        String nullId = sign(Map.of(
+            "auth_date", String.valueOf(Instant.now().getEpochSecond()),
+            "query_id", "AAGAAQ",
+            "user", "{\"id\":null}"
+        ));
+
+        assertNull(validator.extractTelegramId(""));
+        assertNull(validator.extractTelegramId(" "));
+        assertNull(validator.extractTelegramId(malformedUser));
+        assertNull(validator.extractTelegramId(missingId));
+        assertNull(validator.extractTelegramId(nullId));
     }
 
     private String sign(Map<String, String> params) {

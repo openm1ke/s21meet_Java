@@ -1,5 +1,7 @@
 package ru.izpz.web.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -22,9 +24,12 @@ public class TelegramInitDataValidator {
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final String HASH_PARAM = "hash";
     private static final String AUTH_DATE_PARAM = "auth_date";
+    private static final String USER_PARAM = "user";
+    private static final String TELEGRAM_ID_PATTERN = "^\\d{5,13}$";
 
     private final String botToken;
     private final long maxAgeSeconds;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public TelegramInitDataValidator(
         @Value("${telegram.webapp.auth.bot-token:${BOT_TOKEN:}}") String botToken,
@@ -59,6 +64,31 @@ public class TelegramInitDataValidator {
             expectedHash.getBytes(StandardCharsets.US_ASCII),
             hash.toLowerCase().getBytes(StandardCharsets.US_ASCII)
         );
+    }
+
+    public String extractTelegramId(String initDataRaw) {
+        if (!StringUtils.hasText(initDataRaw)) {
+            return null;
+        }
+        Map<String, String> params = parseQueryString(initDataRaw);
+        String userRaw = params.get(USER_PARAM);
+        if (!StringUtils.hasText(userRaw)) {
+            return null;
+        }
+        try {
+            JsonNode userNode = objectMapper.readTree(userRaw);
+            JsonNode idNode = userNode.get("id");
+            if (idNode == null || idNode.isNull()) {
+                return null;
+            }
+            String telegramId = idNode.asText();
+            if (!StringUtils.hasText(telegramId) || !telegramId.matches(TELEGRAM_ID_PATTERN)) {
+                return null;
+            }
+            return telegramId;
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private boolean isFresh(String authDateRaw) {

@@ -15,6 +15,8 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class TelegramWebAppAuthFilter extends OncePerRequestFilter {
 
+    public static final String TELEGRAM_ID_ATTR = "telegramId";
+
     private final TelegramInitDataValidator validator;
 
     @Value("${telegram.webapp.auth.enabled:true}")
@@ -42,8 +44,12 @@ public class TelegramWebAppAuthFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String initData = request.getHeader(headerName);
         if (validator.isValid(initData)) {
-            filterChain.doFilter(request, response);
-            return;
+            String telegramId = validator.extractTelegramId(initData);
+            if (telegramId != null) {
+                request.setAttribute(TELEGRAM_ID_ATTR, telegramId);
+                filterChain.doFilter(request, response);
+                return;
+            }
         }
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
