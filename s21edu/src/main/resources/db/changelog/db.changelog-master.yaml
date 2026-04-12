@@ -13,3 +13,5 @@ databaseChangeLog:
       file: db/changelog/changes/006-online-last-seen.yaml
   - include:
       file: db/changelog/changes/007-student-project-trim.yaml
+  - include:
+      file: db/changelog/changes/008-participant-updated-at.yaml

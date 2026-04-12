@@ -1,6 +1,7 @@
 package ru.izpz.edu.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,9 @@ import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.repository.ParticipantCampusRepository;
 import ru.izpz.edu.repository.ParticipantRepository;
 
+import java.time.Duration;
+import java.time.OffsetDateTime;
+
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "profile.service.enabled", havingValue = "true")
@@ -22,6 +26,8 @@ public class ParticipantSyncService {
     private final ProfileMapper profileMapper;
     private final ParticipantRepository participantRepository;
     private final ParticipantCampusRepository participantCampusRepository;
+    @Value("${participant.refresh-ttl:PT15M}")
+    private Duration participantRefreshTtl = Duration.ofMinutes(15);
 
     public ParticipantV1DTO fetchByEduLogin(String eduLogin) throws ApiException {
         return participantApi.getParticipantByLogin(eduLogin);
@@ -35,7 +41,7 @@ public class ParticipantSyncService {
     @Transactional
     public Participant getOrSyncByEduLogin(String eduLogin) throws ApiException {
         var stored = participantRepository.findByLogin(eduLogin);
-        if (stored.isPresent() && stored.get().getCampus() != null) {
+        if (stored.isPresent() && stored.get().getCampus() != null && !isRefreshRequired(stored.get())) {
             return stored.get();
         }
         return syncByEduLoginInternal(eduLogin);
@@ -55,6 +61,14 @@ public class ParticipantSyncService {
 
         Participant participant = profileMapper.toEntity(participantDto);
         participant.setCampus(campus);
+        participant.setUpdatedAt(OffsetDateTime.now());
         return participantRepository.save(participant);
+    }
+
+    private boolean isRefreshRequired(Participant participant) {
+        if (participant.getUpdatedAt() == null) {
+            return true;
+        }
+        return participant.getUpdatedAt().isBefore(OffsetDateTime.now().minus(participantRefreshTtl));
     }
 }

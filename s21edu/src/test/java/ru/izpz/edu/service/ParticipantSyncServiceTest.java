@@ -15,10 +15,12 @@ import ru.izpz.edu.model.ParticipantCampus;
 import ru.izpz.edu.repository.ParticipantCampusRepository;
 import ru.izpz.edu.repository.ParticipantRepository;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,6 +48,7 @@ class ParticipantSyncServiceTest {
         Participant stored = new Participant();
         stored.setLogin("testuser");
         stored.setCampus(new ParticipantCampus());
+        stored.setUpdatedAt(OffsetDateTime.now());
         when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(stored));
 
         Participant result = participantSyncService.getOrSyncByEduLogin("testuser");
@@ -81,6 +84,60 @@ class ParticipantSyncServiceTest {
     }
 
     @Test
+    void getOrSyncByEduLogin_shouldSync_whenStoredIsStale() throws ApiException {
+        Participant stored = new Participant();
+        stored.setLogin("testuser");
+        stored.setCampus(new ParticipantCampus());
+        stored.setUpdatedAt(OffsetDateTime.now().minusHours(1));
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(stored));
+
+        ParticipantV1DTO dto = participantDto("testuser");
+        ParticipantCampus campusEntity = new ParticipantCampus();
+        campusEntity.setId(dto.getCampus().getId().toString());
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(dto);
+        when(profileMapper.toEntity(dto.getCampus())).thenReturn(campusEntity);
+        when(profileMapper.toEntity(dto)).thenReturn(participantEntity);
+        when(participantRepository.save(participantEntity)).thenReturn(participantEntity);
+
+        Participant result = participantSyncService.getOrSyncByEduLogin("testuser");
+
+        assertSame(participantEntity, result);
+        verify(participantApi).getParticipantByLogin("testuser");
+        verify(participantCampusRepository).save(campusEntity);
+        verify(participantRepository).save(participantEntity);
+    }
+
+    @Test
+    void getOrSyncByEduLogin_shouldSync_whenUpdatedAtMissing() throws ApiException {
+        Participant stored = new Participant();
+        stored.setLogin("testuser");
+        stored.setCampus(new ParticipantCampus());
+        stored.setUpdatedAt(null);
+        when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(stored));
+
+        ParticipantV1DTO dto = participantDto("testuser");
+        ParticipantCampus campusEntity = new ParticipantCampus();
+        campusEntity.setId(dto.getCampus().getId().toString());
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+
+        when(participantApi.getParticipantByLogin("testuser")).thenReturn(dto);
+        when(profileMapper.toEntity(dto.getCampus())).thenReturn(campusEntity);
+        when(profileMapper.toEntity(dto)).thenReturn(participantEntity);
+        when(participantRepository.save(participantEntity)).thenReturn(participantEntity);
+
+        Participant result = participantSyncService.getOrSyncByEduLogin("testuser");
+
+        assertSame(participantEntity, result);
+        verify(participantApi).getParticipantByLogin("testuser");
+        verify(participantCampusRepository).save(campusEntity);
+        verify(participantRepository).save(participantEntity);
+    }
+
+    @Test
     void syncByEduLogin_shouldSync_whenParticipantMissingInStorage() throws ApiException {
         ParticipantV1DTO dto = participantDto("freshuser");
         ParticipantCampus campusEntity = new ParticipantCampus();
@@ -96,6 +153,7 @@ class ParticipantSyncServiceTest {
         Participant result = participantSyncService.syncByEduLogin("freshuser");
 
         assertSame(participantEntity, result);
+        assertNotNull(participantEntity.getUpdatedAt());
         verify(participantCampusRepository).save(campusEntity);
         verify(participantRepository).save(participantEntity);
     }

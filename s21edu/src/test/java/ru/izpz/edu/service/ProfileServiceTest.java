@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.*;
+import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.exception.EntityNotFoundException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
@@ -321,6 +322,30 @@ class ProfileServiceTest {
     }
 
     @Test
+    void checkAndSetLogin_shouldNotWarmUp_whenFallbackProfileHasDifferentLogin() throws ApiException {
+        testProfile.setS21login(null);
+        Profile savedByAnotherTx = new Profile();
+        savedByAnotherTx.setTelegramId("123456");
+        savedByAnotherTx.setS21login("another-login");
+        savedByAnotherTx.setStatus(ProfileStatus.CREATED);
+        ProfileDto differentLoginDto = new ProfileDto("123456", "another-login", ProfileStatus.CREATED, null);
+
+        when(profileRepository.findByTelegramId("123456"))
+                .thenReturn(Optional.of(testProfile), Optional.of(savedByAnotherTx));
+        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
+        when(profileRepository.save(testProfile))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+        when(profileMapper.toDto(savedByAnotherTx)).thenReturn(differentLoginDto);
+
+        ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
+
+        assertNotNull(result);
+        assertEquals("another-login", result.s21login());
+        verify(participantSyncService, never()).syncByEduLogin("newuser");
+        verify(participantCoalitionService, never()).refreshByLogin("newuser");
+    }
+
+    @Test
     void checkAndSetLogin_shouldThrowException_whenLoginAlreadyExists() {
         // Given
         testProfile.setS21login(null);
@@ -386,6 +411,22 @@ class ProfileServiceTest {
         verify(profileRepository).findByTelegramId("123456");
         verify(profileRepository, never()).existsByS21login(anyString());
         verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void checkAndSetLogin_shouldReturnSavedProfile_whenWarmUpSyncThrowsRuntime() throws ApiException {
+        testProfile.setS21login(null);
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(profileRepository.existsByS21login("newuser")).thenReturn(false);
+        when(profileRepository.save(testProfile)).thenReturn(testProfile);
+        when(participantSyncService.syncByEduLogin("newuser")).thenThrow(new RuntimeException("sync failed"));
+
+        ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
+
+        assertNotNull(result);
+        assertEquals("newuser", result.s21login());
+        verify(participantSyncService).syncByEduLogin("newuser");
+        verify(participantCoalitionService).refreshByLogin("newuser");
     }
 
     @Test
@@ -498,6 +539,23 @@ class ProfileServiceTest {
         assertTrue(exception.getMessage().contains("Профиль не найден для telegramId = 123456"));
         verify(profileRepository).findByTelegramId("123456");
         verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void checkEduLogin_shouldMapFetchedParticipantFromApi() throws ApiException {
+        ParticipantV1DTO fetched = new ParticipantV1DTO();
+        fetched.setLogin("testuser");
+        ParticipantDto mapped = ParticipantDto.builder().login("testuser").build();
+
+        when(participantSyncService.fetchByEduLogin("testuser")).thenReturn(fetched);
+        when(profileMapper.toDto(fetched)).thenReturn(mapped);
+
+        ParticipantDto result = profileService.checkEduLogin("testuser");
+
+        assertNotNull(result);
+        assertEquals("testuser", result.getLogin());
+        verify(participantSyncService).fetchByEduLogin("testuser");
+        verify(profileMapper).toDto(fetched);
     }
 
     @Test
@@ -620,6 +678,22 @@ class ProfileServiceTest {
     }
 
     @Test
+    void getCampus_shouldFallbackToDefault_whenParticipantCampusIsNull() throws ApiException {
+        Participant participant = new Participant();
+        participant.setLogin("testuser");
+        participant.setCampus(null);
+
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participant);
+
+        CampusDto result = profileService.getCampus("123456");
+
+        assertNotNull(result);
+        assertEquals("Moscow", result.getName());
+        assertEquals("6bfe3c56-0211-4fe1-9e59-51616caac4dd", result.getUuid());
+    }
+
+    @Test
     void getParticipant_shouldMapAndPersistParticipantAndCampus() throws ApiException {
         Participant participantEntity = new Participant();
         participantEntity.setLogin("testuser");
@@ -714,6 +788,55 @@ class ProfileServiceTest {
         assertNotNull(result);
         assertEquals(Boolean.FALSE, result.getIsOnline());
         assertEquals(seenAt, result.getLastSeenAt());
+    }
+
+    @Test
+    void getParticipant_shouldIncludeSeatWithoutId_whenOnlineSeatHasNoId() throws ApiException {
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+        ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
+        Workplace workplace = new Workplace();
+        workplace.setId(null);
+        workplace.setStageGroupName("Core");
+        workplace.setStageName("C3");
+
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participantEntity);
+        when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
+        when(workplaceRepository.findByLogin("testuser")).thenReturn(Optional.of(workplace));
+
+        ParticipantDto result = profileService.getParticipant("testuser");
+
+        assertNotNull(result);
+        assertEquals(Boolean.TRUE, result.getIsOnline());
+        assertNotNull(result.getSeat());
+        assertNull(result.getSeat().getRow());
+        assertNull(result.getSeat().getNumber());
+        assertNull(result.getSeat().getClusterName());
+        verify(clusterRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    void getParticipant_shouldNotResolveCluster_whenSeatClusterIdIsNull() throws ApiException {
+        Participant participantEntity = new Participant();
+        participantEntity.setLogin("testuser");
+        ParticipantDto mappedDto = ParticipantDto.builder().login("testuser").build();
+        Workplace workplace = new Workplace();
+        workplace.setId(new WorkplaceId(null, "B", 2));
+        workplace.setStageGroupName("Core");
+        workplace.setStageName("C3");
+
+        when(participantSyncService.getOrSyncByEduLogin("testuser")).thenReturn(participantEntity);
+        when(profileMapper.toDto(participantEntity)).thenReturn(mappedDto);
+        when(workplaceRepository.findByLogin("testuser")).thenReturn(Optional.of(workplace));
+
+        ParticipantDto result = profileService.getParticipant("testuser");
+
+        assertNotNull(result);
+        assertEquals(Boolean.TRUE, result.getIsOnline());
+        assertEquals("B", result.getSeat().getRow());
+        assertEquals(Integer.valueOf(2), result.getSeat().getNumber());
+        assertNull(result.getSeat().getClusterName());
+        verify(clusterRepository, never()).findById(anyLong());
     }
 
     @Test
