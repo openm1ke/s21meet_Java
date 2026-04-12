@@ -294,21 +294,24 @@ class ProfileControllerTest {
 
     @Test
     void getProjectNames_shouldReturnOk() throws Exception {
-        when(projectDirectoryService.getProjectNames()).thenReturn(List.of("C2_SimpleBashUtils", "C3_s21_stringplus"));
+        CampusRequest request = CampusRequest.builder().telegramId("123456").build();
+        when(profileService.getProjectNamesByTelegramId("123456")).thenReturn(List.of("C2_SimpleBashUtils", "C3_s21_stringplus"));
 
-        mockMvc.perform(post("/profile/project-names"))
+        mockMvc.perform(post("/profile/project-names")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0]").value("C2_SimpleBashUtils"))
                 .andExpect(jsonPath("$[1]").value("C3_s21_stringplus"));
 
-        verify(projectDirectoryService).getProjectNames();
+        verify(profileService).getProjectNamesByTelegramId("123456");
     }
 
     @Test
     void getProjectExecutors_shouldReturnOk() throws Exception {
         ProjectExecutorsRequest request = new ProjectExecutorsRequest("C2_SimpleBashUtils");
-        ProjectExecutorDto executor = new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", "cluster=11, row=A, place=5");
-        when(projectDirectoryService.getProjectExecutors("C2_SimpleBashUtils")).thenReturn(List.of(executor));
+        ProjectExecutorDto executor = new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", null);
+        when(projectDirectoryService.getProjectExecutors(request)).thenReturn(List.of(executor));
 
         mockMvc.perform(post("/profile/project-executors")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -316,10 +319,21 @@ class ProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].login").value("mike"))
                 .andExpect(jsonPath("$[0].campusName").value("Kazan"))
-                .andExpect(jsonPath("$[0].projectStatus").value("IN_PROGRESS"))
-                .andExpect(jsonPath("$[0].campusPlace").value("cluster=11, row=A, place=5"));
+                .andExpect(jsonPath("$[0].projectStatus").value("IN_PROGRESS"));
 
-        verify(projectDirectoryService).getProjectExecutors("C2_SimpleBashUtils");
+        verify(projectDirectoryService).getProjectExecutors(request);
+    }
+
+    @Test
+    void getAllProjectNames_shouldReturnOk() throws Exception {
+        when(projectDirectoryService.getProjectNames()).thenReturn(List.of("A1_Maze_C", "C2_SimpleBashUtils"));
+
+        mockMvc.perform(post("/profile/project-names/all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("A1_Maze_C"))
+                .andExpect(jsonPath("$[1]").value("C2_SimpleBashUtils"));
+
+        verify(projectDirectoryService).getProjectNames();
     }
 
     @Test
@@ -331,7 +345,7 @@ class ProfileControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
-        verify(projectDirectoryService, never()).getProjectExecutors(anyString());
+        verify(projectDirectoryService, never()).getProjectExecutors(any(ProjectExecutorsRequest.class));
     }
 
     @Test
@@ -343,6 +357,6 @@ class ProfileControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
-        verify(projectDirectoryService, never()).getProjectExecutors(anyString());
+        verify(projectDirectoryService, never()).getProjectExecutors(any(ProjectExecutorsRequest.class));
     }
 }

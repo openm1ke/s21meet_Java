@@ -7,5 +7,4 @@ public record ProjectExecutorsRequest(
         @NotBlank
         @Size(max = 120)
         String projectName
-) {
-}
+) {}

@@ -24,6 +24,7 @@ import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.utils.StringUtils;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -39,6 +40,7 @@ public class ProfileService {
     private final ProfileVerificationMapper profileVerificationMapper;
     private final ParticipantSyncService participantSyncService;
     private final ParticipantCoalitionService participantCoalitionService;
+    private final CampusService campusService;
     private final ProfileRepository profileRepository;
     private final ProfileValidationRepository profileValidationRepository;
     private final WorkplaceRepository workplaceRepository;
@@ -148,6 +150,20 @@ public class ProfileService {
     public ParticipantDto checkEduLogin(String login) throws ApiException {
         log.info("Получен запрос на проверку логина: login = {}", login);
         return profileMapper.toDto(participantSyncService.fetchByEduLogin(login));
+    }
+
+    public List<String> getProjectNamesByTelegramId(String telegramId) {
+        return profileRepository.findByTelegramId(telegramId)
+            .map(Profile::getS21login)
+            .filter(login -> login != null && !login.isBlank())
+            .map(campusService::getStudentProjectsByLogin)
+            .orElse(List.of())
+            .stream()
+            .map(ProjectsDto::name)
+            .filter(name -> name != null && !name.isBlank())
+            .map(String::trim)
+            .distinct()
+            .toList();
     }
 
     public CampusDto getCampus(String telegramId) {

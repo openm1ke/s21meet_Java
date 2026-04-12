@@ -7,13 +7,25 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            color-scheme: light;
+            color-scheme: dark;
+            --bg: #151a22;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --surface: #1b2230;
+            --surface-soft: #222b3a;
+            --border: #334155;
+            --border-soft: #2b3648;
+            --accent: #cbd5e1;
+            --accent-contrast: #111827;
+            --sort-mark: #94a3b8;
+            --status-btn-text: #cbd5e1;
+            --shadow: rgba(2, 6, 23, 0.5);
         }
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background: #f3f4f6;
-            color: #111827;
+            background: var(--bg);
+            color: var(--text);
         }
         main {
             max-width: 980px;
@@ -30,39 +42,129 @@
             margin-bottom: 8px;
             font-weight: 600;
         }
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .controls label {
+            margin-bottom: 0;
+        }
+        .toggle-all {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text);
+            user-select: none;
+            cursor: pointer;
+        }
+        .toggle-all input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+        }
         select {
             width: 100%;
             max-width: 460px;
             padding: 10px;
             font-size: 15px;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border);
             border-radius: 6px;
-            background: #fff;
+            background: var(--surface);
+            color: var(--text);
         }
         .hint {
             margin-top: 10px;
-            color: #4b5563;
+            color: var(--muted);
             font-size: 14px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            background: #fff;
+            background: var(--surface);
         }
         th, td {
             text-align: left;
             padding: 10px 12px;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-soft);
             font-size: 14px;
         }
         th {
-            background: #f9fafb;
+            background: var(--surface-soft);
             font-weight: 600;
+        }
+        .sort-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+            user-select: none;
+        }
+        .sort-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 14px;
+            color: var(--sort-mark);
+            font-size: 13px;
+            line-height: 1;
+        }
+        .status-header {
+            position: relative;
+        }
+        .status-header-main {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-filter-toggle {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--status-btn-text);
+        }
+        .status-filter-menu {
+            position: absolute;
+            top: 38px;
+            right: 8px;
+            z-index: 10;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px var(--shadow);
+            min-width: 220px;
+            padding: 10px;
+        }
+        .status-filter-menu[hidden] {
+            display: none;
+        }
+        .status-filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0;
+            font-size: 13px;
+            color: var(--text);
+            cursor: pointer;
+        }
+        .status-filter-item input {
+            margin: 0;
         }
         .empty {
             margin-top: 20px;
-            color: #6b7280;
+            color: var(--muted);
         }
         .pagination-controls {
             margin-top: 12px;
@@ -90,9 +192,9 @@
             gap: 6px;
         }
         .pagination button {
-            border: 1px solid #d1d5db;
-            background: #fff;
-            color: #111827;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
             border-radius: 6px;
             padding: 6px 10px;
             font-size: 14px;
@@ -103,15 +205,15 @@
             cursor: default;
         }
         .pagination button.active {
-            background: #111827;
-            color: #fff;
-            border-color: #111827;
+            background: var(--accent);
+            color: var(--accent-contrast);
+            border-color: var(--accent);
         }
         .pagination .ellipsis {
             display: inline-flex;
             align-items: center;
             padding: 6px 4px;
-            color: #6b7280;
+            color: var(--muted);
             font-size: 14px;
         }
     </style>
@@ -119,7 +221,13 @@
 <body>
 <main>
     <h1>Исполнители проектов</h1>
-    <label for="projectSelect">Выберите проект</label>
+    <div class="controls">
+        <label for="projectSelect">Выберите проект</label>
+        <label class="toggle-all" for="showAllProjects">
+            <input id="showAllProjects" type="checkbox" checked>
+            Только доступные мне проекты
+        </label>
+    </div>
     <select id="projectSelect">
         <option value="">-- выберите проект --</option>
     </select>
@@ -129,10 +237,29 @@
     <table id="resultTable" hidden>
         <thead>
         <tr>
-            <th>Логин</th>
-            <th>Кампус</th>
-            <th>Статус проекта</th>
-            <th>Место в кампусе</th>
+            <th>
+                <button id="sortByLogin" type="button" class="sort-trigger" aria-label="Сортировать по логину">
+                    <span>Логин</span><span id="sortMarkLogin" class="sort-mark"></span>
+                </button>
+            </th>
+            <th class="status-header">
+                <div class="status-header-main">
+                    <span>Кампус</span>
+                    <button id="campusFilterToggle" type="button" class="status-filter-toggle">Фильтр</button>
+                </div>
+                <div id="campusFilterMenu" class="status-filter-menu" hidden>
+                    <div id="campusFilterItems"></div>
+                </div>
+            </th>
+            <th class="status-header">
+                <div class="status-header-main">
+                    <span>Статус проекта</span>
+                    <button id="statusFilterToggle" type="button" class="status-filter-toggle">Фильтр</button>
+                </div>
+                <div id="statusFilterMenu" class="status-filter-menu" hidden>
+                    <div id="statusFilterItems"></div>
+                </div>
+            </th>
         </tr>
         </thead>
         <tbody id="resultBody"></tbody>
@@ -162,9 +289,23 @@
     const pageSizeSelect = document.getElementById("pageSizeSelect");
     const pageInfo = document.getElementById("pageInfo");
     const paginationButtons = document.getElementById("paginationButtons");
-    let currentRows = [];
+    const showAllProjects = document.getElementById("showAllProjects");
+    const sortByLogin = document.getElementById("sortByLogin");
+    const sortMarkLogin = document.getElementById("sortMarkLogin");
+    const campusFilterToggle = document.getElementById("campusFilterToggle");
+    const campusFilterMenu = document.getElementById("campusFilterMenu");
+    const campusFilterItems = document.getElementById("campusFilterItems");
+    const statusFilterToggle = document.getElementById("statusFilterToggle");
+    const statusFilterMenu = document.getElementById("statusFilterMenu");
+    const statusFilterItems = document.getElementById("statusFilterItems");
+    let sourceRows = [];
     let currentPage = 1;
     let pageSize = Number(pageSizeSelect.value);
+    let scopedProjectNames = [];
+    let allProjectNames = null;
+    let sortDirection = "asc";
+    let selectedCampuses = new Set();
+    let selectedStatuses = new Set();
     const TELEGRAM_HEADER_NAME = "X-Telegram-Init-Data";
     const telegramInitData = globalThis.Telegram?.WebApp?.initData ?? "";
 
@@ -184,15 +325,28 @@
         return headers;
     }
 
-    async function loadProjectNames() {
+    function renderProjectOptions(projectNames) {
+        projectSelect.innerHTML = "";
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "-- выберите проект --";
+        projectSelect.appendChild(placeholder);
+        projectNames.forEach((projectName) => {
+            const option = document.createElement("option");
+            option.value = projectName;
+            option.textContent = projectName;
+            projectSelect.appendChild(option);
+        });
+    }
+
+    async function loadProjectNames(all = false) {
         if (!telegramInitData) {
             hintText.textContent = "Откройте эту страницу через Telegram-кнопку Web App.";
             emptyState.textContent = "Доступ разрешен только из Telegram Web App.";
             return;
         }
 
-        emptyState.textContent = "Загрузка проектов...";
-        const response = await fetch("/api/projects/names", {
+        const response = await fetch(`/api/projects/names${all ? "?all=true" : ""}`, {
             method: "GET",
             headers: createTelegramHeaders(false)
         });
@@ -203,39 +357,167 @@
             return;
         }
 
-        const projectNames = await response.json();
-        projectNames.forEach((projectName) => {
-            const option = document.createElement("option");
-            option.value = projectName;
-            option.textContent = projectName;
-            projectSelect.appendChild(option);
-        });
+        return await response.json();
+    }
+
+    async function reloadProjectsSelector() {
+        emptyState.textContent = "Загрузка проектов...";
+        const scopedEnabled = showAllProjects.checked;
+        if (scopedEnabled) {
+            if (!scopedProjectNames.length) {
+                scopedProjectNames = await loadProjectNames(false) ?? [];
+            }
+            renderProjectOptions(scopedProjectNames);
+        } else {
+            if (!allProjectNames) {
+                allProjectNames = await loadProjectNames(true);
+            }
+            renderProjectOptions(allProjectNames ?? []);
+        }
+        projectSelect.value = "";
+        resultTable.hidden = true;
+        paginationSection.hidden = true;
+        sourceRows = [];
+        currentPage = 1;
+        selectedCampuses = new Set();
+        selectedStatuses = new Set();
+        renderCampusFilters([]);
+        renderStatusFilters([]);
+        campusFilterMenu.hidden = true;
+        statusFilterMenu.hidden = true;
+        updateSortMarks();
         emptyState.textContent = "Исполнители не выбраны.";
     }
 
+    function stringValue(value) {
+        return (value ?? "").toString().trim();
+    }
+
+    function toggleSort() {
+        sortDirection = sortDirection === "asc" ? "desc" : "asc";
+        updateSortMarks();
+        currentPage = 1;
+        renderRows();
+    }
+
+    function updateSortMarks() {
+        const up = "▲";
+        const down = "▼";
+        sortMarkLogin.textContent = sortDirection === "asc" ? up : down;
+        sortByLogin.setAttribute("aria-label", `Сортировать по логину (${sortDirection})`);
+    }
+
+    function campusKey(campusName) {
+        const value = stringValue(campusName);
+        return value.length > 0 ? value : "__EMPTY__";
+    }
+
+    function campusLabel(campusNameKey) {
+        return campusNameKey === "__EMPTY__" ? "Не указан" : campusNameKey;
+    }
+
+    function renderCampusFilters(campuses) {
+        campusFilterItems.innerHTML = "";
+        const allCampuses = [...campuses].sort((a, b) => campusLabel(a).localeCompare(campusLabel(b), "ru", { sensitivity: "base" }));
+        allCampuses.forEach((campus) => {
+            const label = document.createElement("label");
+            label.className = "status-filter-item";
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.checked = selectedCampuses.has(campus);
+            input.addEventListener("change", () => {
+                if (input.checked) {
+                    selectedCampuses.add(campus);
+                } else {
+                    selectedCampuses.delete(campus);
+                }
+                currentPage = 1;
+                renderRows();
+            });
+            const text = document.createElement("span");
+            text.textContent = campusLabel(campus);
+            label.appendChild(input);
+            label.appendChild(text);
+            campusFilterItems.appendChild(label);
+        });
+    }
+
+    function renderStatusFilters(statuses) {
+        statusFilterItems.innerHTML = "";
+        const allStatuses = [...statuses].sort((a, b) => a.localeCompare(b, "ru", { sensitivity: "base" }));
+        allStatuses.forEach((status) => {
+            const label = document.createElement("label");
+            label.className = "status-filter-item";
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.checked = selectedStatuses.has(status);
+            input.addEventListener("change", () => {
+                if (input.checked) {
+                    selectedStatuses.add(status);
+                } else {
+                    selectedStatuses.delete(status);
+                }
+                currentPage = 1;
+                renderRows();
+            });
+            const text = document.createElement("span");
+            text.textContent = status;
+            label.appendChild(input);
+            label.appendChild(text);
+            statusFilterItems.appendChild(label);
+        });
+    }
+
+    function getPreparedRows() {
+        const filtered = sourceRows.filter((row) =>
+            selectedCampuses.has(campusKey(row.campusName))
+            && selectedStatuses.has(stringValue(row.projectStatus))
+        );
+        const sorted = [...filtered].sort((a, b) => {
+            const left = stringValue(a.login);
+            const right = stringValue(b.login);
+            const cmp = left.localeCompare(right, "ru", { sensitivity: "base" });
+            return sortDirection === "asc" ? cmp : -cmp;
+        });
+        return sorted;
+    }
+
+    function renderNoResultsRow(message) {
+        resultBody.innerHTML = "";
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        td.className = "empty";
+        td.textContent = message;
+        tr.appendChild(td);
+        resultBody.appendChild(tr);
+    }
+
     function getTotalPages() {
-        return Math.max(1, Math.ceil(currentRows.length / pageSize));
+        return Math.max(1, Math.ceil(getPreparedRows().length / pageSize));
     }
 
     function renderPagination(totalPages) {
         paginationButtons.innerHTML = "";
-        pageInfo.textContent = `Страница ${currentPage} из ${totalPages} • Всего записей: ${currentRows.length}`;
+        pageInfo.textContent = `Страница ${currentPage} из ${totalPages} • Всего записей: ${getPreparedRows().length}`;
 
         if (totalPages <= 1) {
             return;
         }
 
-        const prev = document.createElement("button");
-        prev.type = "button";
-        prev.textContent = "Назад";
-        prev.disabled = currentPage === 1;
-        prev.addEventListener("click", () => {
-            if (currentPage > 1) {
-                currentPage -= 1;
-                renderRows();
-            }
-        });
-        paginationButtons.appendChild(prev);
+        const addNavButton = (label, targetPage, disabled) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = label;
+            button.disabled = disabled;
+            button.addEventListener("click", () => {
+                if (!button.disabled && currentPage !== targetPage) {
+                    currentPage = targetPage;
+                    renderRows();
+                }
+            });
+            paginationButtons.appendChild(button);
+        };
 
         const addPageButton = (page) => {
             const pageButton = document.createElement("button");
@@ -259,41 +541,58 @@
             paginationButtons.appendChild(ellipsis);
         };
 
-        const blockStart = Math.floor((currentPage - 1) / 5) * 5 + 1;
-        const blockEnd = Math.min(blockStart + 4, totalPages);
-        const lastPagesStart = Math.max(totalPages - 2, 1);
+        const uniquePages = (pages) => {
+            const seen = new Set();
+            const result = [];
+            pages.forEach((page) => {
+                if (page >= 1 && page <= totalPages && !seen.has(page)) {
+                    seen.add(page);
+                    result.push(page);
+                }
+            });
+            return result.sort((a, b) => a - b);
+        };
 
-        for (let page = blockStart; page <= blockEnd; page += 1) {
-            addPageButton(page);
-        }
-
-        if (lastPagesStart > blockEnd + 1) {
-            addEllipsis();
-        }
-
-        for (let page = Math.max(lastPagesStart, blockEnd + 1); page <= totalPages; page += 1) {
-            addPageButton(page);
-        }
-
-        const next = document.createElement("button");
-        next.type = "button";
-        next.textContent = "Вперед";
-        next.disabled = currentPage === totalPages;
-        next.addEventListener("click", () => {
-            if (currentPage < totalPages) {
-                currentPage += 1;
-                renderRows();
+        const buildVisiblePages = () => {
+            if (totalPages <= 7) {
+                return Array.from({ length: totalPages }, (_, index) => index + 1);
             }
+            if (currentPage <= 3 || currentPage >= totalPages - 2) {
+                return uniquePages([1, 2, 3, totalPages - 2, totalPages - 1, totalPages]);
+            }
+            return uniquePages([1, currentPage - 1, currentPage, currentPage + 1, totalPages]);
+        };
+
+        addNavButton("<<", 1, currentPage === 1);
+        addNavButton("<", currentPage - 1, currentPage === 1);
+
+        const visiblePages = buildVisiblePages();
+        let prevPage = 0;
+        visiblePages.forEach((page) => {
+            if (prevPage !== 0 && page - prevPage > 1) {
+                addEllipsis();
+            }
+            addPageButton(page);
+            prevPage = page;
         });
-        paginationButtons.appendChild(next);
+
+        addNavButton(">", currentPage + 1, currentPage === totalPages);
+        addNavButton(">>", totalPages, currentPage === totalPages);
     }
 
     function renderRows() {
         resultBody.innerHTML = "";
-        if (!currentRows.length) {
-            resultTable.hidden = true;
+        const preparedRows = getPreparedRows();
+        if (!preparedRows.length) {
             paginationSection.hidden = true;
-            emptyState.textContent = "Для выбранного проекта исполнители не найдены.";
+            if (sourceRows.length) {
+                resultTable.hidden = false;
+                emptyState.textContent = "";
+                renderNoResultsRow("Ничего не найдено по выбранным фильтрам.");
+            } else {
+                resultTable.hidden = true;
+                emptyState.textContent = "Для выбранного проекта исполнители не найдены.";
+            }
             return;
         }
 
@@ -304,7 +603,7 @@
 
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize;
-        const pageRows = currentRows.slice(from, to);
+        const pageRows = preparedRows.slice(from, to);
 
         pageRows.forEach((row) => {
             const tr = document.createElement("tr");
@@ -319,10 +618,6 @@
             const statusTd = document.createElement("td");
             statusTd.textContent = row.projectStatus ?? "";
             tr.appendChild(statusTd);
-
-            const placeTd = document.createElement("td");
-            placeTd.textContent = row.campusPlace ?? "";
-            tr.appendChild(placeTd);
             resultBody.appendChild(tr);
         });
 
@@ -338,13 +633,44 @@
         renderRows();
     });
 
+    showAllProjects.addEventListener("change", async () => {
+        await reloadProjectsSelector();
+    });
+
+    sortByLogin.addEventListener("click", () => toggleSort());
+
+    campusFilterToggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        campusFilterMenu.hidden = !campusFilterMenu.hidden;
+    });
+
+    statusFilterToggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        statusFilterMenu.hidden = !statusFilterMenu.hidden;
+    });
+
+    document.addEventListener("click", (event) => {
+        if (!campusFilterMenu.hidden && !campusFilterMenu.contains(event.target) && event.target !== campusFilterToggle) {
+            campusFilterMenu.hidden = true;
+        }
+        if (!statusFilterMenu.hidden && !statusFilterMenu.contains(event.target) && event.target !== statusFilterToggle) {
+            statusFilterMenu.hidden = true;
+        }
+    });
+
     projectSelect.addEventListener("change", async () => {
         const projectName = projectSelect.value;
         if (!projectName) {
             resultTable.hidden = true;
             paginationSection.hidden = true;
-            currentRows = [];
+            sourceRows = [];
             currentPage = 1;
+            selectedCampuses = new Set();
+            selectedStatuses = new Set();
+            renderCampusFilters([]);
+            renderStatusFilters([]);
+            campusFilterMenu.hidden = true;
+            statusFilterMenu.hidden = true;
             emptyState.textContent = "Исполнители не выбраны.";
             return;
         }
@@ -364,12 +690,25 @@
             return;
         }
 
-        currentRows = await response.json();
+        sourceRows = await response.json();
+        const campuses = new Set(sourceRows.map((row) => campusKey(row.campusName)));
+        const statuses = new Set(
+            sourceRows
+                .map((row) => stringValue(row.projectStatus))
+                .filter((status) => status.length > 0)
+        );
+        selectedCampuses = new Set(campuses);
+        selectedStatuses = new Set(statuses);
+        renderCampusFilters(campuses);
+        renderStatusFilters(statuses);
+        campusFilterMenu.hidden = true;
+        statusFilterMenu.hidden = true;
         currentPage = 1;
         renderRows();
     });
 
-    await loadProjectNames();
+    updateSortMarks();
+    await reloadProjectsSelector();
 </script>
 </body>
 </html>

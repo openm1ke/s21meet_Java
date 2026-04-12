@@ -30,24 +30,15 @@ public interface StudentProjectRepository extends JpaRepository<StudentProject, 
                 sp.login,
                 c.campusName,
                 sp.goalStatus,
-                case
-                    when o.isOnline = true and w.login is not null then concat(
-                        'cluster=', str(w.id.clusterId),
-                        ', row=', w.id.row,
-                        ', place=', str(w.id.number)
-                    )
-                    else null
-                end
+                null
             )
             from StudentProject sp
             left join Participant p on p.login = sp.login
             left join p.campus c
-            left join Online o on o.login = sp.login
-            left join Workplace w on w.login = sp.login
             where sp.snapshot = false
               and lower(sp.name) like lower(concat('%', :projectName, '%'))
               escape '\\'
-            order by sp.login
             """)
-    List<ProjectExecutorDto> findExecutorsByProjectName(@Param("projectName") String projectName);
+    List<ProjectExecutorDto> findExecutorsByProjectName(
+            @Param("projectName") String projectName);
 }
