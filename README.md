@@ -233,6 +233,8 @@ Rate limit / retry resilience4j:
 ### HTTPS для `s21web` через `web-edge` (Caddy)
 
 - В `docker-compose.yml` добавлен сервис `web-edge`, который принимает HTTPS на 443 и проксирует в `s21web:8085`.
+- Для прямого локального доступа `s21web` публикует порт наружу: `${S21WEB_BIND_ADDR:-127.0.0.1}:8085`.
+- По умолчанию доступны оба варианта: напрямую `http://localhost:8085` и через `web-edge`.
 - Для локальной разработки: `WEB_TLS_MODE=internal`, `WEB_PUBLIC_DOMAIN=localhost`.
 - Для деплоя: `WEB_TLS_MODE=acme`, `WEB_PUBLIC_DOMAIN=<ваш_домен>`, `WEB_TLS_EMAIL=<email>`.
 - `BOT_WEB_APP_URL` в `s21bot.env` должен быть вида `https://<тот_же_домен>/`.

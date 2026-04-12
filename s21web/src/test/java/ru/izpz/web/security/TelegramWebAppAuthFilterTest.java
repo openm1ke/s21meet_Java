@@ -58,6 +58,7 @@ class TelegramWebAppAuthFilterTest {
     void doFilter_shouldPassWhenInitDataIsValid() throws Exception {
         TelegramInitDataValidator validator = mock(TelegramInitDataValidator.class);
         when(validator.isValid("init-data")).thenReturn(true);
+        when(validator.extractTelegramId("init-data")).thenReturn("123456");
 
         TelegramWebAppAuthFilter filter = new TelegramWebAppAuthFilter(validator);
         ReflectionTestUtils.setField(filter, "enabled", true);
@@ -74,6 +75,32 @@ class TelegramWebAppAuthFilterTest {
         assertEquals(200, response.getStatus());
         assertEquals(request, chain.getRequest());
         verify(validator).isValid("init-data");
+        verify(validator).extractTelegramId("init-data");
+        assertEquals("123456", request.getAttribute(TelegramWebAppAuthFilter.TELEGRAM_ID_ATTR));
+    }
+
+    @Test
+    void doFilter_shouldReturn401WhenInitDataValidButTelegramIdMissing() throws Exception {
+        TelegramInitDataValidator validator = mock(TelegramInitDataValidator.class);
+        when(validator.isValid("init-data")).thenReturn(true);
+        when(validator.extractTelegramId("init-data")).thenReturn(null);
+
+        TelegramWebAppAuthFilter filter = new TelegramWebAppAuthFilter(validator);
+        ReflectionTestUtils.setField(filter, "enabled", true);
+        ReflectionTestUtils.setField(filter, "headerName", "X-Telegram-Init-Data");
+        ReflectionTestUtils.setField(filter, "pathPrefix", "/api/projects");
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/projects/names");
+        request.addHeader("X-Telegram-Init-Data", "init-data");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertEquals(401, response.getStatus());
+        assertNull(chain.getRequest());
+        verify(validator).isValid("init-data");
+        verify(validator).extractTelegramId("init-data");
     }
 
     @Test

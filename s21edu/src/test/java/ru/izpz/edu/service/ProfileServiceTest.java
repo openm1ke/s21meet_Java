@@ -29,6 +29,7 @@ import ru.izpz.edu.repository.ProfileValidationRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -57,6 +58,9 @@ class ProfileServiceTest {
     
     @Mock
     private ParticipantRepository participantRepository;
+    
+    @Mock
+    private CampusService campusService;
     
     @Mock
     private CampusCatalog campusCatalog;
@@ -875,5 +879,39 @@ class ProfileServiceTest {
         assertNotNull(result);
         assertEquals("Moscow", result.getName());
         assertEquals("7c293c9c-f28c-4b10-be29-560e4b000a34", result.getUuid());
+    }
+
+    @Test
+    void getProjectNamesByTelegramId_shouldReturnDistinctProjectNamesForBoundLogin() {
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+        when(campusService.getStudentProjectsByLogin("testuser")).thenReturn(List.of(
+            new ProjectsDto("1", "A1_Maze", null, null, null, null, null, null, null, null, null),
+            new ProjectsDto("2", "A1_Maze", null, null, null, null, null, null, null, null, null),
+            new ProjectsDto("3", "  C2_SimpleBashUtils  ", null, null, null, null, null, null, null, null, null),
+            new ProjectsDto("4", " ", null, null, null, null, null, null, null, null, null),
+            new ProjectsDto("5", null, null, null, null, null, null, null, null, null, null)
+        ));
+
+        List<String> result = profileService.getProjectNamesByTelegramId("123456");
+
+        assertEquals(List.of("A1_Maze", "C2_SimpleBashUtils"), result);
+        verify(campusService).getStudentProjectsByLogin("testuser");
+    }
+
+    @Test
+    void getProjectNamesByTelegramId_shouldReturnEmptyWhenProfileMissingOrLoginBlank() {
+        when(profileRepository.findByTelegramId("missing")).thenReturn(Optional.empty());
+
+        List<String> missing = profileService.getProjectNamesByTelegramId("missing");
+        assertTrue(missing.isEmpty());
+
+        Profile blankLoginProfile = new Profile();
+        blankLoginProfile.setTelegramId("123456");
+        blankLoginProfile.setS21login("  ");
+        when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(blankLoginProfile));
+
+        List<String> blank = profileService.getProjectNamesByTelegramId("123456");
+        assertTrue(blank.isEmpty());
+        verify(campusService, never()).getStudentProjectsByLogin(anyString());
     }
 }

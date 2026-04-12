@@ -3,6 +3,7 @@ package ru.izpz.edu.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.ProjectExecutorDto;
+import ru.izpz.dto.ProjectExecutorsRequest;
 import ru.izpz.edu.repository.StudentCredentialsRepository;
 import ru.izpz.edu.repository.StudentProjectRepository;
 
@@ -23,12 +24,14 @@ public class ProjectDirectoryService {
         return studentProjectRepository.findDistinctActualProjectNames();
     }
 
-    public List<ProjectExecutorDto> getProjectExecutors(String projectName) {
-        String normalizedName = projectName == null ? "" : projectName.strip();
+    public List<ProjectExecutorDto> getProjectExecutors(ProjectExecutorsRequest request) {
+        String normalizedName = request == null || request.projectName() == null ? "" : request.projectName().strip();
         if (normalizedName.isEmpty()) {
             return List.of();
         }
-        List<ProjectExecutorDto> executors = studentProjectRepository.findExecutorsByProjectName(escapeLikePattern(normalizedName));
+        List<ProjectExecutorDto> executors = studentProjectRepository.findExecutorsByProjectName(
+            escapeLikePattern(normalizedName)
+        );
         if (executors.isEmpty()) {
             return executors;
         }
@@ -49,9 +52,9 @@ public class ProjectDirectoryService {
 
         return executors.stream()
             .map(executor -> {
-                String campusName = executor.campusName();
+                String campusName = normalizeCampusCode(executor.campusName());
                 if ((campusName == null || campusName.isBlank()) && executor.login() != null) {
-                    campusName = campusByLogin.get(executor.login());
+                    campusName = normalizeCampusCode(campusByLogin.get(executor.login()));
                 }
                 return new ProjectExecutorDto(
                     executor.login(),
@@ -61,6 +64,23 @@ public class ProjectDirectoryService {
                 );
             })
             .toList();
+    }
+
+    private String normalizeCampusCode(String campusName) {
+        if (campusName == null || campusName.isBlank()) {
+            return null;
+        }
+        String normalized = campusName.trim().toUpperCase();
+        if ("MSK".equals(normalized) || normalized.contains("MOSCOW")) {
+            return "MSK";
+        }
+        if ("KZN".equals(normalized) || normalized.contains("KAZAN")) {
+            return "KZN";
+        }
+        if ("NSK".equals(normalized) || normalized.contains("NOVOSIBIRSK")) {
+            return "NSK";
+        }
+        return normalized;
     }
 
     private String escapeLikePattern(String value) {

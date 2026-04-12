@@ -15,6 +15,7 @@ import ru.izpz.web.service.ProjectDirectoryFacade;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -42,21 +43,51 @@ class ProjectDirectoryApiControllerTest {
 
     @Test
     void getProjectNames_shouldReturnOk() throws Exception {
-        when(projectDirectoryFacade.getProjectNames()).thenReturn(List.of("C2_SimpleBashUtils"));
+        when(projectDirectoryFacade.getProjectNames("123456")).thenReturn(List.of("C2_SimpleBashUtils"));
 
-        mockMvc.perform(get("/api/projects/names"))
+        mockMvc.perform(get("/api/projects/names")
+                        .requestAttr("telegramId", "123456"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0]").value("C2_SimpleBashUtils"));
 
-        verify(projectDirectoryFacade).getProjectNames();
+        verify(projectDirectoryFacade).getProjectNames("123456");
+    }
+
+    @Test
+    void getProjectNames_shouldReturnUnauthorized_whenTelegramIdMissing() throws Exception {
+        mockMvc.perform(get("/api/projects/names"))
+                .andExpect(status().isUnauthorized());
+
+        verify(projectDirectoryFacade, never()).getProjectNames(anyString());
+    }
+
+    @Test
+    void getProjectNames_shouldReturnUnauthorized_whenTelegramIdBlank() throws Exception {
+        mockMvc.perform(get("/api/projects/names")
+                        .requestAttr("telegramId", "   "))
+                .andExpect(status().isUnauthorized());
+
+        verify(projectDirectoryFacade, never()).getProjectNames(anyString());
+    }
+
+    @Test
+    void getProjectNames_shouldReturnAllWhenAllFlagEnabled() throws Exception {
+        when(projectDirectoryFacade.getAllProjectNames()).thenReturn(List.of("A1_Maze_C", "C2_SimpleBashUtils"));
+
+        mockMvc.perform(get("/api/projects/names").param("all", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("A1_Maze_C"))
+                .andExpect(jsonPath("$[1]").value("C2_SimpleBashUtils"));
+
+        verify(projectDirectoryFacade).getAllProjectNames();
+        verify(projectDirectoryFacade, never()).getProjectNames(anyString());
     }
 
     @Test
     void getProjectExecutors_shouldReturnOk() throws Exception {
-        when(projectDirectoryFacade.getProjectExecutors("C2_SimpleBashUtils"))
-                .thenReturn(List.of(new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", "cluster=11, row=A, place=5")));
-
         ProjectExecutorsRequest request = new ProjectExecutorsRequest("C2_SimpleBashUtils");
+        when(projectDirectoryFacade.getProjectExecutors(request))
+                .thenReturn(List.of(new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", null)));
 
         mockMvc.perform(post("/api/projects/executors")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -64,10 +95,9 @@ class ProjectDirectoryApiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].login").value("mike"))
                 .andExpect(jsonPath("$[0].campusName").value("Kazan"))
-                .andExpect(jsonPath("$[0].projectStatus").value("IN_PROGRESS"))
-                .andExpect(jsonPath("$[0].campusPlace").value("cluster=11, row=A, place=5"));
+                .andExpect(jsonPath("$[0].projectStatus").value("IN_PROGRESS"));
 
-        verify(projectDirectoryFacade).getProjectExecutors("C2_SimpleBashUtils");
+        verify(projectDirectoryFacade).getProjectExecutors(request);
     }
 
     @Test
@@ -79,7 +109,7 @@ class ProjectDirectoryApiControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
-        verify(projectDirectoryFacade, never()).getProjectExecutors(anyString());
+        verify(projectDirectoryFacade, never()).getProjectExecutors(any(ProjectExecutorsRequest.class));
     }
 
     @Test
@@ -91,6 +121,6 @@ class ProjectDirectoryApiControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
-        verify(projectDirectoryFacade, never()).getProjectExecutors(anyString());
+        verify(projectDirectoryFacade, never()).getProjectExecutors(any(ProjectExecutorsRequest.class));
     }
 }

@@ -140,14 +140,20 @@ public class ProfileController {
     }
 
     @PostMapping("/project-names")
-    ResponseEntity<List<String>> getProjectNames() {
-        log.info("Получен запрос на вывод списка всех проектов");
+    ResponseEntity<List<String>> getProjectNames(@Valid @RequestBody CampusRequest request) {
+        log.info("Получен запрос на вывод списка проектов для telegramId={}", request.getTelegramId());
+        return ResponseEntity.ok(profileService.getProjectNamesByTelegramId(request.getTelegramId()));
+    }
+
+    @PostMapping("/project-names/all")
+    ResponseEntity<List<String>> getAllProjectNames() {
+        log.info("Получен запрос на вывод полного списка проектов");
         return ResponseEntity.ok(projectDirectoryService.getProjectNames());
     }
 
     @PostMapping("/project-executors")
     ResponseEntity<List<ProjectExecutorDto>> getProjectExecutors(@Valid @RequestBody ProjectExecutorsRequest request) {
         log.info("Получен запрос на вывод исполнителей проекта {}", request.projectName());
-        return ResponseEntity.ok(projectDirectoryService.getProjectExecutors(request.projectName()));
+        return ResponseEntity.ok(projectDirectoryService.getProjectExecutors(request));
     }
 }
