@@ -180,6 +180,7 @@ chmod +x gradlew dev.sh
 
 - `COALITION_PROVIDER` — выбор провайдера коалиций (`auto|graphql|rest`).
 - `COALITION_REFRESH_TTL` — TTL данных коалиций.
+- `PARTICIPANT_REFRESH_TTL` — TTL кэша профиля участника (XP/level и связанные данные `Participant`).
 - `COALITION_REST_FETCH_MEMBER_COUNT` — догружать ли count участников через REST.
 - `COALITION_REST_PAGE_SIZE` — page size REST-коалиций.
 - `PROJECTS_REFRESH_TTL` — TTL проектов.
