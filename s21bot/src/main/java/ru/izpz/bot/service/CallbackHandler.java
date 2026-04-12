@@ -72,7 +72,7 @@ public class CallbackHandler {
                 case "event" -> {
                     var event = Long.parseLong(payload.getArgs().get("id"));
                     var eventDto = profileService.getEvent(event);
-                    messageSender.sendMessage(chatId, eventDto.toString(), null);
+                    messageSender.sendMessageWithoutWebPreview(chatId, EventMessageFormatter.format(eventDto), null);
                 }
                 case "events_page" -> {
                     var page = Integer.parseInt(payload.getArgs().get("page"));

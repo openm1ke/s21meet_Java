@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
@@ -61,6 +62,18 @@ class MessageSenderTest {
         messageSender.sendMessage(1L, "txt", kb);
 
         verify(telegramExecutorService).execute(any(SendMessage.class));
+    }
+
+    @Test
+    void sendMessageWithoutWebPreview_setsDisableWebPreviewFlag() {
+        Message msg = mock(Message.class);
+        when(telegramExecutorService.execute(any())).thenReturn(Optional.of(msg));
+
+        messageSender.sendMessageWithoutWebPreview(1L, "txt https://example.com", null);
+
+        ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
+        verify(telegramExecutorService).execute(captor.capture());
+        assertEquals(Boolean.TRUE, captor.getValue().getDisableWebPagePreview());
     }
 
     @Test
