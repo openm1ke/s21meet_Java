@@ -62,6 +62,8 @@ jobs:
       - name: Checkout
         if: ${{ steps.sonar-check.outputs.ready == '1' }}
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Java 21
         if: ${{ steps.sonar-check.outputs.ready == '1' }}

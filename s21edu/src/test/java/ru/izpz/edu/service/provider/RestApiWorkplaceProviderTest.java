@@ -51,6 +51,18 @@ class RestApiWorkplaceProviderTest {
     }
 
     @Test
+    void fetchParticipantsByCluster_shouldReturnEmpty_whenClusterMapIsNull() throws Exception {
+        ClusterMapV1DTO dto = new ClusterMapV1DTO();
+        dto.setClusterMap(null);
+        when(clusterApi.getParticipantsByCoalitionId1(1L, 1000, 0, true)).thenReturn(dto);
+
+        List<Workplace> result = provider.fetchParticipantsByCluster(1L);
+
+        assertTrue(result.isEmpty());
+        verify(campusMapper, never()).toWorkplaceEntity(any(), anyLong());
+    }
+
+    @Test
     void fetchParticipantsByCluster_shouldReturnMappedList_whenNonEmptyClusterMap() throws Exception {
         WorkplaceV1DTO w = new WorkplaceV1DTO();
         ClusterMapV1DTO dto = new ClusterMapV1DTO();

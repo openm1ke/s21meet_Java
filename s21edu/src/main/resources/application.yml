@@ -137,6 +137,8 @@ api:
 profile:
   api.enabled: true
   service.enabled: true
+participant:
+  refresh-ttl: ${PARTICIPANT_REFRESH_TTL:PT15M}
 coalition:
   provider: ${COALITION_PROVIDER:graphql}  # auto|graphql|rest
   refresh-ttl: ${COALITION_REFRESH_TTL:${GRAPHQL_COALITION_REFRESH_TTL:PT15M}}

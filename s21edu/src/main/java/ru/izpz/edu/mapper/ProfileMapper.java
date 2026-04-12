@@ -17,6 +17,7 @@ public interface ProfileMapper {
     @Mapping(target = "id", ignore = true)
     Profile toEntity(ProfileDto dto);
 
+    @Mapping(target = "updatedAt", ignore = true)
     Participant toEntity(ParticipantV1DTO dto);
     @Mapping(target = "coalition", ignore = true)
     @Mapping(target = "isOnline", ignore = true)

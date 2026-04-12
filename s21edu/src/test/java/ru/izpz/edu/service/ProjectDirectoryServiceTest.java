@@ -27,6 +27,22 @@ class ProjectDirectoryServiceTest {
     private CampusCatalog campusCatalog;
 
     @Test
+    void getProjectNames_shouldReturnDistinctNamesFromRepository() {
+        ProjectDirectoryService service = new ProjectDirectoryService(
+            studentProjectRepository,
+            studentCredentialsRepository,
+            campusCatalog
+        );
+        List<String> expected = List.of("C Piscine C", "CPP Module 00");
+        when(studentProjectRepository.findDistinctActualProjectNames()).thenReturn(expected);
+
+        List<String> result = service.getProjectNames();
+
+        assertEquals(expected, result);
+        verify(studentProjectRepository).findDistinctActualProjectNames();
+    }
+
+    @Test
     void getProjectExecutors_shouldEscapeLikePatternAndFillCampusFromCatalog() {
         ProjectDirectoryService service = new ProjectDirectoryService(
             studentProjectRepository,

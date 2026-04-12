@@ -157,4 +157,106 @@ class ProjectExecutorsRateLimitFilterTest {
 
         assertEquals(200, freshResponse.getStatus());
     }
+
+    @Test
+    void doFilter_shouldUseDefaultPathAndMinimalLimitsFromInvalidConstructorArgs() throws Exception {
+        AtomicLong now = new AtomicLong(42_000L);
+        ProjectExecutorsRateLimitFilter filter = new ProjectExecutorsRateLimitFilter(
+            true,
+            "   ",
+            0,
+            Duration.ZERO,
+            now::get
+        );
+
+        MockHttpServletRequest first = new MockHttpServletRequest("POST", TARGET_PATH);
+        first.setRemoteAddr("100.100.100.1");
+        filter.doFilter(first, new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletRequest second = new MockHttpServletRequest("POST", TARGET_PATH);
+        second.setRemoteAddr("100.100.100.1");
+        MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+        filter.doFilter(second, secondResponse, new MockFilterChain());
+
+        assertEquals(429, secondResponse.getStatus());
+    }
+
+    @Test
+    void doFilter_shouldFallbackToRemoteAddrWhenXForwardedForFirstTokenBlank() throws Exception {
+        ProjectExecutorsRateLimitFilter filter = new ProjectExecutorsRateLimitFilter(true, TARGET_PATH, 1, Duration.ofMinutes(1));
+
+        MockHttpServletRequest first = new MockHttpServletRequest("POST", TARGET_PATH);
+        first.setRemoteAddr("55.55.55.55");
+        first.addHeader("X-Forwarded-For", "   , 1.2.3.4");
+        filter.doFilter(first, new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletRequest second = new MockHttpServletRequest("POST", TARGET_PATH);
+        second.setRemoteAddr("55.55.55.55");
+        MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+        filter.doFilter(second, secondResponse, new MockFilterChain());
+
+        assertEquals(429, secondResponse.getStatus());
+    }
+
+    @Test
+    void doFilter_shouldUseUnknownKeyWhenRemoteAddrIsNull() throws Exception {
+        ProjectExecutorsRateLimitFilter filter = new ProjectExecutorsRateLimitFilter(true, TARGET_PATH, 1, Duration.ofMinutes(1));
+
+        MockHttpServletRequest first = new MockHttpServletRequest("POST", TARGET_PATH);
+        first.setRemoteAddr(null);
+        filter.doFilter(first, new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletRequest second = new MockHttpServletRequest("POST", TARGET_PATH);
+        second.setRemoteAddr(null);
+        MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+        filter.doFilter(second, secondResponse, new MockFilterChain());
+
+        assertEquals(429, secondResponse.getStatus());
+    }
+
+    @Test
+    void doFilter_shouldIncrementCounterWhenWithinWindowAndBelowLimit() throws Exception {
+        ProjectExecutorsRateLimitFilter filter = new ProjectExecutorsRateLimitFilter(true, TARGET_PATH, 3, Duration.ofMinutes(1));
+
+        MockHttpServletRequest first = new MockHttpServletRequest("POST", TARGET_PATH);
+        first.setRemoteAddr("77.77.77.77");
+        MockHttpServletRequest second = new MockHttpServletRequest("POST", TARGET_PATH);
+        second.setRemoteAddr("77.77.77.77");
+        MockHttpServletRequest third = new MockHttpServletRequest("POST", TARGET_PATH);
+        third.setRemoteAddr("77.77.77.77");
+        MockHttpServletRequest fourth = new MockHttpServletRequest("POST", TARGET_PATH);
+        fourth.setRemoteAddr("77.77.77.77");
+
+        MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+        MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+        MockHttpServletResponse thirdResponse = new MockHttpServletResponse();
+        MockHttpServletResponse fourthResponse = new MockHttpServletResponse();
+
+        filter.doFilter(first, firstResponse, new MockFilterChain());
+        filter.doFilter(second, secondResponse, new MockFilterChain());
+        filter.doFilter(third, thirdResponse, new MockFilterChain());
+        filter.doFilter(fourth, fourthResponse, new MockFilterChain());
+
+        assertEquals(200, firstResponse.getStatus());
+        assertEquals(200, secondResponse.getStatus());
+        assertEquals(200, thirdResponse.getStatus());
+        assertEquals(429, fourthResponse.getStatus());
+    }
+
+    @Test
+    void doFilter_shouldIgnoreBlankXForwardedForAndUseRemoteAddr() throws Exception {
+        ProjectExecutorsRateLimitFilter filter = new ProjectExecutorsRateLimitFilter(true, TARGET_PATH, 1, Duration.ofMinutes(1));
+
+        MockHttpServletRequest first = new MockHttpServletRequest("POST", TARGET_PATH);
+        first.setRemoteAddr("66.66.66.66");
+        first.addHeader("X-Forwarded-For", "   ");
+        filter.doFilter(first, new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletRequest second = new MockHttpServletRequest("POST", TARGET_PATH);
+        second.setRemoteAddr("66.66.66.66");
+        MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+        filter.doFilter(second, secondResponse, new MockFilterChain());
+
+        assertEquals(429, secondResponse.getStatus());
+    }
 }

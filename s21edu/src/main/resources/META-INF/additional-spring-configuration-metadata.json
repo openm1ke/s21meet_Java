@@ -110,6 +110,12 @@
       "description": "TTL for refreshing cached coalition data."
     },
     {
+      "name": "participant.refresh-ttl",
+      "type": "java.time.Duration",
+      "defaultValue": "PT15M",
+      "description": "TTL for refreshing cached participant profile data."
+    },
+    {
       "name": "projects.refresh-ttl",
       "type": "java.time.Duration",
       "defaultValue": "PT45M",
