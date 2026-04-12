@@ -300,16 +300,34 @@ class CallbackHandlerTest {
     }
 
     @Test
-    void handleCallbackMessage_event_sendsEventDto() {
+    void handleCallbackMessage_event_sendsFormattedEventCard() {
         when(callbackPayloadSerializer.deserialize("data"))
                 .thenReturn(new CallbackPayload("event", Map.of("id", "1")));
 
-        EventDto event = new EventDto(1L, "t", "n", null, null, null, null, java.util.List.of(), null, null);
+        EventDto event = new EventDto(
+                1L,
+                "t",
+                "День открытых дверей",
+                "Большая встреча",
+                "Москва, Кампус 21",
+                java.time.OffsetDateTime.parse("2026-04-20T10:00:00+03:00"),
+                java.time.OffsetDateTime.parse("2026-04-20T12:00:00+03:00"),
+                java.util.List.of("School 21", "Community Team"),
+                120,
+                85
+        );
         when(profileService.getEvent(1L)).thenReturn(event);
 
         callbackHandler.handleCallbackMessage(chatId, "data", 1, "cb");
 
-        verify(messageSender).sendMessage(chatId, event.toString(), null);
+        verify(messageSender).sendMessageWithoutWebPreview(eq(chatId), argThat(text ->
+                text.startsWith("🗓️ День открытых дверей")
+                        && text.contains("\n💬 Большая встреча\n")
+                        && text.contains("📍 Москва, Кампус 21")
+                        && text.contains("🙌️ 20.04.2026 10:00 - 20.04.2026 12:00")
+                        && text.contains("👥 85 / 120")
+                        && text.contains("👨‍💼 School 21, Community Team")
+        ), isNull());
     }
 
     @Test
@@ -360,6 +378,31 @@ class CallbackHandlerTest {
         verify(metricsService).recordProcessingError("show_profile", "edu_login_check_exception");
         verify(messageSender).sendMessage(chatId, "Ошибка проверки логина: bad", null);
         verify(messageSender).sendMessage(999L, "Ошибка проверки логина: " + err, null);
+    }
+
+    @Test
+    void showProfile_whenProjectsUnavailable_sendsProfileWithoutProjectsLine() {
+        when(profileService.checkEduLogin("abc")).thenReturn(new ParticipantDto());
+        FriendDto friend = FriendDto.builder().login("abc").isFriend(false).build();
+        when(profileService.applyFriend(chatId, "abc", FriendRequest.Action.NONE, null)).thenReturn(friend);
+        InlineKeyboardMarkup kb = mock(InlineKeyboardMarkup.class);
+        when(telegramKeyboardFactory.getFriendInlineKeyboard("abc", friend)).thenReturn(kb);
+
+        ParticipantDto participant = new ParticipantDto();
+        participant.setLogin("abc");
+        participant.setClassName("22_10_MSK");
+        participant.setExpValue(100);
+        participant.setLevel(5);
+        participant.setParallelName("AP4");
+        participant.setStatus(ParticipantStatusEnum.ACTIVE);
+        when(profileService.showParticipant(chatId.toString(), "abc")).thenReturn(participant);
+        when(profileService.getProjects("abc")).thenThrow(createFeignException(503, "projects-down"));
+
+        callbackHandler.showProfile(chatId, "abc");
+
+        verify(messageSender).sendMessage(eq(chatId), argThat(text ->
+                text.startsWith("✅ abc") && !text.contains("📁")
+        ), eq(kb));
     }
 
     @Test

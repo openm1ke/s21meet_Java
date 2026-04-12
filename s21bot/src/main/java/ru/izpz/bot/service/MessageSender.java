@@ -35,6 +35,16 @@ public class MessageSender {
         telegramExecutorService.execute(msg);
     }
 
+    public void sendMessageWithoutWebPreview(Long chatId, String text, ReplyKeyboard replyKeyboard) {
+        SendMessage msg = SendMessage.builder()
+                .chatId(chatId.toString())
+                .text(text)
+                .replyMarkup(replyKeyboard)
+                .disableWebPagePreview(true)
+                .build();
+        telegramExecutorService.execute(msg);
+    }
+
     public void updateMessage(Long chatId, Integer messageId, String text, InlineKeyboardMarkup keyboard) {
         EditMessageText edit = EditMessageText.builder()
                 .chatId(chatId.toString())
