@@ -1,0 +1,7 @@
+spring:
+  config:
+    import:
+      - optional:file:./env/test/s21web.env[.properties]
+      - optional:file:../env/test/s21web.env[.properties]
+      - optional:file:./env/local/s21web.env[.properties]
+      - optional:file:../env/local/s21web.env[.properties]
