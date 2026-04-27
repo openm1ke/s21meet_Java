@@ -1,0 +1,9 @@
+spring:
+  config:
+    import:
+      - optional:file:./env/test/s21edu.env[.properties]
+      - optional:file:../env/test/s21edu.env[.properties]
+      - optional:file:./env/local/s21edu.env[.properties]
+      - optional:file:../env/local/s21edu.env[.properties]
+  liquibase:
+    enabled: true

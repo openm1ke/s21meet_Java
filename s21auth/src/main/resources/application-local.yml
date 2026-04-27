@@ -1,0 +1,5 @@
+spring:
+  config:
+    import:
+      - optional:file:./env/test/s21auth.env[.properties]
+      - optional:file:../env/test/s21auth.env[.properties]
