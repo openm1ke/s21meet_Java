@@ -46,9 +46,9 @@ services:
     env_file:
       - ./env/${APP_ENV:-test}/s21edu.env
     environment:
+      SPRING_PROFILES_ACTIVE: ${S21EDU_SPRING_PROFILES_ACTIVE:-compose}
       TZ: ${TZ:-Europe/Moscow}
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Europe/Moscow}
-      SPRING_LIQUIBASE_ENABLED: false
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
       interval: 10s

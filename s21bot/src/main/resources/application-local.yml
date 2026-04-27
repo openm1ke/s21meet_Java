@@ -1,0 +1,7 @@
+spring:
+  config:
+    import:
+      - optional:file:./env/test/s21bot.env[.properties]
+      - optional:file:../env/test/s21bot.env[.properties]
+      - optional:file:./env/local/s21bot.env[.properties]
+      - optional:file:../env/local/s21bot.env[.properties]
