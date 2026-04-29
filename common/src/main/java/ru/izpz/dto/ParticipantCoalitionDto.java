@@ -12,7 +12,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ParticipantCoalitionDto {
-    private String name;
-    private Integer memberCount;
-    private Integer rank;
+  private String name;
+  private Integer memberCount;
+  private Integer rank;
 }

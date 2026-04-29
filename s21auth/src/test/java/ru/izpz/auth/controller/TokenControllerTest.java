@@ -1,6 +1,14 @@
 package ru.izpz.auth.controller;
 
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -13,99 +21,96 @@ import ru.izpz.auth.dto.TokenRequest;
 import ru.izpz.auth.model.TokenEntity;
 import ru.izpz.auth.service.TokenService;
 
-import java.util.Optional;
-
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 @AutoConfigureMockMvc
 @WebMvcTest(TokenController.class)
 @Import(TokenControllerConfig.class)
 class TokenControllerTest {
-    @Autowired
-    private MockMvc mockMvc;
+  private static final String USER_1 = "user1";
+  private static final String PASS_1 = "pass1";
+  private static final String GENERATED_TOKEN = "generatedToken";
+  private static final String TOKENS_PATH = "/api/tokens";
 
-    @Autowired
-    private TokenService tokenService;
+  @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+  @Autowired private TokenService tokenService;
 
-    @Test
-    void generateToken_returnsOk_whenTokenIsGenerated() throws Exception {
-        TokenRequest request = new TokenRequest();
-        request.setLogin("user1");
-        request.setPassword("pass1");
+  @Autowired private ObjectMapper objectMapper;
 
-        doReturn("generatedToken").when(tokenService).getAccessToken("user1", "pass1");
+  @Test
+  void generateToken_returnsOk_whenTokenIsGenerated() throws Exception {
+    TokenRequest request = new TokenRequest();
+    request.setLogin(USER_1);
+    request.setPassword(PASS_1);
 
-        mockMvc.perform(post("/api/tokens")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("generatedToken"));
-    }
+    doReturn(GENERATED_TOKEN).when(tokenService).getAccessToken(USER_1, PASS_1);
 
-    @Test
-    void generateToken_returnInternalServerError_whenTokenIsNull() throws Exception {
-        TokenRequest request = new TokenRequest();
-        request.setLogin("user1");
-        request.setPassword("pass1");
+    mockMvc
+        .perform(
+            post(TOKENS_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(content().string(GENERATED_TOKEN));
+  }
 
-        doReturn(null).when(tokenService).getAccessToken("user1", "pass1");
+  @Test
+  void generateToken_returnInternalServerError_whenTokenIsNull() throws Exception {
+    TokenRequest request = new TokenRequest();
+    request.setLogin(USER_1);
+    request.setPassword(PASS_1);
 
-        mockMvc.perform(post("/api/tokens")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError());
-    }
+    doReturn(null).when(tokenService).getAccessToken(USER_1, PASS_1);
 
-    @Test
-    void getDefaultToken_returnInternalServerError_whenTokenIsNull() throws Exception {
-        doReturn(null).when(tokenService).getDefaultAccessToken();
-        
-        mockMvc.perform(get("/api/tokens/default"))
-                .andExpect(status().isInternalServerError());
-    }
+    mockMvc
+        .perform(
+            post(TOKENS_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isInternalServerError());
+  }
 
-    @Test
-    void getDefaultToken_returnOk_whenTokenExists() throws Exception {
-        doReturn("generatedToken").when(tokenService).getDefaultAccessToken();
-        
-        mockMvc.perform(get("/api/tokens/default"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("generatedToken"));
-    }
+  @Test
+  void getDefaultToken_returnInternalServerError_whenTokenIsNull() throws Exception {
+    doReturn(null).when(tokenService).getDefaultAccessToken();
 
-    @Test
-    void getToken_returnOk_whenTokenExists() throws Exception {
-        String login = "user1";
-        TokenEntity tokenEntity = new TokenEntity();
-        tokenEntity.setLogin(login);
-        tokenEntity.setAccessToken("generatedToken");
-        tokenEntity.setPassword("pass1");
-        tokenEntity.setExpiresAt(null);
-        tokenEntity.setRefreshToken(null);
-        
-        Optional<TokenEntity> token = Optional.of(tokenEntity);
-        when(tokenService.findById(login)).thenReturn(token);
-        
-        mockMvc.perform(get("/api/tokens").param("login", login))
-                .andExpect(status().isOk())
-                .andExpect(content().string("generatedToken"));
-    }
+    mockMvc.perform(get("/api/tokens/default")).andExpect(status().isInternalServerError());
+  }
 
-    @Test
-    void getToken_returnNotFound_whenTokenNotExists() throws Exception {
-        String login = "nonexistent";
-        
-        when(tokenService.findById(login)).thenReturn(Optional.empty());
-        
-        mockMvc.perform(get("/api/tokens").param("login", login))
-                .andExpect(status().isNotFound());
-    }
+  @Test
+  void getDefaultToken_returnOk_whenTokenExists() throws Exception {
+    doReturn(GENERATED_TOKEN).when(tokenService).getDefaultAccessToken();
+
+    mockMvc
+        .perform(get("/api/tokens/default"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(GENERATED_TOKEN));
+  }
+
+  @Test
+  void getToken_returnOk_whenTokenExists() throws Exception {
+    String login = USER_1;
+    TokenEntity tokenEntity = new TokenEntity();
+    tokenEntity.setLogin(login);
+    tokenEntity.setAccessToken(GENERATED_TOKEN);
+    tokenEntity.setPassword(PASS_1);
+    tokenEntity.setExpiresAt(null);
+    tokenEntity.setRefreshToken(null);
+
+    Optional<TokenEntity> token = Optional.of(tokenEntity);
+    when(tokenService.findById(login)).thenReturn(token);
+
+    mockMvc
+        .perform(get("/api/tokens").param("login", login))
+        .andExpect(status().isOk())
+        .andExpect(content().string(GENERATED_TOKEN));
+  }
+
+  @Test
+  void getToken_returnNotFound_whenTokenNotExists() throws Exception {
+    String login = "nonexistent";
+
+    when(tokenService.findById(login)).thenReturn(Optional.empty());
+
+    mockMvc.perform(get("/api/tokens").param("login", login)).andExpect(status().isNotFound());
+  }
 }

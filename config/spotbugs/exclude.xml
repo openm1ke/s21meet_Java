@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <!-- Suppress EI exposes for DTO/transport-like classes -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+  <Match>
+    <Class name="ru.izpz.dto.ServerConfiguration"/>
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
+  </Match>
+  <Match>
+    <Class name="ru.izpz.dto.ServerVariable"/>
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
+  </Match>
+  <!-- Exclude DTO and OpenAPI client layer -->
+  <Match>
+    <Class name="~ru\\.izpz\\.dto\\..*"/>
+  </Match>
+  <!-- Exclude OpenAPI generated packages -->
+  <Match>
+    <Class name="~ru\\.izpz\\.dto\\.(api|auth|model)\\..*"/>
+  </Match>
+  <!-- Exclude OpenAPI generated helper classes -->
+  <Match>
+    <Class name="~ru\\.izpz\\.dto\\.(ApiClient|ServerConfiguration|ServerVariable|StringUtil|RFC3339.*|JavaTimeFormatter)"/>
+  </Match>
+</FindBugsFilter>

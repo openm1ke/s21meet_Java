@@ -1,5 +1,7 @@
 package ru.izpz.auth.service;
 
+import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -7,43 +9,41 @@ import ru.izpz.auth.client.TokenClient;
 import ru.izpz.auth.dto.TokenResponse;
 import ru.izpz.auth.model.TokenEntity;
 
-import java.util.List;
-import java.util.Optional;
-
 @Slf4j
 @Service
 public class TokenService {
 
-    @Value("${edu.login}")
-    private String defaultLogin;
-    private final TokenClient tokenClient;
-    private final TokenPersistenceService tokenPersistenceService;
+  @Value("${edu.login}")
+  private String defaultLogin;
 
-    // Constructor for Spring
-    public TokenService(TokenClient tokenClient, TokenPersistenceService tokenPersistenceService) {
-        this.tokenClient = tokenClient;
-        this.tokenPersistenceService = tokenPersistenceService;
-    }
+  private final TokenClient tokenClient;
+  private final TokenPersistenceService tokenPersistenceService;
 
-    public String getAccessToken(String login, String password) {
-        TokenResponse tr = tokenClient.requestNewToken(login, password);
-        tokenPersistenceService.upsertToken(login, password, tr);
-        return tr.getAccessToken();
-    }
+  // Constructor for Spring
+  public TokenService(TokenClient tokenClient, TokenPersistenceService tokenPersistenceService) {
+    this.tokenClient = tokenClient;
+    this.tokenPersistenceService = tokenPersistenceService;
+  }
 
-    public List<TokenEntity> findAll() {
-        return tokenPersistenceService.findAll();
-    }
+  public String getAccessToken(String login, String password) {
+    TokenResponse tr = tokenClient.requestNewToken(login, password);
+    tokenPersistenceService.upsertToken(login, password, tr);
+    return tr.getAccessToken();
+  }
 
-    public Optional<TokenEntity> findById(String login) {
-        return tokenPersistenceService.findById(login);
-    }
+  public List<TokenEntity> findAll() {
+    return tokenPersistenceService.findAll();
+  }
 
-    public String getDefaultAccessToken() {
-        if (defaultLogin == null || defaultLogin.isBlank()) return null;
-        return tokenPersistenceService.findById(defaultLogin)
-            .map(TokenEntity::getAccessToken)
-            .orElse(null);
-    }
+  public Optional<TokenEntity> findById(String login) {
+    return tokenPersistenceService.findById(login);
+  }
+
+  public String getDefaultAccessToken() {
+    if (defaultLogin == null || defaultLogin.isBlank()) return null;
+    return tokenPersistenceService
+        .findById(defaultLogin)
+        .map(TokenEntity::getAccessToken)
+        .orElse(null);
+  }
 }
-

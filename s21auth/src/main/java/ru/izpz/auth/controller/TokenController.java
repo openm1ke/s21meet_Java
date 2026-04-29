@@ -18,32 +18,33 @@ import ru.izpz.auth.service.TokenService;
 @RequestMapping("/api/tokens")
 public class TokenController {
 
-    private final TokenService tokenService;
+  private final TokenService tokenService;
 
-    @PostMapping
-    public ResponseEntity<String> generateToken(@Valid @RequestBody TokenRequest request) {
-        String accessToken = tokenService.getAccessToken(request.getLogin(), request.getPassword());
-        if (accessToken == null) {
-            log.error("Не удалось сгенерировать токен для {}", request.getLogin());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-        return ResponseEntity.ok(accessToken);
+  @PostMapping
+  public ResponseEntity<String> generateToken(@Valid @RequestBody TokenRequest request) {
+    String accessToken = tokenService.getAccessToken(request.getLogin(), request.getPassword());
+    if (accessToken == null) {
+      log.error("Не удалось сгенерировать токен для {}", request.getLogin());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
+    return ResponseEntity.ok(accessToken);
+  }
 
-    @GetMapping("/default")
-    public ResponseEntity<String> getDefaultTokenController() {
-        String accessToken = tokenService.getDefaultAccessToken();
-        if (accessToken == null) {
-            log.error("Не удалось сгенерировать токен по умолчанию");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-        return ResponseEntity.ok(accessToken);
+  @GetMapping("/default")
+  public ResponseEntity<String> getDefaultTokenController() {
+    String accessToken = tokenService.getDefaultAccessToken();
+    if (accessToken == null) {
+      log.error("Не удалось сгенерировать токен по умолчанию");
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
+    return ResponseEntity.ok(accessToken);
+  }
 
-    @GetMapping
-    public ResponseEntity<String> getToken(@RequestParam @NotBlank String login) {
-        return tokenService.findById(login)
-                .map(tokenEntity -> ResponseEntity.ok(tokenEntity.getAccessToken()))
-                .orElse(ResponseEntity.notFound().build());
-    }
+  @GetMapping
+  public ResponseEntity<String> getToken(@RequestParam @NotBlank String login) {
+    return tokenService
+        .findById(login)
+        .map(tokenEntity -> ResponseEntity.ok(tokenEntity.getAccessToken()))
+        .orElse(ResponseEntity.notFound().build());
+  }
 }

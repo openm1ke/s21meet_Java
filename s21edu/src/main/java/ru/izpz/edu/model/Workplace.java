@@ -9,11 +9,10 @@ import lombok.Setter;
 @Getter
 @Entity
 public class Workplace {
-    @EmbeddedId
-    WorkplaceId id;
-    String login;
-    Integer expValue;
-    Integer levelCode;
-    String stageGroupName;
-    String stageName;
+  @EmbeddedId WorkplaceId id;
+  String login;
+  Integer expValue;
+  Integer levelCode;
+  String stageGroupName;
+  String stageName;
 }

@@ -1,5 +1,16 @@
 package ru.izpz.auth.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,138 +22,133 @@ import org.springframework.web.client.RestTemplate;
 import ru.izpz.auth.dto.TokenResponse;
 import ru.izpz.exception.TokenResponseException;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class TokenClientTest {
 
-    @Mock
-    private RestTemplate restTemplate;
-    
-    private TokenClient tokenClient;
+  @Mock private RestTemplate restTemplate;
 
-    private static final String TEST_LOGIN = "testUser";
-    private static final String TEST_PASSWORD = "testPass";
-    private static final String ACCESS_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9";
-    private static final String REFRESH_TOKEN = "refreshToken";
+  private TokenClient tokenClient;
 
-    @BeforeEach
-    void setUp() {
-        tokenClient = new TokenClient("/auth/realms/EduPowerKeycloak/protocol/openid-connect/token", restTemplate);
-    }
+  private static final String TEST_LOGIN = "testUser";
+  private static final String TEST_PASSWORD = "testPass";
+  private static final String ACCESS_TOKEN = "test-access-token";
+  private static final String REFRESH_TOKEN = "refreshToken";
 
-    @Test
-    void requestNewToken_shouldReturnTokenResponse_whenResponseIsValid() {
-        TokenResponse expectedResponse = new TokenResponse();
-        expectedResponse.setAccessToken(ACCESS_TOKEN);
-        expectedResponse.setRefreshToken(REFRESH_TOKEN);
-        expectedResponse.setExpiresIn(3600);
+  @BeforeEach
+  void setUp() {
+    tokenClient =
+        new TokenClient(
+            "/auth/realms/EduPowerKeycloak/protocol/openid-connect/token", restTemplate);
+  }
 
-        ResponseEntity<TokenResponse> responseEntity = ResponseEntity.ok(expectedResponse);
-        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
-                .thenReturn(responseEntity);
+  @Test
+  void requestNewToken_shouldReturnTokenResponse_whenResponseIsValid() {
+    TokenResponse expectedResponse = new TokenResponse();
+    expectedResponse.setAccessToken(ACCESS_TOKEN);
+    expectedResponse.setRefreshToken(REFRESH_TOKEN);
+    expectedResponse.setExpiresIn(3600);
 
-        TokenResponse result = tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD);
+    ResponseEntity<TokenResponse> responseEntity = ResponseEntity.ok(expectedResponse);
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenReturn(responseEntity);
 
-        assertNotNull(result);
-        assertEquals(ACCESS_TOKEN, result.getAccessToken());
-        assertEquals(REFRESH_TOKEN, result.getRefreshToken());
-        assertEquals(3600, result.getExpiresIn());
-    }
+    TokenResponse result = tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD);
 
-    @Test
-    void requestNewToken_shouldThrowException_whenResponseBodyIsNull() {
-        ResponseEntity<TokenResponse> responseEntity = ResponseEntity.ok(null);
-        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
-                .thenReturn(responseEntity);
+    assertNotNull(result);
+    assertEquals(ACCESS_TOKEN, result.getAccessToken());
+    assertEquals(REFRESH_TOKEN, result.getRefreshToken());
+    assertEquals(3600, result.getExpiresIn());
+  }
 
-        assertThrows(TokenResponseException.class, () -> 
-                tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)
-        );
-    }
+  @Test
+  void requestNewToken_shouldThrowException_whenResponseBodyIsNull() {
+    ResponseEntity<TokenResponse> responseEntity = ResponseEntity.ok(null);
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenReturn(responseEntity);
 
-    @Test
-    void requestNewToken_shouldThrowException_whenResponseHasNoBody() {
-        ResponseEntity<TokenResponse> responseEntity = ResponseEntity.noContent().build();
-        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
-                .thenReturn(responseEntity);
+    assertThrows(
+        TokenResponseException.class, () -> tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD));
+  }
 
-        assertThrows(TokenResponseException.class, () ->
-                tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)
-        );
-    }
+  @Test
+  void requestNewToken_shouldThrowException_whenResponseHasNoBody() {
+    ResponseEntity<TokenResponse> responseEntity = ResponseEntity.noContent().build();
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenReturn(responseEntity);
 
-    @Test
-    void requestNewToken_shouldThrowException_whenHasBodyTrueButBodyNull() {
-        @SuppressWarnings("unchecked")
-        ResponseEntity<TokenResponse> responseEntity = mock(ResponseEntity.class);
-        when(responseEntity.hasBody()).thenReturn(true);
-        when(responseEntity.getBody()).thenReturn(null);
-        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
-                .thenReturn(responseEntity);
+    assertThrows(
+        TokenResponseException.class, () -> tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD));
+  }
 
-        assertThrows(TokenResponseException.class, () ->
-                tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)
-        );
-    }
+  @Test
+  void requestNewToken_shouldThrowException_whenHasBodyTrueButBodyNull() {
+    @SuppressWarnings("unchecked")
+    ResponseEntity<TokenResponse> responseEntity = mock(ResponseEntity.class);
+    when(responseEntity.hasBody()).thenReturn(true);
+    when(responseEntity.getBody()).thenReturn(null);
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenReturn(responseEntity);
 
-    @Test
-    void requestNewToken_shouldThrowException_whenAccessTokenIsNull() {
-        TokenResponse tokenResponse = new TokenResponse();
-        tokenResponse.setAccessToken(null);
-        tokenResponse.setRefreshToken(REFRESH_TOKEN);
-        tokenResponse.setExpiresIn(3600);
+    assertThrows(
+        TokenResponseException.class, () -> tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD));
+  }
 
-        ResponseEntity<TokenResponse> responseEntity = ResponseEntity.ok(tokenResponse);
-        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
-                .thenReturn(responseEntity);
+  @Test
+  void requestNewToken_shouldThrowException_whenAccessTokenIsNull() {
+    TokenResponse tokenResponse = new TokenResponse();
+    tokenResponse.setAccessToken(null);
+    tokenResponse.setRefreshToken(REFRESH_TOKEN);
+    tokenResponse.setExpiresIn(3600);
 
-        assertThrows(TokenResponseException.class, () -> 
-                tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)
-        );
-    }
+    ResponseEntity<TokenResponse> responseEntity = ResponseEntity.ok(tokenResponse);
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenReturn(responseEntity);
 
-    @Test
-    void requestNewToken_shouldThrowException_whenRestClientExceptionOccurs() {
-        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
-                .thenThrow(new RestClientException("Connection error"));
+    assertThrows(
+        TokenResponseException.class, () -> tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD));
+  }
 
-        TokenResponseException exception = assertThrows(TokenResponseException.class, () -> 
-                tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)
-        );
+  @Test
+  void requestNewToken_shouldThrowException_whenRestClientExceptionOccurs() {
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenThrow(new RestClientException("Connection error"));
 
-        assertEquals("Не удалось получить токен", exception.getMessage());
-        assertNotNull(exception.getCause());
-    }
+    TokenResponseException exception =
+        assertThrows(
+            TokenResponseException.class,
+            () -> tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD));
 
-    @Test
-    void requestNewToken_shouldThrowException_whenGenericExceptionOccurs() {
-        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
-                .thenThrow(new RuntimeException("Unexpected error"));
+    assertEquals("Не удалось получить токен", exception.getMessage());
+    assertNotNull(exception.getCause());
+  }
 
-        TokenResponseException exception = assertThrows(TokenResponseException.class, () -> 
-                tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)
-        );
+  @Test
+  void requestNewToken_shouldThrowException_whenGenericExceptionOccurs() {
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenThrow(new RuntimeException("Unexpected error"));
 
-        assertEquals("Не удалось получить токен", exception.getMessage());
-        assertNotNull(exception.getCause());
-    }
+    TokenResponseException exception =
+        assertThrows(
+            TokenResponseException.class,
+            () -> tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD));
 
-    @Test
-    void requestNewToken_shouldUseCorrectEndpoint() {
-        TokenResponse expectedResponse = new TokenResponse();
-        expectedResponse.setAccessToken(ACCESS_TOKEN);
-        expectedResponse.setRefreshToken(REFRESH_TOKEN);
-        expectedResponse.setExpiresIn(3600);
+    assertEquals("Не удалось получить токен", exception.getMessage());
+    assertNotNull(exception.getCause());
+  }
 
-        ResponseEntity<TokenResponse> responseEntity = ResponseEntity.ok(expectedResponse);
-        when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
-                .thenReturn(responseEntity);
+  @Test
+  void requestNewToken_shouldUseCorrectEndpoint() {
+    TokenResponse expectedResponse = new TokenResponse();
+    expectedResponse.setAccessToken(ACCESS_TOKEN);
+    expectedResponse.setRefreshToken(REFRESH_TOKEN);
+    expectedResponse.setExpiresIn(3600);
 
-        tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD);
+    ResponseEntity<TokenResponse> responseEntity = ResponseEntity.ok(expectedResponse);
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenReturn(responseEntity);
 
-        verify(restTemplate).postForEntity(contains("token"), any(), eq(TokenResponse.class));
-    }
+    tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD);
+
+    verify(restTemplate).postForEntity(contains("token"), any(), eq(TokenResponse.class));
+  }
 }

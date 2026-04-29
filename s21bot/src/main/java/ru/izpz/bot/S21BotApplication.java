@@ -9,7 +9,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @ConfigurationPropertiesScan
 @EnableFeignClients(basePackages = "ru.izpz.bot.client")
 public class S21BotApplication {
-	public static void main(String[] args) {
-		SpringApplication.run(S21BotApplication.class, args);
-	}
+  public static void main(String[] args) {
+    SpringApplication.run(S21BotApplication.class, args);
+  }
 }

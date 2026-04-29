@@ -1,12 +1,11 @@
 package ru.izpz.edu.model;
 
+import jakarta.persistence.*;
+import java.util.UUID;
 import lombok.*;
 import ru.izpz.dto.LastCommandState;
 import ru.izpz.dto.ProfileStatus;
-import jakarta.persistence.*;
 import ru.izpz.edu.utils.LastCommandAttributeConverter;
-
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -15,15 +14,18 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @AllArgsConstructor
 public class Profile {
-    @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(updatable = false, nullable = false)
-    UUID id;
-    String telegramId;
-    String s21login;
-    @Enumerated(EnumType.STRING)
-    ProfileStatus status;
-    @Column(name = "last_command", columnDefinition = "TEXT")
-    @Convert(converter = LastCommandAttributeConverter.class)
-    LastCommandState lastCommand;
+  @Id
+  @GeneratedValue(generator = "UUID")
+  @Column(updatable = false, nullable = false)
+  UUID id;
+
+  String telegramId;
+  String s21login;
+
+  @Enumerated(EnumType.STRING)
+  ProfileStatus status;
+
+  @Column(name = "last_command", columnDefinition = "TEXT")
+  @Convert(converter = LastCommandAttributeConverter.class)
+  LastCommandState lastCommand;
 }

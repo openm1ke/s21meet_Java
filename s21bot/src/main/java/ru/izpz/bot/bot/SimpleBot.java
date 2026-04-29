@@ -11,25 +11,25 @@ import ru.izpz.bot.service.MessageProcessor;
 @RequiredArgsConstructor
 public class SimpleBot implements LongPollingSingleThreadUpdateConsumer {
 
-    private final MessageProcessor messageProcessor;
+  private final MessageProcessor messageProcessor;
 
-    @Override
-    public void consume(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            Message message = update.getMessage();
-            String type = message.getChat().getType();
-            if (type.equals("private")) {
-                log.info("{} написал {}", message.getChat().getUserName(), message.getText());
-                messageProcessor.handleTextMessage(message);
-            }
-        } else if (update.hasCallbackQuery()) {
-            var callback = update.getCallbackQuery();
-            var data = callback.getData();
-            var chatId = callback.getMessage().getChatId();
-            var messageId = update.getCallbackQuery().getMessage().getMessageId();
-            var callbackId = callback.getId();
-            log.info("Callback id = {} '{}' от chatId={}", callbackId, data, chatId);
-            messageProcessor.handleCallbackMessage(chatId, data, messageId, callbackId);
-        }
+  @Override
+  public void consume(Update update) {
+    if (update.hasMessage() && update.getMessage().hasText()) {
+      Message message = update.getMessage();
+      String type = message.getChat().getType();
+      if (type.equals("private")) {
+        log.info("{} написал {}", message.getChat().getUserName(), message.getText());
+        messageProcessor.handleTextMessage(message);
+      }
+    } else if (update.hasCallbackQuery()) {
+      var callback = update.getCallbackQuery();
+      var data = callback.getData();
+      var chatId = callback.getMessage().getChatId();
+      var messageId = update.getCallbackQuery().getMessage().getMessageId();
+      var callbackId = callback.getId();
+      log.info("Callback id = {} '{}' от chatId={}", callbackId, data, chatId);
+      messageProcessor.handleCallbackMessage(chatId, data, messageId, callbackId);
     }
+  }
 }

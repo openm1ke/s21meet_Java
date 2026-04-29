@@ -1,328 +1,351 @@
 package ru.izpz.rocket.client;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import ru.izpz.dto.RocketChatSendResponse;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RocketChatWebSocketClientTest {
 
-    private static final String TEST_URI = "ws://localhost:3000/websocket";
-    private static final String TEST_TOKEN = "test-token";
-    private static final String TEST_USERNAME = "testuser";
-    private static final String TEST_MESSAGE = "Test message";
+  private static final String TEST_URI = "ws://localhost:3000/websocket";
+  private static final String TEST_TOKEN = "test-token";
+  private static final String TEST_USERNAME = "testuser";
+  private static final String TEST_MESSAGE = "Test message";
 
-    @Mock
-    private CountDownLatch mockLatch;
+  @Mock private CountDownLatch mockLatch;
 
-    private RocketChatWebSocketClient client;
+  private RocketChatWebSocketClient client;
 
-    @BeforeEach
-    void setUp() {
-        client = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false);
-    }
+  @BeforeEach
+  void setUp() {
+    client =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false);
+  }
 
-    @Test
-    void constructor_shouldSetAllFieldsCorrectly() {
-        // When
-        RocketChatWebSocketClient qrClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, null, true);
+  @Test
+  void constructor_shouldSetAllFieldsCorrectly() {
+    // When
+    RocketChatWebSocketClient qrClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, null, true);
 
-        // Then
-        assertEquals(TEST_URI, qrClient.getURI().toString());
-        assertNotNull(qrClient);
-    }
+    // Then
+    assertEquals(TEST_URI, qrClient.getURI().toString());
+    assertNotNull(qrClient);
+  }
 
-    @Test
-    void execute_shouldReturnTimeoutResponse_whenLatchNotCompleted() {
-        // Given
-        RocketChatWebSocketClient timeoutClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public boolean connectBlocking() {
-                // Simulate connection but don't complete latch
-                return true;
-            }
+  @Test
+  void execute_shouldReturnTimeoutResponse_whenLatchNotCompleted() {
+    // Given
+    RocketChatWebSocketClient timeoutClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public boolean connectBlocking() {
+            // Simulate connection but don't complete latch
+            return true;
+          }
         };
 
-        // When
-        RocketChatSendResponse result = timeoutClient.execute(1);
+    // When
+    RocketChatSendResponse result = timeoutClient.execute(1);
 
-        // Then
-        assertNotNull(result);
-        assertFalse(result.isSuccess());
-        assertTrue(result.getMessage().contains("Timeout"));
-    }
+    // Then
+    assertNotNull(result);
+    assertFalse(result.isSuccess());
+    assertTrue(result.getMessage().contains("Timeout"));
+  }
 
-    @Test
-    void execute_shouldReturnErrorResponse_whenExceptionThrown() {
-        // Given
-        RocketChatWebSocketClient errorClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public boolean connectBlocking() {
-                throw new RuntimeException("Connection failed");
-            }
+  @Test
+  void execute_shouldReturnErrorResponse_whenExceptionThrown() {
+    // Given
+    RocketChatWebSocketClient errorClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public boolean connectBlocking() {
+            throw new RuntimeException("Connection failed");
+          }
         };
 
-        // When
-        RocketChatSendResponse result = errorClient.execute(5);
+    // When
+    RocketChatSendResponse result = errorClient.execute(5);
 
-        // Then
-        assertNotNull(result);
-        assertFalse(result.isSuccess());
-        assertTrue(result.getMessage().contains("Error"));
-        assertTrue(result.getMessage().contains("Connection failed"));
-    }
+    // Then
+    assertNotNull(result);
+    assertFalse(result.isSuccess());
+    assertTrue(result.getMessage().contains("Error"));
+    assertTrue(result.getMessage().contains("Connection failed"));
+  }
 
-    @Test
-    void execute_shouldReturnInterruptedResponse_whenThreadInterrupted() {
-        // Given
-        RocketChatWebSocketClient interruptedClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public boolean connectBlocking() {
-                return true;
-            }
+  @Test
+  void execute_shouldReturnInterruptedResponse_whenThreadInterrupted() {
+    // Given
+    RocketChatWebSocketClient interruptedClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public boolean connectBlocking() {
+            return true;
+          }
         };
 
-        // When
-        Thread.currentThread().interrupt();
-        try {
-            RocketChatSendResponse result = interruptedClient.execute(5);
+    // When
+    Thread.currentThread().interrupt();
+    try {
+      RocketChatSendResponse result = interruptedClient.execute(5);
 
-            // Then
-            assertNotNull(result);
-            assertFalse(result.isSuccess());
-            assertEquals("Interrupted", result.getMessage());
-        } finally {
-            // очистка флага прерывания, чтобы не влиять на другие тесты
-            Thread.interrupted();
-        }
+      // Then
+      assertNotNull(result);
+      assertFalse(result.isSuccess());
+      assertEquals("Interrupted", result.getMessage());
+    } finally {
+      // очистка флага прерывания, чтобы не влиять на другие тесты
+      Thread.interrupted();
     }
+  }
 
-    @Test
-    void execute_shouldReturnSuccessResponse_whenResponseExists() {
-        // Given
-        RocketChatWebSocketClient successClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public boolean connectBlocking() {
-                // Simulate successful connection and set response
-                try {
-                    var responseField = RocketChatWebSocketClient.class.getDeclaredField("response");
-                    responseField.setAccessible(true);
-                    AtomicReference<RocketChatSendResponse> responseRef = (AtomicReference<RocketChatSendResponse>) responseField.get(this);
-                    responseRef.set(new RocketChatSendResponse(true, "Success"));
-                    
-                    var latchField = RocketChatWebSocketClient.class.getDeclaredField("latch");
-                    latchField.setAccessible(true);
-                    ((CountDownLatch) latchField.get(this)).countDown();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                return true;
-            }
+  @Test
+  void execute_shouldReturnSuccessResponse_whenResponseExists() {
+    // Given
+    RocketChatWebSocketClient successClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public boolean connectBlocking() {
+            // Simulate successful connection and set response
+            AtomicReference<RocketChatSendResponse> responseRef = responseRef(this);
+            responseRef.set(new RocketChatSendResponse(true, "Success"));
+
+            CountDownLatch latch = (CountDownLatch) ReflectionTestUtils.getField(this, "latch");
+            assertNotNull(latch);
+            latch.countDown();
+            return true;
+          }
         };
 
-        // When
-        RocketChatSendResponse result = successClient.execute(5);
+    // When
+    RocketChatSendResponse result = successClient.execute(5);
 
-        // Then
-        assertNotNull(result);
-        assertTrue(result.isSuccess());
-        assertEquals("Success", result.getMessage());
-    }
+    // Then
+    assertNotNull(result);
+    assertTrue(result.isSuccess());
+    assertEquals("Success", result.getMessage());
+  }
 
-    @Test
-    void execute_shouldReturnUnexpectedEmptyResponse_whenLatchCompletedWithoutPayload() {
-        RocketChatWebSocketClient emptyClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public boolean connectBlocking() {
-                try {
-                    var latchField = RocketChatWebSocketClient.class.getDeclaredField("latch");
-                    latchField.setAccessible(true);
-                    ((CountDownLatch) latchField.get(this)).countDown();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                return true;
-            }
+  @SuppressWarnings("unchecked")
+  private static AtomicReference<RocketChatSendResponse> responseRef(
+      RocketChatWebSocketClient client) {
+    return (AtomicReference<RocketChatSendResponse>)
+        ReflectionTestUtils.getField(client, "response");
+  }
+
+  @Test
+  void execute_shouldReturnUnexpectedEmptyResponse_whenLatchCompletedWithoutPayload() {
+    RocketChatWebSocketClient emptyClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public boolean connectBlocking() {
+            CountDownLatch latch = (CountDownLatch) ReflectionTestUtils.getField(this, "latch");
+            assertNotNull(latch);
+            latch.countDown();
+            return true;
+          }
         };
 
-        RocketChatSendResponse result = emptyClient.execute(5);
+    RocketChatSendResponse result = emptyClient.execute(5);
 
-        assertNotNull(result);
-        assertFalse(result.isSuccess());
-        assertEquals("Unexpected empty response", result.getMessage());
-    }
+    assertNotNull(result);
+    assertFalse(result.isSuccess());
+    assertEquals("Unexpected empty response", result.getMessage());
+  }
 
-    @Test
-    void onMessage_shouldHandlePingMessage() {
-        // Given
-        String pingMessage = "{\"msg\":\"ping\"}";
-        
-        // Создаем mock клиент, который не будет пытаться отправлять сообщения
-        RocketChatWebSocketClient mockClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public void send(String text) {
-                // Do nothing - prevent actual sending
-            }
+  @Test
+  void onMessage_shouldHandlePingMessage() {
+    // Given
+    String pingMessage = "{\"msg\":\"ping\"}";
+
+    // Создаем mock клиент, который не будет пытаться отправлять сообщения
+    RocketChatWebSocketClient mockClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public void send(String text) {
+            // Do nothing - prevent actual sending
+          }
         };
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> mockClient.onMessage(pingMessage));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> mockClient.onMessage(pingMessage));
+  }
 
-    @Test
-    void onMessage_shouldHandleResultMessage() {
-        // Given
-        String resultMessage = "{\"msg\":\"result\",\"id\":\"42\",\"result\":{\"token\":\"test\"}}";
-        
-        // Создаем mock клиент, который не будет пытаться отправлять сообщения
-        RocketChatWebSocketClient mockClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public void send(String text) {
-                // Do nothing - prevent actual sending
-            }
+  @Test
+  void onMessage_shouldHandleResultMessage() {
+    // Given
+    String resultMessage = "{\"msg\":\"result\",\"id\":\"42\",\"result\":{\"token\":\"test\"}}";
+
+    // Создаем mock клиент, который не будет пытаться отправлять сообщения
+    RocketChatWebSocketClient mockClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public void send(String text) {
+            // Do nothing - prevent actual sending
+          }
         };
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> mockClient.onMessage(resultMessage));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> mockClient.onMessage(resultMessage));
+  }
 
-    @Test
-    void onMessage_shouldHandleChangedMessage() {
-        // Given
-        String changedMessage = "{\"msg\":\"changed\",\"fields\":{\"args\":[{\"msg\":\"The QR code will expire on 2023-12-31\"}]}}";
+  @Test
+  void onMessage_shouldHandleChangedMessage() {
+    // Given
+    String changedMessage =
+        "{\"msg\":\"changed\",\"fields\":{\"args\":[{\"msg\":"
+            + "\"The QR code will expire on 2023-12-31\"}]}}";
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> client.onMessage(changedMessage));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> client.onMessage(changedMessage));
+  }
 
-    @Test
-    void onMessage_shouldHandleUnknownMessageType() {
-        // Given
-        String unknownMessage = "{\"msg\":\"unknown\"}";
+  @Test
+  void onMessage_shouldHandleUnknownMessageType() {
+    // Given
+    String unknownMessage = "{\"msg\":\"unknown\"}";
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> client.onMessage(unknownMessage));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> client.onMessage(unknownMessage));
+  }
 
-    @Test
-    void onMessage_shouldIgnoreResultWithUnknownId() {
-        String unknownResultId = "{\"msg\":\"result\",\"id\":\"some_other_id\",\"result\":{}}";
+  @Test
+  void onMessage_shouldIgnoreResultWithUnknownId() {
+    String unknownResultId = "{\"msg\":\"result\",\"id\":\"some_other_id\",\"result\":{}}";
 
-        assertDoesNotThrow(() -> client.onMessage(unknownResultId));
-    }
+    assertDoesNotThrow(() -> client.onMessage(unknownResultId));
+  }
 
-    @Test
-    void onMessage_shouldIgnoreChangedWithoutArgs() {
-        String changedWithoutArgs = "{\"msg\":\"changed\",\"fields\":{\"args\":[]}}";
+  @Test
+  void onMessage_shouldIgnoreChangedWithoutArgs() {
+    String changedWithoutArgs = "{\"msg\":\"changed\",\"fields\":{\"args\":[]}}";
 
-        assertDoesNotThrow(() -> client.onMessage(changedWithoutArgs));
-    }
+    assertDoesNotThrow(() -> client.onMessage(changedWithoutArgs));
+  }
 
-    @Test
-    void onMessage_shouldIgnoreChangedWithoutExpectedQrPhrase() {
-        String changedOtherMessage = "{\"msg\":\"changed\",\"fields\":{\"args\":[{\"msg\":\"Another message\"}]}}";
+  @Test
+  void onMessage_shouldIgnoreChangedWithoutExpectedQrPhrase() {
+    String changedOtherMessage =
+        "{\"msg\":\"changed\",\"fields\":{\"args\":[{\"msg\":\"Another message\"}]}}";
 
-        assertDoesNotThrow(() -> client.onMessage(changedOtherMessage));
-    }
+    assertDoesNotThrow(() -> client.onMessage(changedOtherMessage));
+  }
 
-    @Test
-    void onClose_shouldCountDownLatch() {
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> client.onClose(1000, "Normal closure", true));
-    }
+  @Test
+  void onClose_shouldCountDownLatch() {
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> client.onClose(1000, "Normal closure", true));
+  }
 
-    @Test
-    void onError_shouldSetErrorResponseAndCountDownLatch() {
-        // Given
-        Exception testException = new RuntimeException("Test error");
+  @Test
+  void onError_shouldSetErrorResponseAndCountDownLatch() {
+    // Given
+    Exception testException = new RuntimeException("Test error");
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> client.onError(testException));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> client.onError(testException));
+  }
 
-    @Test
-    void onOpen_shouldSendConnectAndLoginMessages() {
-        // Given
-        var mockHandshake = mock(org.java_websocket.handshake.ServerHandshake.class);
-        
-        // Создаем mock клиент, который не будет пытаться отправлять сообщения
-        RocketChatWebSocketClient mockClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public void send(String text) {
-                // Do nothing - prevent actual sending
-            }
+  @Test
+  void onOpen_shouldSendConnectAndLoginMessages() {
+    // Given
+    var mockHandshake = mock(org.java_websocket.handshake.ServerHandshake.class);
+
+    // Создаем mock клиент, который не будет пытаться отправлять сообщения
+    RocketChatWebSocketClient mockClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public void send(String text) {
+            // Do nothing - prevent actual sending
+          }
         };
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> mockClient.onOpen(mockHandshake));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> mockClient.onOpen(mockHandshake));
+  }
 
-    @Test
-    void qrModeClient_shouldHandleQrResponse() {
-        // Given
-        RocketChatWebSocketClient qrClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, null, true);
-        String qrMessage = "{\"msg\":\"changed\",\"fields\":{\"args\":[{\"msg\":\"The QR code will expire on 2023-12-31 23:59:59\"}]}}";
+  @Test
+  void qrModeClient_shouldHandleQrResponse() {
+    // Given
+    RocketChatWebSocketClient qrClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, null, true);
+    String qrMessage =
+        "{\"msg\":\"changed\",\"fields\":{\"args\":[{\"msg\":"
+            + "\"The QR code will expire on 2023-12-31 23:59:59\"}]}}";
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> qrClient.onMessage(qrMessage));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> qrClient.onMessage(qrMessage));
+  }
 
-    @Test
-    void handleMessage_shouldHandleLoginError() {
-        // Given
-        String loginError = "{\"msg\":\"result\",\"id\":\"42\",\"error\":{\"message\":\"Invalid token\"}}";
+  @Test
+  void handleMessage_shouldHandleLoginError() {
+    // Given
+    String loginError =
+        "{\"msg\":\"result\",\"id\":\"42\",\"error\":{\"message\":\"Invalid token\"}}";
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> client.onMessage(loginError));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> client.onMessage(loginError));
+  }
 
-    @Test
-    void handleMessage_shouldHandleCreateDmError() {
-        // Given
-        String createDmError = "{\"msg\":\"result\",\"id\":\"unique_create_dm_id\",\"error\":{\"message\":\"User not found\"}}";
+  @Test
+  void handleMessage_shouldHandleCreateDmError() {
+    // Given
+    String createDmError =
+        "{\"msg\":\"result\",\"id\":\"unique_create_dm_id\","
+            + "\"error\":{\"message\":\"User not found\"}}";
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> client.onMessage(createDmError));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> client.onMessage(createDmError));
+  }
 
-    @Test
-    void handleMessage_shouldHandleSuccessfulDmCreation() {
-        // Given
-        String createDmSuccess = "{\"msg\":\"result\",\"id\":\"unique_create_dm_id\",\"result\":{\"rid\":\"room123\"}}";
-        
-        // Создаем mock клиент, который не будет пытаться отправлять сообщения
-        RocketChatWebSocketClient mockClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
-            @Override
-            public void send(String text) {
-                // Do nothing - prevent actual sending
-            }
+  @Test
+  void handleMessage_shouldHandleSuccessfulDmCreation() {
+    // Given
+    String createDmSuccess =
+        "{\"msg\":\"result\",\"id\":\"unique_create_dm_id\",\"result\":{\"rid\":\"room123\"}}";
+
+    // Создаем mock клиент, который не будет пытаться отправлять сообщения
+    RocketChatWebSocketClient mockClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, TEST_MESSAGE, false) {
+          @Override
+          public void send(String text) {
+            // Do nothing - prevent actual sending
+          }
         };
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> mockClient.onMessage(createDmSuccess));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> mockClient.onMessage(createDmSuccess));
+  }
 
-    @Test
-    void qrModeClient_shouldHandleSubscriptionAndCommand() {
-        // Given
-        RocketChatWebSocketClient qrClient = new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, null, true) {
-            @Override
-            public void send(String text) {
-                // Do nothing - prevent actual sending
-            }
+  @Test
+  void qrModeClient_shouldHandleSubscriptionAndCommand() {
+    // Given
+    RocketChatWebSocketClient qrClient =
+        new RocketChatWebSocketClient(TEST_URI, TEST_TOKEN, TEST_USERNAME, null, true) {
+          @Override
+          public void send(String text) {
+            // Do nothing - prevent actual sending
+          }
         };
-        String createDmSuccess = "{\"msg\":\"result\",\"id\":\"unique_create_dm_id\",\"result\":{\"rid\":\"room123\"}}";
+    String createDmSuccess =
+        "{\"msg\":\"result\",\"id\":\"unique_create_dm_id\",\"result\":{\"rid\":\"room123\"}}";
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow(() -> qrClient.onMessage(createDmSuccess));
-    }
+    // When & Then - should not throw exception
+    assertDoesNotThrow(() -> qrClient.onMessage(createDmSuccess));
+  }
 }

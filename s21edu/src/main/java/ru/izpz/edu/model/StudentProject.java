@@ -5,36 +5,35 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "student_project")
 public class StudentProject {
-    @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(updatable = false, nullable = false)
-    UUID id;
+  @Id
+  @GeneratedValue(generator = "UUID")
+  @Column(updatable = false, nullable = false)
+  UUID id;
 
-    String login;
-    String userId;
-    String goalId;
-    String name;
-    String description;
-    Integer experience;
-    String dateTime;
-    Integer finalPercentage;
-    Integer laboriousness;
-    String executionType;
-    String goalStatus;
-    Integer amountMembers;
-    Integer localCourseId;
-    Integer sortOrder;
-    Boolean snapshot;
-    OffsetDateTime updatedAt;
+  String login;
+  String userId;
+  String goalId;
+  String name;
+  String description;
+  Integer experience;
+  String dateTime;
+  Integer finalPercentage;
+  Integer laboriousness;
+  String executionType;
+  String goalStatus;
+  Integer amountMembers;
+  Integer localCourseId;
+  Integer sortOrder;
+  Boolean snapshot;
+  OffsetDateTime updatedAt;
 }

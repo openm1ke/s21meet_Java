@@ -7,5 +7,5 @@ import ru.izpz.edu.model.ProfileValidation;
 @Mapper(componentModel = "spring")
 public interface ProfileVerificationMapper {
 
-    ProfileCodeResponse toProfileCodeResponse(ProfileValidation save);
+  ProfileCodeResponse toProfileCodeResponse(ProfileValidation save);
 }

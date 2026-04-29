@@ -1,24 +1,24 @@
 package ru.izpz.edu.service.provider;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 class ProjectsProviderTest {
 
-    @Test
-    void refreshStudentProjectsByLogin_shouldDelegateToGetStudentProjectsByLoginByDefault() {
-        AtomicInteger calls = new AtomicInteger();
-        ProjectsProvider provider = login -> {
-            calls.incrementAndGet();
-            return List.of();
+  @Test
+  void refreshStudentProjectsByLogin_shouldDelegateToGetStudentProjectsByLoginByDefault() {
+    AtomicInteger calls = new AtomicInteger();
+    ProjectsProvider provider =
+        login -> {
+          calls.incrementAndGet();
+          return List.of();
         };
 
-        provider.refreshStudentProjectsByLogin("login");
+    provider.refreshStudentProjectsByLogin("login");
 
-        assertEquals(1, calls.get());
-    }
+    assertEquals(1, calls.get());
+  }
 }

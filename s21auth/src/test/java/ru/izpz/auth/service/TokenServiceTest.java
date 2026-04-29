@@ -1,147 +1,151 @@
 package ru.izpz.auth.service;
 
-import ru.izpz.auth.client.TokenClient;
-import ru.izpz.auth.dto.TokenResponse;
-import ru.izpz.exception.TokenResponseException;
-import ru.izpz.auth.model.TokenEntity;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import ru.izpz.auth.client.TokenClient;
+import ru.izpz.auth.dto.TokenResponse;
+import ru.izpz.auth.model.TokenEntity;
+import ru.izpz.exception.TokenResponseException;
 
 @ExtendWith(MockitoExtension.class)
 class TokenServiceTest {
 
-    @InjectMocks
-    private TokenService tokenService;
+  @InjectMocks private TokenService tokenService;
 
-    @Mock
-    private TokenPersistenceService tokenPersistenceService;
+  @Mock private TokenPersistenceService tokenPersistenceService;
 
-    @Mock
-    private TokenClient tokenClient;
+  @Mock private TokenClient tokenClient;
 
-    private static final String TEST_LOGIN = "testUser";
-    private static final String TEST_PASSWORD = "testPass";
-    private static final String ACCESS_TOKEN = "newAccessToken";
-    private static final String REFRESH_TOKEN = "newRefreshToken";
+  private static final String TEST_LOGIN = "testUser";
+  private static final String TEST_PASSWORD = "testPass";
+  private static final String ACCESS_TOKEN = "newAccessToken";
+  private static final String REFRESH_TOKEN = "newRefreshToken";
 
-    @Test
-    void getAccessToken_shouldReturnNewToken() {
-        TokenResponse tokenResponse = new TokenResponse();
-        tokenResponse.setAccessToken(ACCESS_TOKEN);
-        tokenResponse.setRefreshToken(REFRESH_TOKEN);
-        tokenResponse.setExpiresIn(3600);
+  @Test
+  void getAccessToken_shouldReturnNewToken() {
+    TokenResponse tokenResponse = new TokenResponse();
+    tokenResponse.setAccessToken(ACCESS_TOKEN);
+    tokenResponse.setRefreshToken(REFRESH_TOKEN);
+    tokenResponse.setExpiresIn(3600);
 
-        when(tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)).thenReturn(tokenResponse);
+    when(tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD)).thenReturn(tokenResponse);
 
-        String token = tokenService.getAccessToken(TEST_LOGIN, TEST_PASSWORD);
+    String token = tokenService.getAccessToken(TEST_LOGIN, TEST_PASSWORD);
 
-        assertEquals(ACCESS_TOKEN, token, "Метод должен вернуть новый токен");
-        verify(tokenPersistenceService).upsertToken(TEST_LOGIN, TEST_PASSWORD, tokenResponse);
-    }
+    assertEquals(ACCESS_TOKEN, token, "Метод должен вернуть новый токен");
+    verify(tokenPersistenceService).upsertToken(TEST_LOGIN, TEST_PASSWORD, tokenResponse);
+  }
 
-    @Test
-    void getAccessToken_shouldThrowExceptionIfTokenRequestFails() {
-        when(tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD))
-                .thenThrow(new TokenResponseException("Ошибка сети"));
+  @Test
+  void getAccessToken_shouldThrowExceptionIfTokenRequestFails() {
+    when(tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD))
+        .thenThrow(new TokenResponseException("Ошибка сети"));
 
-        assertThrows(TokenResponseException.class, () ->
-                        tokenService.getAccessToken(TEST_LOGIN, TEST_PASSWORD),
-                "Метод должен выбросить TokenResponseException"
-        );
+    assertThrows(
+        TokenResponseException.class,
+        () -> tokenService.getAccessToken(TEST_LOGIN, TEST_PASSWORD),
+        "Метод должен выбросить TokenResponseException");
 
-        verify(tokenPersistenceService, never()).upsertToken(anyString(), anyString(), any(TokenResponse.class));
-    }
+    verify(tokenPersistenceService, never())
+        .upsertToken(anyString(), anyString(), any(TokenResponse.class));
+  }
 
-    @Test
-    void findAll_shouldReturnAllTokens() {
-        TokenEntity token1 = new TokenEntity();
-        token1.setLogin("user1");
-        token1.setAccessToken("token1");
-        
-        TokenEntity token2 = new TokenEntity();
-        token2.setLogin("user2");
-        token2.setAccessToken("token2");
+  @Test
+  void findAll_shouldReturnAllTokens() {
+    TokenEntity token1 = new TokenEntity();
+    token1.setLogin("user1");
+    token1.setAccessToken("token1");
 
-        List<TokenEntity> expectedTokens = List.of(token1, token2);
-        when(tokenPersistenceService.findAll()).thenReturn(expectedTokens);
+    TokenEntity token2 = new TokenEntity();
+    token2.setLogin("user2");
+    token2.setAccessToken("token2");
 
-        List<TokenEntity> result = tokenService.findAll();
+    List<TokenEntity> expectedTokens = List.of(token1, token2);
+    when(tokenPersistenceService.findAll()).thenReturn(expectedTokens);
 
-        assertEquals(expectedTokens, result, "Должен вернуть все токены");
-    }
+    List<TokenEntity> result = tokenService.findAll();
 
-    @Test
-    void findByLogin_shouldReturnTokenIfExists() {
-        TokenEntity tokenEntity = new TokenEntity();
-        tokenEntity.setLogin(TEST_LOGIN);
-        tokenEntity.setAccessToken(ACCESS_TOKEN);
+    assertEquals(expectedTokens, result, "Должен вернуть все токены");
+  }
 
-        when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.of(tokenEntity));
+  @Test
+  void findByLogin_shouldReturnTokenIfExists() {
+    TokenEntity tokenEntity = new TokenEntity();
+    tokenEntity.setLogin(TEST_LOGIN);
+    tokenEntity.setAccessToken(ACCESS_TOKEN);
 
-        Optional<TokenEntity> result = tokenService.findById(TEST_LOGIN);
+    when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.of(tokenEntity));
 
-        assertTrue(result.isPresent(), "Токен должен быть найден");
-        assertEquals(ACCESS_TOKEN, result.get().getAccessToken(), "Токен должен совпадать");
-    }
+    Optional<TokenEntity> result = tokenService.findById(TEST_LOGIN);
 
-    @Test
-    void findByLogin_shouldReturnEmptyIfNotExists() {
-        when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.empty());
+    assertTrue(result.isPresent(), "Токен должен быть найден");
+    assertEquals(ACCESS_TOKEN, result.get().getAccessToken(), "Токен должен совпадать");
+  }
 
-        Optional<TokenEntity> result = tokenService.findById(TEST_LOGIN);
+  @Test
+  void findByLogin_shouldReturnEmptyIfNotExists() {
+    when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.empty());
 
-        assertFalse(result.isPresent(), "Токен не должен быть найден");
-    }
+    Optional<TokenEntity> result = tokenService.findById(TEST_LOGIN);
 
-    @Test
-    void getDefaultAccessToken_shouldReturnNullIfDefaultLoginIsNull() {
-        // В тестовом окружении defaultLogin будет null
-        String result = tokenService.getDefaultAccessToken();
-        assertNull(result, "Должен вернуть null если defaultLogin равен null");
-    }
+    assertFalse(result.isPresent(), "Токен не должен быть найден");
+  }
 
-    @Test
-    void getDefaultAccessToken_shouldReturnNullIfDefaultLoginIsBlank() {
-        ReflectionTestUtils.setField(tokenService, "defaultLogin", "   ");
-        String result = tokenService.getDefaultAccessToken();
-        assertNull(result, "Должен вернуть null если defaultLogin пустой");
-        verify(tokenPersistenceService, never()).findById(anyString());
-    }
+  @Test
+  void getDefaultAccessToken_shouldReturnNullIfDefaultLoginIsNull() {
+    // В тестовом окружении defaultLogin будет null
+    String result = tokenService.getDefaultAccessToken();
+    assertNull(result, "Должен вернуть null если defaultLogin равен null");
+  }
 
-    @Test
-    void getDefaultAccessToken_shouldReturnTokenIfDefaultLoginExists() {
-        ReflectionTestUtils.setField(tokenService, "defaultLogin", TEST_LOGIN);
-        
-        TokenEntity tokenEntity = new TokenEntity();
-        tokenEntity.setLogin(TEST_LOGIN);
-        tokenEntity.setAccessToken(ACCESS_TOKEN);
+  @Test
+  void getDefaultAccessToken_shouldReturnNullIfDefaultLoginIsBlank() {
+    ReflectionTestUtils.setField(tokenService, "defaultLogin", "   ");
+    String result = tokenService.getDefaultAccessToken();
+    assertNull(result, "Должен вернуть null если defaultLogin пустой");
+    verify(tokenPersistenceService, never()).findById(anyString());
+  }
 
-        when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.of(tokenEntity));
+  @Test
+  void getDefaultAccessToken_shouldReturnTokenIfDefaultLoginExists() {
+    ReflectionTestUtils.setField(tokenService, "defaultLogin", TEST_LOGIN);
 
-        String result = tokenService.getDefaultAccessToken();
+    TokenEntity tokenEntity = new TokenEntity();
+    tokenEntity.setLogin(TEST_LOGIN);
+    tokenEntity.setAccessToken(ACCESS_TOKEN);
 
-        assertEquals(ACCESS_TOKEN, result, "Должен вернуть токен для пользователя по умолчанию");
-    }
+    when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.of(tokenEntity));
 
-    @Test
-    void getDefaultAccessToken_shouldReturnNullIfTokenNotFound() {
-        ReflectionTestUtils.setField(tokenService, "defaultLogin", TEST_LOGIN);
+    String result = tokenService.getDefaultAccessToken();
 
-        when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.empty());
+    assertEquals(ACCESS_TOKEN, result, "Должен вернуть токен для пользователя по умолчанию");
+  }
 
-        String result = tokenService.getDefaultAccessToken();
+  @Test
+  void getDefaultAccessToken_shouldReturnNullIfTokenNotFound() {
+    ReflectionTestUtils.setField(tokenService, "defaultLogin", TEST_LOGIN);
 
-        assertNull(result, "Должен вернуть null если токен не найден");
-    }
+    when(tokenPersistenceService.findById(TEST_LOGIN)).thenReturn(Optional.empty());
+
+    String result = tokenService.getDefaultAccessToken();
+
+    assertNull(result, "Должен вернуть null если токен не найден");
+  }
 }

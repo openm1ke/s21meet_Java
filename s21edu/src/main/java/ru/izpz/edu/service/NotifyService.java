@@ -1,5 +1,12 @@
 package ru.izpz.edu.service;
 
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -13,109 +20,111 @@ import ru.izpz.edu.repository.FriendsRepository;
 import ru.izpz.edu.repository.OnlineRepository;
 import ru.izpz.edu.repository.WorkplaceRepository;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.time.OffsetDateTime;
-import java.util.stream.Collectors;
-
 @Slf4j
 @Service
 public class NotifyService {
 
-    private final FriendsRepository friendsRepository;
-    private final WorkplaceRepository workplaceRepository;
-    private final OnlineRepository onlineRepository;
+  private final FriendsRepository friendsRepository;
+  private final WorkplaceRepository workplaceRepository;
+  private final OnlineRepository onlineRepository;
 
-    public NotifyService(FriendsRepository friendsRepository, WorkplaceRepository workplaceRepository, OnlineRepository onlineRepository) {
-        this.friendsRepository = friendsRepository;
-        this.workplaceRepository = workplaceRepository;
-        this.onlineRepository = onlineRepository;
+  public NotifyService(
+      FriendsRepository friendsRepository,
+      WorkplaceRepository workplaceRepository,
+      OnlineRepository onlineRepository) {
+    this.friendsRepository = friendsRepository;
+    this.workplaceRepository = workplaceRepository;
+    this.onlineRepository = onlineRepository;
+  }
+
+  @Transactional(isolation = Isolation.REPEATABLE_READ)
+  public List<StatusChange> computeAndPersistChanges() {
+    List<String> logins = friendsRepository.findDistinctLogins();
+    if (logins.isEmpty()) {
+      log.debug("computeAndPersistChanges: no tracked logins");
+      return List.of();
     }
-
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public List<StatusChange> computeAndPersistChanges() {
-        List<String> logins = friendsRepository.findDistinctLogins();
-        if (logins.isEmpty()) {
-            log.debug("computeAndPersistChanges: no tracked logins");
-            return List.of();
-        }
-        Set<String> inCampusLogins = workplaceRepository.findAllByLoginIn(logins).stream()
+    Set<String> inCampusLogins =
+        workplaceRepository.findAllByLoginIn(logins).stream()
             .map(Workplace::getLogin)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
 
-        List<StatusChange> changes = new ArrayList<>();
-        int becameOnline = 0;
-        int becameOffline = 0;
+    List<StatusChange> changes = new ArrayList<>();
+    int becameOnline = 0;
+    int becameOffline = 0;
 
-        for (String login : logins) {
-            boolean inCampus = inCampusLogins.contains(login);
-            Optional<Online> opt = onlineRepository.findByLogin(login);
+    for (String login : logins) {
+      boolean inCampus = inCampusLogins.contains(login);
+      Optional<Online> opt = onlineRepository.findByLogin(login);
 
-            if (inCampus) {
-                boolean shouldMarkOnline = opt.isEmpty() || Boolean.FALSE.equals(opt.get().getIsOnline());
-                if (shouldMarkOnline) {
-                    persistOnlineStatus(opt, login, true);
-                    addChangeIfSubscribers(changes, login, true);
-                    becameOnline++;
-                }
-            } else {
-                if (opt.isPresent() && Boolean.TRUE.equals(opt.get().getIsOnline())) {
-                    persistOnlineStatus(opt, login, false);
-                    addChangeIfSubscribers(changes, login, false);
-                    becameOffline++;
-                }
-            }
+      if (inCampus) {
+        boolean shouldMarkOnline = opt.isEmpty() || Boolean.FALSE.equals(opt.get().getIsOnline());
+        if (shouldMarkOnline) {
+          persistOnlineStatus(opt, login, true);
+          addChangeIfSubscribers(changes, login, true);
+          becameOnline++;
         }
-        long recipients = changes.stream()
+      } else {
+        if (opt.isPresent() && Boolean.TRUE.equals(opt.get().getIsOnline())) {
+          persistOnlineStatus(opt, login, false);
+          addChangeIfSubscribers(changes, login, false);
+          becameOffline++;
+        }
+      }
+    }
+    long recipients =
+        changes.stream()
             .map(StatusChange::telegramIds)
             .filter(Objects::nonNull)
             .mapToLong(List::size)
             .sum();
-        log.info(
-            "computeAndPersistChanges: processedLogins={}, becameOnline={}, becameOffline={}, emittedChanges={}, recipients={}",
-            logins.size(),
-            becameOnline,
-            becameOffline,
-            changes.size(),
-            recipients
-        );
-        return changes;
-    }
+    log.info(
+        "computeAndPersistChanges: processedLogins={}, becameOnline={}, becameOffline={}, emittedChanges={}, recipients={}",
+        logins.size(),
+        becameOnline,
+        becameOffline,
+        changes.size(),
+        recipients);
+    return changes;
+  }
 
-    private void addChangeIfSubscribers(List<StatusChange> changes, String login, boolean newStatus) {
-        List<String> ids = friendsRepository.findByLoginAndIsSubscribeTrue(login).stream()
-                .map(Friends::getTelegramId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        if (!ids.isEmpty()) changes.add(new StatusChange(login, newStatus, ids));
-    }
+  private void addChangeIfSubscribers(List<StatusChange> changes, String login, boolean newStatus) {
+    List<String> ids =
+        friendsRepository.findByLoginAndIsSubscribeTrue(login).stream()
+            .map(Friends::getTelegramId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    if (!ids.isEmpty()) changes.add(new StatusChange(login, newStatus, ids));
+  }
 
-    private void persistOnlineStatus(Optional<Online> current, String login, boolean status) {
-        try {
-            Online entity = current.orElseGet(() -> {
+  private void persistOnlineStatus(Optional<Online> current, String login, boolean status) {
+    try {
+      Online entity =
+          current.orElseGet(
+              () -> {
                 Online created = new Online();
                 created.setLogin(login);
                 return created;
-            });
-            entity.setIsOnline(status);
-            if (!status) {
-                entity.setLastSeenAt(OffsetDateTime.now());
-            }
-            onlineRepository.save(entity);
-        } catch (DataIntegrityViolationException e) {
-            log.warn("Race condition while saving online status for login={}: {}", login, e.getMessage());
-            onlineRepository.findByLogin(login).ifPresent(existing -> {
+              });
+      entity.setIsOnline(status);
+      if (!status) {
+        entity.setLastSeenAt(OffsetDateTime.now());
+      }
+      onlineRepository.save(entity);
+    } catch (DataIntegrityViolationException e) {
+      log.warn("Race condition while saving online status for login={}: {}", login, e.getMessage());
+      onlineRepository
+          .findByLogin(login)
+          .ifPresent(
+              existing -> {
                 existing.setIsOnline(status);
                 if (!status) {
-                    existing.setLastSeenAt(OffsetDateTime.now());
+                  existing.setLastSeenAt(OffsetDateTime.now());
                 }
                 onlineRepository.save(existing);
-            });
-        }
+              });
     }
+  }
 }

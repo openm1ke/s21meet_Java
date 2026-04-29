@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All Services (local)" type="CompoundRunConfigurationType" factoryName="Compound">
+    <toRun name="S21Auth Local" type="SpringBootApplicationConfigurationType" />
+    <toRun name="S21Edu Local" type="SpringBootApplicationConfigurationType" />
+    <toRun name="S21Bot Local" type="SpringBootApplicationConfigurationType" />
+    <toRun name="S21Rocket Local" type="SpringBootApplicationConfigurationType" />
+    <toRun name="S21Web Local" type="SpringBootApplicationConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

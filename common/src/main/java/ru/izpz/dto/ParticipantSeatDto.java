@@ -12,9 +12,9 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ParticipantSeatDto {
-    private String clusterName;
-    private String row;
-    private Integer number;
-    private String stageGroupName;
-    private String stageName;
+  private String clusterName;
+  private String row;
+  private Integer number;
+  private String stageGroupName;
+  private String stageName;
 }

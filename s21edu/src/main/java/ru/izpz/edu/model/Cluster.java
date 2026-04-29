@@ -9,11 +9,10 @@ import lombok.Setter;
 @Getter
 @Entity
 public class Cluster {
-    @Id
-    Long clusterId;
-    String name;
-    Integer capacity;
-    Integer availableCapacity;
-    Integer floor;
-    String campusId;
+  @Id Long clusterId;
+  String name;
+  Integer capacity;
+  Integer availableCapacity;
+  Integer floor;
+  String campusId;
 }

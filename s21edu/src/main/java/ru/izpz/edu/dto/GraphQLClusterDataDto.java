@@ -4,6 +4,4 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record GraphQLClusterDataDto(
-        List<GraphQLPlaceDto> occupiedPlaces
-) {}
+public record GraphQLClusterDataDto(List<GraphQLPlaceDto> occupiedPlaces) {}

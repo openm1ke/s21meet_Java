@@ -9,8 +9,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Clusters {
-    private String name;
-    private Integer capacity;
-    private Integer availableCapacity;
-    private Integer floor;
+  private String name;
+  private Integer capacity;
+  private Integer availableCapacity;
+  private Integer floor;
 }

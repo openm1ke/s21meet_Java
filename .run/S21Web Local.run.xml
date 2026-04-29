@@ -2,7 +2,7 @@
   <configuration default="false" name="S21Web Local" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="s21meet_Java.s21web.main" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="ru.izpz.web.S21WebApplication" />
-    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=local" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=local --spring.config.import=optional:file:env/local/s21web.env" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <envs>
       <env name="SPRING_PROFILES_ACTIVE" value="local" />

@@ -13,23 +13,22 @@ import ru.izpz.bot.exception.InvalidCallbackPayloadException;
 @RequiredArgsConstructor
 public class CallbackPayloadSerializer {
 
-    private final ObjectMapper objectMapper;
+  private final ObjectMapper objectMapper;
 
-    public String serialize(CallbackPayload payload) {
-        try {
-            return objectMapper.writeValueAsString(payload);
-        } catch (JsonProcessingException e) {
-            throw new InvalidCallbackPayloadException("Failed to serialize callback payload", e);
-        }
+  public String serialize(CallbackPayload payload) {
+    try {
+      return objectMapper.writeValueAsString(payload);
+    } catch (JsonProcessingException e) {
+      throw new InvalidCallbackPayloadException("Failed to serialize callback payload", e);
     }
+  }
 
-    public CallbackPayload deserialize(String data) {
-        try {
-            return objectMapper.readValue(data, CallbackPayload.class);
-        } catch (JsonProcessingException e) {
-            log.error("Error parsing callback data: {}", data, e);
-            throw new InvalidCallbackPayloadException("Invalid callback payload data", e);
-        }
+  public CallbackPayload deserialize(String data) {
+    try {
+      return objectMapper.readValue(data, CallbackPayload.class);
+    } catch (JsonProcessingException e) {
+      log.error("Error parsing callback data: {}", data, e);
+      throw new InvalidCallbackPayloadException("Invalid callback payload data", e);
     }
+  }
 }
-

@@ -11,8 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class RocketChatSendRequest {
-    @NotBlank(message = "Username must not be blank")
-    private String username;
-    @NotBlank(message = "Message must not be blank")
-    private String message;
+  @NotBlank(message = "Username must not be blank")
+  private String username;
+
+  @NotBlank(message = "Message must not be blank")
+  private String message;
 }

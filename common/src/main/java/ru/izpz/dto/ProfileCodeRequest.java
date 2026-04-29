@@ -10,6 +10,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProfileCodeRequest {
-    @NotBlank(message = "s21login не должен быть пустым")
-    private String s21login;
+  @NotBlank(message = "s21login не должен быть пустым")
+  private String s21login;
 }

@@ -1,5 +1,6 @@
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.compile.JavaCompile
 
 plugins {
     java
@@ -14,6 +15,7 @@ val springRetryVersion: String by project
 val apacheCommonsVersion: String by project
 val postgresqlVersion: String by project
 val squareupOkhttpVersion: String by project
+val jacksonDatabindNullable: String by project
 
 dependencies {
     implementation(project(":common"))
@@ -33,8 +35,11 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:${squareupOkhttpVersion}")
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     implementation("org.postgresql:postgresql:$postgresqlVersion")
+    implementation("org.openapitools:jackson-databind-nullable:$jacksonDatabindNullable")
     implementation("io.github.resilience4j:resilience4j-spring-boot3")
     implementation("io.github.resilience4j:resilience4j-ratelimiter")
+    compileOnly("com.h2database:h2")
+    runtimeOnly("com.h2database:h2")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
@@ -62,4 +67,8 @@ tasks.named<BootJar>("bootJar") {
 
 tasks.named<Jar>("jar") {
     enabled = false
+}
+
+tasks.named<JavaCompile>("compileTestJava") {
+    options.compilerArgs.add("-Xlint:unchecked")
 }
