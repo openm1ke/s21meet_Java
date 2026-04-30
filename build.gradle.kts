@@ -57,6 +57,11 @@ subprojects {
     apply(plugin = "pmd")
     apply(plugin = "com.github.spotbugs")
     apply(plugin = "com.diffplug.spotless")
+    
+    val mockitoVersion: String by project
+    val mockitoAgent by configurations.creating {
+        isTransitive = false
+    }
 
     val springCloudVersion: String by project
     val springBootVersion: String by project
@@ -76,13 +81,6 @@ subprojects {
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
         }
-    }
-
-    configure<SpotBugsExtension> {
-        ignoreFailures = true
-        effort = Effort.MAX
-        reportLevel = Confidence.MEDIUM
-        showProgress = true
     }
 
     tasks.withType<SpotBugsTask>().configureEach {
@@ -109,10 +107,41 @@ subprojects {
             "com.github.spotbugs:spotbugs-annotations:$spotbugsAnnotationsVersion")
 
         annotationProcessor("org.projectlombok:lombok")
+        add("mockitoAgent", "org.mockito:mockito-core:$mockitoVersion")
+        // SpotBugs runtime: add logger backend and Lombok annotation classes
+        add("spotbugs", "com.github.spotbugs:spotbugs:4.9.8")
+        add("spotbugs", "org.slf4j:slf4j-nop:2.0.17")
+        add("spotbugs", "org.projectlombok:lombok:1.18.30")
     }
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        jvmArgs("-javaagent:${mockitoAgent.singleFile.absolutePath}")
+    }
+
+    val testTask = tasks.named<Test>("test")
+    tasks.register<Test>("unitTest") {
+        group = "verification"
+        description = "Runs fast unit tests (excludes *IntegrationTest)"
+        dependsOn("testClasses")
+        testClassesDirs = testTask.get().testClassesDirs
+        classpath = testTask.get().classpath
+        useJUnitPlatform()
+        jvmArgs("-javaagent:${mockitoAgent.singleFile.absolutePath}")
+        exclude("**/*IntegrationTest.class")
+        shouldRunAfter("test")
+    }
+
+    tasks.register<Test>("integrationTest") {
+        group = "verification"
+        description = "Runs integration tests (*IntegrationTest)"
+        dependsOn("testClasses")
+        testClassesDirs = testTask.get().testClassesDirs
+        classpath = testTask.get().classpath
+        useJUnitPlatform()
+        jvmArgs("-javaagent:${mockitoAgent.singleFile.absolutePath}")
+        include("**/*IntegrationTest.class")
+        shouldRunAfter("unitTest")
     }
 
     configure<CheckstyleExtension> {
@@ -158,7 +187,7 @@ subprojects {
             ruleSetFiles = files(rootProject.file("config/pmd/pmd-test-ruleset.xml"))
             ruleSets = listOf()
         }
-        ignoreFailures = true
+        ignoreFailures = false
         reports {
             xml.required.set(true)
             html.required.set(true)
@@ -283,4 +312,16 @@ tasks.register("runStaticAnalysisOnTests") {
         subprojects.map { it.path + ":checkstyleTest" } +
             subprojects.map { it.path + ":pmdTest" }
     )
+}
+
+tasks.register("runAllUnitTests") {
+    group = "verification"
+    description = "Runs unit tests in all subprojects"
+    dependsOn(subprojects.map { it.path + ":unitTest" })
+}
+
+tasks.register("runAllIntegrationTests") {
+    group = "verification"
+    description = "Runs integration tests in all subprojects"
+    dependsOn(subprojects.map { it.path + ":integrationTest" })
 }

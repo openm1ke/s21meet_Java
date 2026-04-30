@@ -16,6 +16,6 @@ public class GraphQLCoalitionProvider implements CoalitionProvider {
 
   @Override
   public void refreshCoalitionByLogin(String login) {
-    graphQLService.refreshStudentCoalitionByLogin(login);
+    graphQLService.refreshStudentCoalitionByLoginWithLimits(login);
   }
 }

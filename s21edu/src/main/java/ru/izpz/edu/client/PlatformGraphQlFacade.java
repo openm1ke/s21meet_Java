@@ -2,9 +2,7 @@ package ru.izpz.edu.client;
 
 import java.util.Map;
 
-/**
- * Фасад вызова GraphQL-операций платформы.
- */
+/** Фасад вызова GraphQL-операций платформы. */
 public interface PlatformGraphQlFacade {
 
   /**

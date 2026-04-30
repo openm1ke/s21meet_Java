@@ -35,7 +35,7 @@ class RocketChatControllerTest {
   void generateQr_shouldReturnResponseFromService() {
     // Given
     RocketChatSendResponse expectedResponse = new RocketChatSendResponse(true, "QR code generated");
-    when(rocketChatService.generateQrCode()).thenReturn(expectedResponse);
+    when(rocketChatService.generateQrCodeResilient()).thenReturn(expectedResponse);
 
     // When
     ResponseEntity<RocketChatSendResponse> response = rocketChatController.generateQr();
@@ -44,7 +44,7 @@ class RocketChatControllerTest {
     assertNotNull(response);
     assertTrue(response.getStatusCode().is2xxSuccessful());
     assertEquals(expectedResponse, response.getBody());
-    verify(rocketChatService, times(1)).generateQrCode();
+    verify(rocketChatService, times(1)).generateQrCodeResilient();
   }
 
   @Test
@@ -54,7 +54,8 @@ class RocketChatControllerTest {
     String message = "Test message";
     RocketChatSendRequest request = new RocketChatSendRequest(username, message);
     RocketChatSendResponse expectedResponse = new RocketChatSendResponse(true, "Message sent");
-    when(rocketChatService.sendVerificationCode(username, message)).thenReturn(expectedResponse);
+    when(rocketChatService.sendVerificationCodeResilient(username, message))
+        .thenReturn(expectedResponse);
 
     // When
     ResponseEntity<RocketChatSendResponse> response = rocketChatController.sendMessage(request);
@@ -63,7 +64,7 @@ class RocketChatControllerTest {
     assertNotNull(response);
     assertTrue(response.getStatusCode().is2xxSuccessful());
     assertEquals(expectedResponse, response.getBody());
-    verify(rocketChatService, times(1)).sendVerificationCode(username, message);
+    verify(rocketChatService, times(1)).sendVerificationCodeResilient(username, message);
   }
 
   @Test
@@ -79,7 +80,7 @@ class RocketChatControllerTest {
     assertNotNull(response);
     assertTrue(response.getStatusCode().is4xxClientError());
     assertEquals(expectedResponse, response.getBody());
-    verify(rocketChatService, never()).sendVerificationCode(any(), any());
+    verify(rocketChatService, never()).sendVerificationCodeResilient(any(), any());
   }
 
   @Test
@@ -90,7 +91,8 @@ class RocketChatControllerTest {
     RocketChatSendRequest request = new RocketChatSendRequest(username, message);
     RocketChatSendResponse expectedResponse =
         new RocketChatSendResponse(true, "Message sent successfully");
-    when(rocketChatService.sendVerificationCode(username, message)).thenReturn(expectedResponse);
+    when(rocketChatService.sendVerificationCodeResilient(username, message))
+        .thenReturn(expectedResponse);
 
     // When
     ResponseEntity<RocketChatSendResponse> response = rocketChatController.sendMessage(request);
@@ -99,14 +101,14 @@ class RocketChatControllerTest {
     assertNotNull(response);
     assertTrue(response.getStatusCode().is2xxSuccessful());
     assertEquals(expectedResponse, response.getBody());
-    verify(rocketChatService, times(1)).sendVerificationCode(username, message);
+    verify(rocketChatService, times(1)).sendVerificationCodeResilient(username, message);
   }
 
   @Test
   void generateQr_shouldHandleServiceException() {
     // Given
     RocketChatSendResponse errorResponse = new RocketChatSendResponse(false, "Service error");
-    when(rocketChatService.generateQrCode()).thenReturn(errorResponse);
+    when(rocketChatService.generateQrCodeResilient()).thenReturn(errorResponse);
 
     // When
     ResponseEntity<RocketChatSendResponse> response = rocketChatController.generateQr();
@@ -115,7 +117,7 @@ class RocketChatControllerTest {
     assertNotNull(response);
     assertTrue(response.getStatusCode().is2xxSuccessful());
     assertEquals(errorResponse, response.getBody());
-    verify(rocketChatService, times(1)).generateQrCode();
+    verify(rocketChatService, times(1)).generateQrCodeResilient();
   }
 
   @ParameterizedTest
@@ -128,7 +130,7 @@ class RocketChatControllerTest {
     assertTrue(response.getStatusCode().is4xxClientError());
     assertNotNull(response.getBody());
     assertFalse(response.getBody().isSuccess());
-    verify(rocketChatService, never()).sendVerificationCode(any(), any());
+    verify(rocketChatService, never()).sendVerificationCodeResilient(any(), any());
   }
 
   private static Stream<org.junit.jupiter.params.provider.Arguments> invalidSendMessageRequests() {

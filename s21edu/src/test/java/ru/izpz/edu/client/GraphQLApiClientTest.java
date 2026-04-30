@@ -26,6 +26,7 @@ import ru.izpz.edu.service.TokenService;
 
 @ExtendWith(MockitoExtension.class)
 class GraphQlApiClientTest {
+  private static final ObjectMapper TEST_OM = new ObjectMapper();
 
   @Mock private RestTemplate restTemplate;
 
@@ -56,9 +57,7 @@ class GraphQlApiClientTest {
             .tag("outcome", "error")
             .counter();
     assertNotNull(errorCounter);
-    assertEquals(
-        1.0,
-        errorCounter.count());
+    assertEquals(1.0, errorCounter.count());
   }
 
   @Test
@@ -94,8 +93,7 @@ class GraphQlApiClientTest {
     when(tokenService.getToken()).thenReturn("tok");
     when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
         .thenReturn(ResponseEntity.ok("{\"errors\":[{\"message\":\"boom\"}]}"));
-    ObjectMapper om = new ObjectMapper();
-    JsonNode errorNode = om.readTree("{\"errors\":[{\"message\":\"boom\"}]}");
+    JsonNode errorNode = jsonNode("{\"errors\":[{\"message\":\"boom\"}]}");
     when(objectMapper.readTree(anyString())).thenReturn(errorNode);
 
     assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
@@ -106,8 +104,7 @@ class GraphQlApiClientTest {
     when(tokenService.getToken()).thenReturn("tok");
     when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
         .thenReturn(ResponseEntity.ok("{\"errors\":[],\"data\":{\"field\":\"value\"}}"));
-    ObjectMapper om = new ObjectMapper();
-    JsonNode root = om.readTree("{\"errors\":[],\"data\":{\"field\":\"value\"}}");
+    JsonNode root = jsonNode("{\"errors\":[],\"data\":{\"field\":\"value\"}}");
     when(objectMapper.readTree(anyString())).thenReturn(root);
     when(objectMapper.convertValue(any(), eq(String.class))).thenReturn("value");
 
@@ -121,8 +118,7 @@ class GraphQlApiClientTest {
     when(tokenService.getToken()).thenReturn("tok");
     when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
         .thenReturn(ResponseEntity.ok("{\"errors\":{},\"data\":{\"field\":\"value\"}}"));
-    ObjectMapper om = new ObjectMapper();
-    JsonNode root = om.readTree("{\"errors\":{},\"data\":{\"field\":\"value\"}}");
+    JsonNode root = jsonNode("{\"errors\":{},\"data\":{\"field\":\"value\"}}");
     when(objectMapper.readTree(anyString())).thenReturn(root);
     when(objectMapper.convertValue(any(), eq(String.class))).thenReturn("value");
 
@@ -137,8 +133,7 @@ class GraphQlApiClientTest {
     when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
         .thenReturn(ResponseEntity.ok("{\"data\":null}"));
     when(objectMapper.readTree(anyString()))
-        .thenReturn(
-            new ObjectMapper().createObjectNode().set("data", new ObjectMapper().nullNode()));
+        .thenReturn(TEST_OM.createObjectNode().set("data", TEST_OM.nullNode()));
 
     assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
   }
@@ -148,8 +143,7 @@ class GraphQlApiClientTest {
     when(tokenService.getToken()).thenReturn("tok");
     when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
         .thenReturn(ResponseEntity.ok("{\"meta\":1}"));
-    when(objectMapper.readTree(anyString()))
-        .thenReturn(new ObjectMapper().createObjectNode().put("meta", 1));
+    when(objectMapper.readTree(anyString())).thenReturn(TEST_OM.createObjectNode().put("meta", 1));
 
     assertThrows(GraphQlRemoteException.class, this::executeDefaultOperation);
   }
@@ -161,9 +155,9 @@ class GraphQlApiClientTest {
         .thenReturn(ResponseEntity.ok("{\"data\":{\"field\":\"value\"}}"));
     when(objectMapper.readTree(anyString()))
         .thenReturn(
-            new ObjectMapper()
+            TEST_OM
                 .createObjectNode()
-                .set("data", new ObjectMapper().createObjectNode().put("field", "value")));
+                .set("data", TEST_OM.createObjectNode().put("field", "value")));
     when(objectMapper.convertValue(any(), eq(String.class))).thenReturn("value");
 
     String result = client.execute("op", Map.of(), "query", String.class);
@@ -176,9 +170,7 @@ class GraphQlApiClientTest {
             .tag("outcome", "success")
             .counter();
     assertNotNull(successCounter);
-    assertEquals(
-        1.0,
-        successCounter.count());
+    assertEquals(1.0, successCounter.count());
     assertNotNull(
         meterRegistry
             .find("edu_graphql_request_duration_seconds")
@@ -189,5 +181,9 @@ class GraphQlApiClientTest {
 
   private String executeDefaultOperation() {
     return client.execute("op", Map.of(), "query", String.class);
+  }
+
+  private static JsonNode jsonNode(String json) throws JsonProcessingException {
+    return TEST_OM.readTree(json);
   }
 }

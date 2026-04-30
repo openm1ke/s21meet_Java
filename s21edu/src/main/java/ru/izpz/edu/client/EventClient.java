@@ -8,9 +8,7 @@ import org.springframework.stereotype.Service;
 import ru.izpz.dto.model.EventV1DTO;
 import ru.izpz.edu.exception.PlatformClientException;
 
-/**
- * Клиент получения событий платформы.
- */
+/** Клиент получения событий платформы. */
 @Slf4j
 @Service
 @RequiredArgsConstructor

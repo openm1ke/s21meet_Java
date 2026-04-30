@@ -1,29 +1,28 @@
 package ru.izpz.edu.client;
 
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
+import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PostMapping;
 import ru.izpz.dto.NotifyRequest;
-import ru.izpz.dto.StatusChange;
 
-@ExtendWith(MockitoExtension.class)
 class BotClientTest {
 
-  @Mock private BotClient botClient;
-
   @Test
-  void notify_shouldCallEndpoint() {
-    NotifyRequest req =
-        NotifyRequest.builder()
-            .changes(List.of(new StatusChange("login", true, List.of("123"))))
-            .build();
+  void contract_shouldExposeExpectedFeignAndEndpointMetadata() throws Exception {
+    FeignClient feignClient = BotClient.class.getAnnotation(FeignClient.class);
+    assertNotNull(feignClient);
+    assertEquals("botclient", feignClient.name());
+    assertEquals("/api", feignClient.path());
 
-    botClient.notify(req);
-
-    verify(botClient).notify(req);
+    Method notify = BotClient.class.getMethod("notify", NotifyRequest.class);
+    PostMapping postMapping = notify.getAnnotation(PostMapping.class);
+    assertNotNull(postMapping);
+    assertTrue(postMapping.value().length > 0);
+    assertEquals("/notify", postMapping.value()[0]);
   }
 }

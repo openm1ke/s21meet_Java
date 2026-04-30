@@ -4,9 +4,7 @@ import java.io.Serial;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Ошибка авторизации/доступа внешней платформы.
- */
+/** Ошибка авторизации/доступа внешней платформы. */
 public class PlatformUnauthorizedException extends PlatformClientException {
   @Serial private static final long serialVersionUID = 1L;
 

@@ -1,43 +1,47 @@
 package ru.izpz.bot.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.message.Message;
-import ru.izpz.bot.service.TelegramClientProxy;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import ru.izpz.bot.service.MessageSender;
+import ru.izpz.dto.StatusChange;
 
-@SpringBootTest(properties = "bot.notify.enabled=true")
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class NotifyControllerIntegrationTest {
 
-  @Autowired private MockMvc mockMvc;
+  private MockMvc mockMvc;
 
-  @MockitoBean private TelegramClientProxy telegramClientProxy;
+  @Mock private MessageSender messageSender;
+
+  @BeforeEach
+  void setUp() {
+    mockMvc = MockMvcBuilders.standaloneSetup(new NotifyController(messageSender)).build();
+  }
+
+  @SuppressWarnings("unchecked")
+  private static ArgumentCaptor<List<StatusChange>> statusChangesCaptor() {
+    return (ArgumentCaptor<List<StatusChange>>)
+        (ArgumentCaptor<?>) ArgumentCaptor.forClass(List.class);
+  }
 
   @Test
   void notify_shouldSendStatusMessagesViaTelegramApi_forEachValidTelegramId() throws Exception {
-    Message message = mock(Message.class);
-    doReturn(message).when(telegramClientProxy).execute(any(SendMessage.class));
-
     mockMvc
         .perform(
             post("/api/notify")
@@ -56,24 +60,17 @@ class NotifyControllerIntegrationTest {
                                 """))
         .andExpect(status().isAccepted());
 
-    ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
-    verify(telegramClientProxy, times(2)).execute(captor.capture());
-
-    List<SendMessage> methods = captor.getAllValues();
-    SendMessage first = assertInstanceOf(SendMessage.class, methods.get(0));
-    SendMessage second = assertInstanceOf(SendMessage.class, methods.get(1));
-
-    assertEquals("1001", first.getChatId());
-    assertEquals("alice is online", first.getText());
-    assertEquals("1002", second.getChatId());
-    assertEquals("alice is online", second.getText());
+    ArgumentCaptor<List<StatusChange>> captor = statusChangesCaptor();
+    verify(messageSender).sendStatusChanges(captor.capture());
+    List<StatusChange> changes = captor.getValue();
+    assertEquals(1, changes.size());
+    assertEquals("alice", changes.getFirst().login());
+    assertTrue(changes.getFirst().newStatus());
+    assertEquals(List.of("1001", "1002"), changes.getFirst().telegramIds());
   }
 
   @Test
   void notify_shouldSkipInvalidTelegramIds_andSendOnlyForValidOnes() throws Exception {
-    Message message = mock(Message.class);
-    doReturn(message).when(telegramClientProxy).execute(any(SendMessage.class));
-
     mockMvc
         .perform(
             post("/api/notify")
@@ -92,21 +89,17 @@ class NotifyControllerIntegrationTest {
                                 """))
         .andExpect(status().isAccepted());
 
-    ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
-    verify(telegramClientProxy, times(2)).execute(captor.capture());
-
-    List<SendMessage> methods = captor.getAllValues();
-    assertEquals("1001", methods.get(0).getChatId());
-    assertEquals("bob is online", methods.get(0).getText());
-    assertEquals("1002", methods.get(1).getChatId());
-    assertEquals("bob is online", methods.get(1).getText());
+    ArgumentCaptor<List<StatusChange>> captor = statusChangesCaptor();
+    verify(messageSender).sendStatusChanges(captor.capture());
+    List<StatusChange> changes = captor.getValue();
+    assertEquals(1, changes.size());
+    assertEquals("bob", changes.getFirst().login());
+    assertTrue(changes.getFirst().newStatus());
+    assertEquals(List.of("1001", "bad-id", "1002"), changes.getFirst().telegramIds());
   }
 
   @Test
   void notify_shouldSendOfflineMessage_whenStatusIsFalse() throws Exception {
-    Message message = mock(Message.class);
-    doReturn(message).when(telegramClientProxy).execute(any(SendMessage.class));
-
     mockMvc
         .perform(
             post("/api/notify")
@@ -125,11 +118,22 @@ class NotifyControllerIntegrationTest {
                                 """))
         .andExpect(status().isAccepted());
 
-    ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
-    verify(telegramClientProxy, times(1)).execute(captor.capture());
+    ArgumentCaptor<List<StatusChange>> captor = statusChangesCaptor();
+    verify(messageSender).sendStatusChanges(captor.capture());
+    List<StatusChange> changes = captor.getValue();
+    assertEquals(1, changes.size());
+    assertEquals("alice", changes.getFirst().login());
+    assertFalse(changes.getFirst().newStatus());
+    assertEquals(List.of("2001"), changes.getFirst().telegramIds());
+  }
 
-    SendMessage sent = captor.getValue();
-    assertEquals("2001", sent.getChatId());
-    assertEquals("alice is offline", sent.getText());
+  @Test
+  void notify_shouldNotInvokeSender_whenBodyHasNoChanges() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/notify").contentType(MediaType.APPLICATION_JSON).content("{\"changes\":[]}"))
+        .andExpect(status().isAccepted());
+
+    verify(messageSender, never()).sendStatusChanges(any());
   }
 }

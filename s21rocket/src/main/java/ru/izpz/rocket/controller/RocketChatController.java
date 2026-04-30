@@ -20,7 +20,7 @@ public class RocketChatController {
 
   @PostMapping("/qr")
   public ResponseEntity<RocketChatSendResponse> generateQr() {
-    return ResponseEntity.ok(rocketChatService.generateQrCode());
+    return ResponseEntity.ok(rocketChatService.generateQrCodeResilient());
   }
 
   @PostMapping("/send")
@@ -35,6 +35,7 @@ public class RocketChatController {
           .body(new RocketChatSendResponse(false, "Request body is invalid"));
     }
     return ResponseEntity.ok(
-        rocketChatService.sendVerificationCode(request.getUsername(), request.getMessage()));
+        rocketChatService.sendVerificationCodeResilient(
+            request.getUsername(), request.getMessage()));
   }
 }

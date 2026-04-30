@@ -19,9 +19,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.edu.service.TokenService;
 
-/**
- * Клиент выполнения GraphQL-запросов к платформе.
- */
+/** Клиент выполнения GraphQL-запросов к платформе. */
 @Component
 @ConditionalOnProperty(name = "api.graphql.enabled", havingValue = "true")
 @RequiredArgsConstructor

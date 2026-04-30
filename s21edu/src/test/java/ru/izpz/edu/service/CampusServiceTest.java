@@ -89,8 +89,7 @@ class CampusServiceTest {
     verify(persistenceService)
         .replaceClusters(eq(CAMPUS_ID.toString()), argThat(list -> list.size() == 1));
     verify(campusMapper).toClusterEntity(any(ClusterV1DTO.class), eq(CAMPUS_ID.toString()));
-    verify(schedulerMetricsService)
-        .recordClusterPlaces(CAMPUS_ID.toString(), "cluster-1", 7, 13);
+    verify(schedulerMetricsService).recordClusterPlaces(CAMPUS_ID.toString(), "cluster-1", 7, 13);
   }
 
   @Test

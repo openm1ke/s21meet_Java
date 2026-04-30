@@ -6,8 +6,7 @@ import ru.izpz.dto.RocketChatSendResponse;
 
 @Getter
 public class RocketChatSendException extends RuntimeException {
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
   private final transient RocketChatSendResponse response;
 
   public RocketChatSendException(RocketChatSendResponse response) {

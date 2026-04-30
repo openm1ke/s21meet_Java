@@ -11,9 +11,7 @@ import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.exception.PlatformClientException;
 import ru.izpz.edu.service.GraphQLService;
 
-/**
- * Клиент доступа к данным кампусов и проектам участников.
- */
+/** Клиент доступа к данным кампусов и проектам участников. */
 @Slf4j
 @Service
 @RequiredArgsConstructor

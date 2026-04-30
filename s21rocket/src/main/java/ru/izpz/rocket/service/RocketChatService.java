@@ -1,5 +1,7 @@
 package ru.izpz.rocket.service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.annotation.PostConstruct;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +19,7 @@ import ru.izpz.rocket.property.RocketChatProperties;
 @Service
 @RequiredArgsConstructor
 public class RocketChatService {
+  private static final String ROCKETCHAT_OPERATION = "rocketchatOperation";
 
   private final RocketChatProperties properties;
 
@@ -63,6 +66,16 @@ public class RocketChatService {
         properties.getMessageTimeout());
   }
 
+  @Retry(name = ROCKETCHAT_OPERATION)
+  @CircuitBreaker(name = ROCKETCHAT_OPERATION, fallbackMethod = "generateQrCodeResilientFallback")
+  public RocketChatSendResponse generateQrCodeResilient() {
+    RocketChatSendResponse response = generateQrCode();
+    if (!response.isSuccess()) {
+      throw new RocketChatOperationException(response.getMessage());
+    }
+    return response;
+  }
+
   public RocketChatSendResponse generateQrCode() {
     log.info("Starting QR code generation for bot user: {}", properties.getBotUsername());
 
@@ -82,13 +95,7 @@ public class RocketChatService {
 
       log.debug("Executing QR generation with timeout: {}s", properties.getQrTimeout());
       RocketChatSendResponse response = client.execute(properties.getQrTimeout());
-
-      if (response.isSuccess()) {
-        log.info("QR code generated successfully");
-      } else {
-        log.warn("QR code generation failed: {}", response.getMessage());
-      }
-
+      log.info("QR code generated successfully");
       created.complete(response);
       return response;
     } catch (Exception e) {
@@ -119,6 +126,19 @@ public class RocketChatService {
     }
   }
 
+  @Retry(name = ROCKETCHAT_OPERATION)
+  @CircuitBreaker(
+      name = ROCKETCHAT_OPERATION,
+      fallbackMethod = "sendVerificationCodeResilientFallback")
+  public RocketChatSendResponse sendVerificationCodeResilient(
+      String targetUsername, String message) {
+    RocketChatSendResponse response = sendVerificationCode(targetUsername, message);
+    if (!response.isSuccess()) {
+      throw new RocketChatOperationException(response.getMessage());
+    }
+    return response;
+  }
+
   public RocketChatSendResponse sendVerificationCode(String targetUsername, String message) {
     log.info("Starting verification code sending to user: {}", targetUsername);
 
@@ -141,21 +161,28 @@ public class RocketChatService {
 
       log.debug("Executing message sending with timeout: {}s", properties.getMessageTimeout());
       RocketChatSendResponse response = client.execute(properties.getMessageTimeout());
-
-      if (response.isSuccess()) {
-        log.info("Verification code sent successfully to user: {}", targetUsername);
-      } else {
-        log.warn(
-            "Failed to send verification code to user {}: {}",
-            targetUsername,
-            response.getMessage());
-      }
-
+      log.info("Verification code sent successfully to user: {}", targetUsername);
       return response;
     } catch (Exception e) {
       log.error("Unexpected error during verification code sending to user: {}", targetUsername, e);
       return new RocketChatSendResponse(
           false, "Failed to send verification code: " + e.getMessage());
     }
+  }
+
+  @SuppressWarnings("unused")
+  RocketChatSendResponse generateQrCodeResilientFallback(Throwable throwable) {
+    log.warn("Fallback generateQrCode: {}", throwable.getMessage());
+    return new RocketChatSendResponse(
+        false, "Сервис Rocket.Chat временно недоступен, попробуйте позже");
+  }
+
+  @SuppressWarnings("unused")
+  RocketChatSendResponse sendVerificationCodeResilientFallback(
+      String targetUsername, String message, Throwable throwable) {
+    log.warn(
+        "Fallback sendVerificationCode for user {}: {}", targetUsername, throwable.getMessage());
+    return new RocketChatSendResponse(
+        false, "Сервис Rocket.Chat временно недоступен, попробуйте позже");
   }
 }

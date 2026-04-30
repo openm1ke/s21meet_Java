@@ -6,8 +6,7 @@ import ru.izpz.dto.ServiceErrorDto;
 
 @Getter
 public class EduLoginCheckException extends RuntimeException {
-  @Serial
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
   private final transient ServiceErrorDto error;
 
   public EduLoginCheckException(ServiceErrorDto error) {
