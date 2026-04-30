@@ -8,6 +8,6 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class CampusDto {
-    public String name;
-    public String uuid;
+  private String name;
+  private String uuid;
 }

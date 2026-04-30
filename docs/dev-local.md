@@ -129,3 +129,35 @@
 - Скрипт использует профиль `infra` и профиль прокси (`proxy-vless`/`proxy-ssh`) в `docker-compose`.
 - Если меняешь только Java-код одного модуля, не нужно пересобирать весь проект.
 - Файлы `env/test/*.env` локальные и не должны попадать в git.
+
+## Локальный профиль в IDEA (`spring.profiles.active=local`)
+
+- Для локального запуска сервисы читают `env/local/<service>.env`.
+- Актуальные рабочие файлы уже должны быть созданы:
+  - `env/local/s21auth.env`
+  - `env/local/s21edu.env`
+  - `env/local/s21bot.env`
+  - `env/local/s21rocket.env`
+  - `env/local/s21web.env`
+
+### Базы данных в local
+
+- `s21auth` и `s21edu` используют файловый H2:
+  - `s21auth`: `jdbc:h2:file:/Users/<your-user>/.s21meet/h2/s21auth`
+  - `s21edu`: `jdbc:h2:file:/Users/<your-user>/.s21meet/h2/s21edu`
+- Для удобной отладки в DBeaver по умолчанию используется `DDL_AUTO=update` (данные не удаляются при остановке приложения).
+
+### Подключение из DBeaver
+
+- Локально поднимается встроенный H2 TCP server:
+  - `s21edu`: порт `9092`
+  - `s21auth`: порт `9093`
+- Подключайся по TCP URL:
+  - `s21edu`: `jdbc:h2:tcp://localhost:9092//Users/<your-user>/.s21meet/h2/s21edu`
+  - `s21auth`: `jdbc:h2:tcp://localhost:9093//Users/<your-user>/.s21meet/h2/s21auth`
+- Учётные данные:
+  - username: `sa`
+  - password: пустой
+- H2 console в браузере:
+  - `s21edu`: `http://localhost:8082/h2-console`
+  - `s21auth`: `http://localhost:8081/h2-console`

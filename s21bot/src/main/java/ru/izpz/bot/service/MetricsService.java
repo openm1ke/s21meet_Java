@@ -8,40 +8,42 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class MetricsService {
 
-    private final MeterRegistry meterRegistry;
+  private final MeterRegistry meterRegistry;
 
-    public void recordButtonPress(String buttonCode, ButtonMetricType buttonType) {
-        meterRegistry.counter(
-                "bot_button_press_total",
-                "button", normalize(buttonCode),
-                "type", normalize(buttonType != null ? buttonType.tagValue() : null)
-        ).increment();
-    }
+  public void recordButtonPress(String buttonCode, ButtonMetricType buttonType) {
+    meterRegistry
+        .counter(
+            "bot_button_press_total",
+            "button",
+            normalize(buttonCode),
+            "type",
+            normalize(buttonType != null ? buttonType.tagValue() : null))
+        .increment();
+  }
 
-    public void recordTelegramApiRequest(String method, String outcome) {
-        meterRegistry.counter(
-                "bot_telegram_api_requests_total",
-                "method", normalize(method),
-                "outcome", normalize(outcome)
-        ).increment();
-    }
+  public void recordTelegramApiRequest(String method, String outcome) {
+    meterRegistry
+        .counter(
+            "bot_telegram_api_requests_total",
+            "method",
+            normalize(method),
+            "outcome",
+            normalize(outcome))
+        .increment();
+  }
 
-    public void recordNotifyDelivery(String outcome) {
-        meterRegistry.counter(
-                "bot_notify_delivery_total",
-                "outcome", normalize(outcome)
-        ).increment();
-    }
+  public void recordNotifyDelivery(String outcome) {
+    meterRegistry.counter("bot_notify_delivery_total", "outcome", normalize(outcome)).increment();
+  }
 
-    public void recordProcessingError(String stage, String reason) {
-        meterRegistry.counter(
-                "bot_processing_errors_total",
-                "stage", normalize(stage),
-                "reason", normalize(reason)
-        ).increment();
-    }
+  public void recordProcessingError(String stage, String reason) {
+    meterRegistry
+        .counter(
+            "bot_processing_errors_total", "stage", normalize(stage), "reason", normalize(reason))
+        .increment();
+  }
 
-    private String normalize(String value) {
-        return (value == null || value.isBlank()) ? "unknown" : value;
-    }
+  private String normalize(String value) {
+    return (value == null || value.isBlank()) ? "unknown" : value;
+  }
 }

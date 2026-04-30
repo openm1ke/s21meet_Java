@@ -1,5 +1,12 @@
 package ru.izpz.bot.keyboard;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -8,42 +15,37 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.property.BotProperties;
 
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class TelegramButtonsTest {
 
-    @Mock
-    private BotProperties botProperties;
+  @Mock private BotProperties botProperties;
 
-    @Mock
-    private CallbackPayloadSerializer serializer;
+  @Mock private CallbackPayloadSerializer serializer;
 
-    @InjectMocks
-    private TelegramButtons telegramButtons;
+  @InjectMocks private TelegramButtons telegramButtons;
 
-    @Test
-    void getRegistrationButton_usesSerializer() {
-        when(serializer.serialize(any(CallbackPayload.class))).thenReturn("data");
+  @Test
+  void getRegistrationButton_usesSerializer() {
+    when(serializer.serialize(any(CallbackPayload.class))).thenReturn("data");
 
-        Map<String, String> btn = telegramButtons.getRegistrationButton();
+    Map<String, String> btn = telegramButtons.getRegistrationButton();
 
-        assertEquals("data", btn.get(TelegramButtons.REGISTRATION_NAME));
+    assertEquals("data", btn.get(TelegramButtons.REGISTRATION_NAME));
 
-        verify(serializer).serialize(argThat(p -> TelegramButtons.REGISTRATION_CODE.equals(p.getCommand()) && p.getArgs() == null));
-    }
+    verify(serializer)
+        .serialize(
+            argThat(
+                p ->
+                    TelegramButtons.REGISTRATION_CODE.equals(p.getCommand())
+                        && p.getArgs() == null));
+  }
 
-    @Test
-    void getSubscribeButton_usesInviteLinkFromProperties() {
-        when(botProperties.groupInviteLink()).thenReturn("https://t.me/join");
+  @Test
+  void getSubscribeButton_usesInviteLinkFromProperties() {
+    when(botProperties.groupInviteLink()).thenReturn("https://t.me/join");
 
-        Map<String, String> btn = telegramButtons.getSubscribeButton();
+    Map<String, String> btn = telegramButtons.getSubscribeButton();
 
-        assertEquals("https://t.me/join", btn.get(TelegramButtons.SUBSCRIBE_NAME));
-    }
+    assertEquals("https://t.me/join", btn.get(TelegramButtons.SUBSCRIBE_NAME));
+  }
 }

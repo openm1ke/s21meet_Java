@@ -1,12 +1,15 @@
 package ru.izpz.edu.service;
 
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import ru.izpz.dto.ApiException;
 import ru.izpz.dto.CampusDto;
 import ru.izpz.dto.Clusters;
 import ru.izpz.dto.ProjectsDto;
@@ -19,168 +22,164 @@ import ru.izpz.edu.repository.WorkplaceRepository;
 import ru.izpz.edu.service.provider.CampusRoutingProjectsProvider;
 import ru.izpz.edu.service.provider.WorkplaceProvider;
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "campus.service.enabled", havingValue = "true")
 public class CampusService {
 
-    private static final String STATUS_REGISTERED = "REGISTERED";
-    private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
-    private static final String STATUS_IN_REVIEW = "IN_REVIEW";
-    private static final String STATUS_IN_REVIEWS = "IN_REVIEWS";
+  private static final String STATUS_REGISTERED = "REGISTERED";
+  private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+  private static final String STATUS_IN_REVIEW = "IN_REVIEW";
+  private static final String STATUS_IN_REVIEWS = "IN_REVIEWS";
 
-    private final CampusPersistenceService persistenceService;
-    private final CampusMapper campusMapper;
-    private final ProjectsMapper projectsMapper;
-    private final WorkplaceProvider workplaceProvider;
-    private final CampusRoutingProjectsProvider campusRoutingProjectsProvider;
-    private final SchedulerMetricsService schedulerMetricsService;
-    private final WorkplaceRepository workplaceRepository;
+  private final CampusPersistenceService persistenceService;
+  private final CampusMapper campusMapper;
+  private final ProjectsMapper projectsMapper;
+  private final WorkplaceProvider workplaceProvider;
+  private final CampusRoutingProjectsProvider campusRoutingProjectsProvider;
+  private final SchedulerMetricsService schedulerMetricsService;
+  private final WorkplaceRepository workplaceRepository;
 
-    public List<Clusters> getClusters(CampusDto campus) {
-        return persistenceService.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
-            .map(cluster -> Clusters.builder()
-                .name(cluster.getName())
-                .capacity(cluster.getCapacity())
-                .availableCapacity(cluster.getAvailableCapacity())
-                .floor(cluster.getFloor())
-                .build())
-            .toList();
-    }
+  public List<Clusters> getClusters(CampusDto campus) {
+    return persistenceService.findAllByCampusIdOrderByFloorAsc(campus.getUuid()).stream()
+        .map(
+            cluster ->
+                Clusters.builder()
+                    .name(cluster.getName())
+                    .capacity(cluster.getCapacity())
+                    .availableCapacity(cluster.getAvailableCapacity())
+                    .floor(cluster.getFloor())
+                    .build())
+        .toList();
+  }
 
-    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public CampusSnapshot getCampusSnapshot(CampusDto campus) {
-        List<Clusters> clusters = getClusters(campus);
-        Map<String, Long> programStats = getProgramStatsByCampusId(campus.getUuid());
-        return new CampusSnapshot(clusters, programStats);
-    }
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public CampusSnapshot getCampusSnapshot(CampusDto campus) {
+    List<Clusters> clusters = getClusters(campus);
+    Map<String, Long> programStats = getProgramStatsByCampusId(campus.getUuid());
+    return new CampusSnapshot(clusters, programStats);
+  }
 
-    public Map<String, Long> getProgramStatsByCampusId(String campusId) {
-        List<WorkplaceRepository.StageNameCountView> rows = workplaceRepository
-            .countParticipantsByCampusIdAndStageName(campusId).stream()
+  public Map<String, Long> getProgramStatsByCampusId(String campusId) {
+    List<WorkplaceRepository.StageNameCountView> rows =
+        workplaceRepository.countParticipantsByCampusIdAndStageName(campusId).stream()
             .sorted(Comparator.comparing(row -> normalizeProgramName(row.getStageName())))
             .toList();
 
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (WorkplaceRepository.StageNameCountView row : rows) {
-            result.merge(normalizeProgramName(row.getStageName()), row.getCount(), Long::sum);
-        }
-        return result;
+    Map<String, Long> result = new LinkedHashMap<>();
+    for (WorkplaceRepository.StageNameCountView row : rows) {
+      result.merge(normalizeProgramName(row.getStageName()), row.getCount(), Long::sum);
     }
+    return result;
+  }
 
-    public void replaceClustersByCampusId(String campusId, List<ClusterV1DTO> clustersDto) {
-        if (!clustersDto.isEmpty()) {
-            var clusters = clustersDto.stream()
-                .map(dto -> campusMapper.toClusterEntity(dto, campusId))
-            .toList();
-            persistenceService.replaceClusters(campusId, clusters);
+  public void replaceClustersByCampusId(String campusId, List<ClusterV1DTO> clustersDto) {
+    if (!clustersDto.isEmpty()) {
+      var clusters =
+          clustersDto.stream().map(dto -> campusMapper.toClusterEntity(dto, campusId)).toList();
+      persistenceService.replaceClusters(campusId, clusters);
 
-            clusters.forEach(cluster -> {
-                int freePlaces = toNonNegative(cluster.getAvailableCapacity());
-                int totalCapacity = toNonNegative(cluster.getCapacity());
-                int occupiedPlaces = Math.max(totalCapacity - freePlaces, 0);
-                schedulerMetricsService.recordClusterPlaces(campusId, cluster.getName(), freePlaces, occupiedPlaces);
-            });
-        }
-    }
-
-    public void replaceCampusSnapshotByCampusId(String campusId, List<ClusterV1DTO> clustersDto, List<Workplace> workplaces) {
-        var clusters = clustersDto.stream()
-            .map(dto -> campusMapper.toClusterEntity(dto, campusId))
-            .toList();
-        persistenceService.replaceCampusSnapshot(campusId, clusters, workplaces);
-
-        clusters.forEach(cluster -> {
+      clusters.forEach(
+          cluster -> {
             int freePlaces = toNonNegative(cluster.getAvailableCapacity());
             int totalCapacity = toNonNegative(cluster.getCapacity());
             int occupiedPlaces = Math.max(totalCapacity - freePlaces, 0);
-            schedulerMetricsService.recordClusterPlaces(campusId, cluster.getName(), freePlaces, occupiedPlaces);
+            schedulerMetricsService.recordClusterPlaces(
+                campusId, cluster.getName(), freePlaces, occupiedPlaces);
+          });
+    }
+  }
+
+  public void replaceCampusSnapshotByCampusId(
+      String campusId, List<ClusterV1DTO> clustersDto, List<Workplace> workplaces) {
+    var clusters =
+        clustersDto.stream().map(dto -> campusMapper.toClusterEntity(dto, campusId)).toList();
+    persistenceService.replaceCampusSnapshot(campusId, clusters, workplaces);
+
+    clusters.forEach(
+        cluster -> {
+          int freePlaces = toNonNegative(cluster.getAvailableCapacity());
+          int totalCapacity = toNonNegative(cluster.getCapacity());
+          int occupiedPlaces = Math.max(totalCapacity - freePlaces, 0);
+          schedulerMetricsService.recordClusterPlaces(
+              campusId, cluster.getName(), freePlaces, occupiedPlaces);
         });
+  }
+
+  public List<Cluster> findAllByOrderByCampusIdAsc() {
+    return persistenceService.findAllByOrderByCampusIdAsc();
+  }
+
+  public List<Cluster> findAllByCampusIdOrderByFloorAsc(String campusId) {
+    return persistenceService.findAllByCampusIdOrderByFloorAsc(campusId);
+  }
+
+  public List<ProjectsDto> getStudentProjectsByLogin(String login) {
+    var projects = campusRoutingProjectsProvider.getStudentProjectsByLogin(login);
+    return projects.stream()
+        .filter(project -> isVisibleForProfile(project.goalStatus()))
+        .map(projectsMapper::toDto)
+        .toList();
+  }
+
+  private boolean isVisibleForProfile(String status) {
+    if (status == null) {
+      return false;
     }
+    return STATUS_IN_PROGRESS.equalsIgnoreCase(status)
+        || STATUS_REGISTERED.equalsIgnoreCase(status)
+        || STATUS_IN_REVIEW.equalsIgnoreCase(status)
+        || STATUS_IN_REVIEWS.equalsIgnoreCase(status);
+  }
 
-    public List<Cluster> findAllByOrderByCampusIdAsc() {
-        return persistenceService.findAllByOrderByCampusIdAsc();
+  /** Fetch participants using configured provider. */
+  public List<Workplace> fetchParticipantsByClusterWithProvider(Long clusterId) {
+    return workplaceProvider.fetchParticipantsByCluster(clusterId);
+  }
+
+  public void replaceParticipantsByCampusId(String campusId, List<Workplace> workplaces) {
+    persistenceService.replaceParticipantsByCampusId(campusId, workplaces);
+  }
+
+  public void refreshParticipantMetrics() {
+    schedulerMetricsService.resetParticipantMetrics();
+
+    workplaceRepository
+        .countParticipantsByCampus()
+        .forEach(
+            row ->
+                schedulerMetricsService.recordParticipantsByCampus(
+                    row.getCampusId(), row.getCount()));
+
+    workplaceRepository
+        .countParticipantsByCampusAndStageGroup()
+        .forEach(
+            row ->
+                schedulerMetricsService.recordParticipantsByCampusAndStageGroup(
+                    row.getCampusId(), row.getStageGroupName(), row.getCount()));
+
+    workplaceRepository
+        .countParticipantsByCampusAndStageName()
+        .forEach(
+            row ->
+                schedulerMetricsService.recordParticipantsByCampusAndStageName(
+                    row.getCampusId(), row.getStageName(), row.getCount()));
+  }
+
+  private int toNonNegative(Integer value) {
+    if (value == null || value < 0) {
+      return 0;
     }
+    return value;
+  }
 
-    public List<Cluster> findAllByCampusIdOrderByFloorAsc(String campusId) {
-        return persistenceService.findAllByCampusIdOrderByFloorAsc(campusId);
+  private String normalizeProgramName(String stageGroupName) {
+    if (stageGroupName == null || stageGroupName.isBlank()) {
+      return "No data";
     }
+    return stageGroupName;
+  }
 
-    public List<ProjectsDto> getStudentProjectsByLogin(String login) {
-        var projects = campusRoutingProjectsProvider.getStudentProjectsByLogin(login);
-        return projects.stream()
-                .filter(project -> isVisibleForProfile(project.goalStatus()))
-                .map(projectsMapper::toDto)
-                .toList();
-    }
-
-    private boolean isVisibleForProfile(String status) {
-        if (status == null) {
-            return false;
-        }
-        return STATUS_IN_PROGRESS.equalsIgnoreCase(status)
-            || STATUS_REGISTERED.equalsIgnoreCase(status)
-            || STATUS_IN_REVIEW.equalsIgnoreCase(status)
-            || STATUS_IN_REVIEWS.equalsIgnoreCase(status);
-    }
-
-    /**
-     * Fetch participants using configured provider.
-     * @param clusterId the cluster ID
-     * @throws ApiException if provider call fails
-     */
-    public List<Workplace> fetchParticipantsByClusterWithProvider(Long clusterId) throws ApiException {
-        return workplaceProvider.fetchParticipantsByCluster(clusterId);
-    }
-
-    public void replaceParticipantsByCampusId(String campusId, List<Workplace> workplaces) {
-        persistenceService.replaceParticipantsByCampusId(campusId, workplaces);
-    }
-
-    public void refreshParticipantMetrics() {
-        schedulerMetricsService.resetParticipantMetrics();
-
-        workplaceRepository.countParticipantsByCampus().forEach(row ->
-            schedulerMetricsService.recordParticipantsByCampus(row.getCampusId(), row.getCount())
-        );
-
-        workplaceRepository.countParticipantsByCampusAndStageGroup().forEach(row ->
-            schedulerMetricsService.recordParticipantsByCampusAndStageGroup(
-                row.getCampusId(),
-                row.getStageGroupName(),
-                row.getCount()
-            )
-        );
-
-        workplaceRepository.countParticipantsByCampusAndStageName().forEach(row ->
-            schedulerMetricsService.recordParticipantsByCampusAndStageName(
-                row.getCampusId(),
-                row.getStageName(),
-                row.getCount()
-            )
-        );
-    }
-
-    private int toNonNegative(Integer value) {
-        if (value == null || value < 0) {
-            return 0;
-        }
-        return value;
-    }
-
-    private String normalizeProgramName(String stageGroupName) {
-        if (stageGroupName == null || stageGroupName.isBlank()) {
-            return "No data";
-        }
-        return stageGroupName;
-    }
-
-    public record CampusSnapshot(List<Clusters> clusters, Map<String, Long> programStats) {
-    }
+  public record CampusSnapshot(List<Clusters> clusters, Map<String, Long> programStats) {}
 }

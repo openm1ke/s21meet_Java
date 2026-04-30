@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class S21AuthApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(S21AuthApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(S21AuthApplication.class, args);
+  }
 }

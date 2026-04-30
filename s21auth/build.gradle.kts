@@ -21,6 +21,7 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}")
     implementation("io.github.resilience4j:resilience4j-ratelimiter:${resilience4jVersion}")
 
+    compileOnly("com.h2database:h2")
     runtimeOnly("com.h2database:h2")
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

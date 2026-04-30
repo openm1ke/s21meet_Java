@@ -8,9 +8,11 @@ import ru.izpz.edu.model.Event;
 
 @Mapper(componentModel = "spring")
 public interface EventMapper {
-    Event toEntity(EventV1DTO dto);
-    void update(@MappingTarget Event target, EventV1DTO dto);
+  Event toEntity(EventV1DTO dto);
 
-    EventDto fromEventToDto(Event event);
-    Event fromDtoToEvent(EventDto dto);
+  void update(@MappingTarget Event target, EventV1DTO dto);
+
+  EventDto fromEventToDto(Event event);
+
+  Event fromDtoToEvent(EventDto dto);
 }

@@ -10,11 +10,10 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class ApplicationContextTest {
 
-    @Autowired
-    private ApplicationContext context;
+  @Autowired private ApplicationContext context;
 
-    @Test
-    void contextLoads() {
-        // Если контекст не загрузится, тест упадёт.
-    }
+  @Test
+  void contextLoads() {
+    // Если контекст не загрузится, тест упадёт.
+  }
 }

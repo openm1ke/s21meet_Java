@@ -11,7 +11,6 @@ public record EventDto(
     String location,
     OffsetDateTime startDateTime,
     OffsetDateTime endDateTime,
-    List<String>organizers,
+    List<String> organizers,
     Integer capacity,
-    Integer registerCount
-) {}
+    Integer registerCount) {}

@@ -4,7 +4,6 @@ plugins {
 }
 
 val openApiVersion: String by project
-val jacksonDatabind: String by project
 val squareupOkhttpVersion: String by project
 val okioJvmVersion: String by project
 val gsonVersion: String by project
@@ -20,7 +19,9 @@ repositories {
 }
 
 dependencies {
-    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonDatabind")
+    implementation("com.fasterxml.jackson.core:jackson-core")
+    implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     implementation("org.openapitools:jackson-databind-nullable:$jacksonDatabindNullable")
     implementation("com.squareup.okhttp3:okhttp:$squareupOkhttpVersion")
     implementation("com.squareup.okhttp3:logging-interceptor:$squareupOkhttpVersion")
@@ -53,6 +54,7 @@ openApiGenerate {
     configOptions.set(
         mapOf(
             "dateLibrary" to "java8",  // Используем java.time (LocalDate, LocalDateTime)
+            "library" to "restclient", // Генерируем Java client на Spring RestClient
             "useJakartaEe" to "true",  // Для использования Jakarta Persistence
             "generateApis" to "true", // генерируем API-клиенты
             "generateModels" to "true", // Генерируем только модели
@@ -63,18 +65,11 @@ openApiGenerate {
             //"additionalModelTypeAnnotations" to "@jakarta.persistence.Entity\n@jakarta.persistence.Table(name=\"${'$'}{classname}\")\n@jakarta.persistence.Id\n@jakarta.persistence.GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)"
         )
     )
+    openapiGeneratorIgnoreList.set(listOf("**/ApiException.java"))
 }
 
 
 tasks.named("openApiGenerate") {
-//    doLast {
-//        val stubFile = file("src/main/resources/JSON.java")
-//        val generatedFile = layout.buildDirectory.dir("generated/src/main/java/ru/izpz/dto/JSON.java").get().asFile
-//        if (stubFile.exists()) {
-//            println("Перезаписываем сгенерированный JSON.java на версию-стаб из: ${stubFile.absolutePath}")
-//            stubFile.copyTo(generatedFile, overwrite = true)
-//        }
-//    }
 }
 
 tasks.test {
@@ -83,6 +78,14 @@ tasks.test {
 
 tasks.compileJava {
     dependsOn(tasks.openApiGenerate)
+}
+
+tasks.named<com.github.spotbugs.snom.SpotBugsTask>("spotbugsMain") {
+    classes = files(
+        classes?.asFileTree?.matching {
+            exclude("ru/izpz/dto/**")
+        }
+    )
 }
 
 sourceSets {

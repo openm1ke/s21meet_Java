@@ -1,83 +1,94 @@
 package ru.izpz.edu.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
-import ru.izpz.edu.model.Workplace;
-import ru.izpz.edu.model.WorkplaceId;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import ru.izpz.edu.model.Workplace;
+import ru.izpz.edu.model.WorkplaceId;
 
 @Repository
 public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceId> {
-    void deleteByIdClusterId(Long clusterId);
-    void deleteByIdClusterIdIn(Set<Long> clusterIds);
+  void deleteByIdClusterId(Long clusterId);
 
-    boolean existsByLogin(String login);
+  void deleteByIdClusterIdIn(Set<Long> clusterIds);
 
-    @Query("select distinct w.login from Workplace w")
-    List<String> findDistinctLogins();
+  boolean existsByLogin(String login);
 
-    Optional<Workplace> findByLogin(String telegramId);
+  @Query("select distinct w.login from Workplace w")
+  List<String> findDistinctLogins();
 
-    List<Workplace> findAllByLoginIn(Collection<String> logins);
+  Optional<Workplace> findByLogin(String telegramId);
 
-    @Query("""
+  List<Workplace> findAllByLoginIn(Collection<String> logins);
+
+  @Query(
+      """
         select c.campusId as campusId, count(w) as count
         from Workplace w
         join Cluster c on c.clusterId = w.id.clusterId
         group by c.campusId
         """)
-    List<CampusCountView> countParticipantsByCampus();
+  List<CampusCountView> countParticipantsByCampus();
 
-    @Query("""
+  @Query(
+      """
         select c.campusId as campusId, w.stageGroupName as stageGroupName, count(w) as count
         from Workplace w
         join Cluster c on c.clusterId = w.id.clusterId
         group by c.campusId, w.stageGroupName
         """)
-    List<CampusStageGroupCountView> countParticipantsByCampusAndStageGroup();
+  List<CampusStageGroupCountView> countParticipantsByCampusAndStageGroup();
 
-    @Query("""
+  @Query(
+      """
         select c.campusId as campusId, w.stageName as stageName, count(w) as count
         from Workplace w
         join Cluster c on c.clusterId = w.id.clusterId
         group by c.campusId, w.stageName
         """)
-    List<CampusStageNameCountView> countParticipantsByCampusAndStageName();
+  List<CampusStageNameCountView> countParticipantsByCampusAndStageName();
 
-    @Query("""
+  @Query(
+      """
         select w.stageName as stageName, count(w) as count
         from Workplace w
         join Cluster c on c.clusterId = w.id.clusterId
         where c.campusId = :campusId
         group by w.stageName
         """)
-    List<StageNameCountView> countParticipantsByCampusIdAndStageName(@Param("campusId") String campusId);
+  List<StageNameCountView> countParticipantsByCampusIdAndStageName(
+      @Param("campusId") String campusId);
 
-    interface CampusCountView {
-        String getCampusId();
-        long getCount();
-    }
+  interface CampusCountView {
+    String getCampusId();
 
-    interface CampusStageGroupCountView {
-        String getCampusId();
-        String getStageGroupName();
-        long getCount();
-    }
+    long getCount();
+  }
 
-    interface CampusStageNameCountView {
-        String getCampusId();
-        String getStageName();
-        long getCount();
-    }
+  interface CampusStageGroupCountView {
+    String getCampusId();
 
-    interface StageNameCountView {
-        String getStageName();
-        long getCount();
-    }
+    String getStageGroupName();
+
+    long getCount();
+  }
+
+  interface CampusStageNameCountView {
+    String getCampusId();
+
+    String getStageName();
+
+    long getCount();
+  }
+
+  interface StageNameCountView {
+    String getStageName();
+
+    long getCount();
+  }
 }

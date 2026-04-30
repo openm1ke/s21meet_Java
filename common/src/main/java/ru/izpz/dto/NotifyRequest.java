@@ -1,8 +1,7 @@
 package ru.izpz.dto;
 
-import lombok.*;
-
 import java.util.List;
+import lombok.*;
 
 @Getter
 @Setter
@@ -11,5 +10,5 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class NotifyRequest {
-    private List<StatusChange> changes;
+  private List<StatusChange> changes;
 }

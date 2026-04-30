@@ -108,6 +108,34 @@ chmod +x gradlew dev.sh
 
 - `env/test/*.env.example` — шаблоны для локального/тестового окружения.
 
+### Запуск из IntelliJ IDEA (Compound)
+
+В репозитории есть готовые run-конфигурации в `.run/`:
+
+- `S21Auth Local`
+- `S21Edu Local`
+- `S21Bot Local`
+- `S21Rocket Local`
+- `S21Web Local`
+- `All Services (local)` — compound, запускает все сервисы вместе.
+- `Sonar Local (tests + upload)` — запускает `runAllTestsWithCoverage` и отправляет отчет в SonarCloud.
+
+Каждый сервис запускается с:
+
+- `--spring.profiles.active=local`
+- `--spring.config.import=optional:file:env/local/<service>.env`
+
+Перед первым запуском скопируйте примеры:
+
+- `env/local/s21auth.env.example -> env/local/s21auth.env`
+- `env/local/s21edu.env.example -> env/local/s21edu.env`
+- `env/local/s21bot.env.example -> env/local/s21bot.env`
+- `env/local/s21rocket.env.example -> env/local/s21rocket.env`
+- `env/local/s21web.env.example -> env/local/s21web.env`
+- `env/local/sonar.env.example -> env/local/sonar.env` (для локального Sonar запуска из IDEA/Gradle)
+
+Для `Sonar Local (tests + upload)` используется `env/local/sonar.env` (включая `SONAR_TOKEN`).
+
 #### `compose.env` (оркестрация Docker Compose)
 
 - `APP_ENV` — имя окружения для env-файлов (в текущей схеме используется `test`).
@@ -172,8 +200,7 @@ chmod +x gradlew dev.sh
 
 Флаги и таймауты API:
 
-- `API_CLIENT_ENABLED` — включает HTTP client к внешнему API.
-- `API_CLIENT_CONNECT_TIMEOUT`, `API_CLIENT_READ_TIMEOUT`, `API_CLIENT_CALL_TIMEOUT` — connect/read/call timeout.
+- `API_CLIENT_CONNECT_TIMEOUT`, `API_CLIENT_READ_TIMEOUT` — connect/read timeout для внешнего API клиента.
 - `GRAPHQL_API_ENABLED`, `CAMPUS_API_ENABLED`, `CLUSTER_API_ENABLED`, `PARTICIPANT_API_ENABLED`, `COALITION_API_ENABLED` — включение отдельных внешних API направлений.
 
 Провайдеры и TTL:
@@ -206,7 +233,6 @@ chmod +x gradlew dev.sh
 
 Rate limit / retry resilience4j:
 
-- `PLATFORM_RETRY_MAX_ATTEMPTS`, `PLATFORM_RETRY_WAIT_DURATION`, `PLATFORM_RETRY_EXPONENTIAL_BACKOFF`, `PLATFORM_RETRY_EXPONENTIAL_MULTIPLIER` — общий retry внешнего platform API.
 - `EXTERNAL_GLOBAL_LIMIT_FOR_PERIOD`, `EXTERNAL_GLOBAL_LIMIT_REFRESH_PERIOD`, `EXTERNAL_GLOBAL_TIMEOUT_DURATION` — глобальный limiter на внешний API.
 - `EXTERNAL_GLOBAL_RETRY_MAX_ATTEMPTS`, `EXTERNAL_GLOBAL_RETRY_WAIT_DURATION`, `EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF`, `EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER` — retry для глобального external limiter.
 - `CAMPUS_WORKPLACE_LIMIT_FOR_PERIOD`, `CAMPUS_WORKPLACE_LIMIT_REFRESH_PERIOD`, `CAMPUS_WORKPLACE_TIMEOUT_DURATION` — limiter workplace-парсинга.
@@ -219,6 +245,13 @@ Rate limit / retry resilience4j:
 - `GRAPHQL_GLOBAL_RETRY_MAX_ATTEMPTS`, `GRAPHQL_GLOBAL_RETRY_WAIT_DURATION`, `GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF`, `GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER` — retry GraphQL global limiter.
 - `PROJECTS_REST_LIMIT_FOR_PERIOD`, `PROJECTS_REST_LIMIT_REFRESH_PERIOD`, `PROJECTS_REST_TIMEOUT_DURATION` — limiter REST-проектов.
 - `PROJECTS_REST_RETRY_MAX_ATTEMPTS`, `PROJECTS_REST_RETRY_WAIT_DURATION`, `PROJECTS_REST_RETRY_EXPONENTIAL_BACKOFF`, `PROJECTS_REST_RETRY_EXPONENTIAL_MULTIPLIER` — retry REST-проектов.
+
+Ограничения конфигурации:
+
+- Локальные `RateLimiter` (`campusWorkplace`, `projectsRest`) не могут быть больше `externalGlobal`.
+- Локальные `RateLimiter` GraphQL (`graphqlCredentials`, `graphqlProjects`) не могут быть больше `graphqlGlobal`.
+- Локальные `Retry` (`campusWorkplace`, `projectsRest`) не могут быть больше `externalGlobal`.
+- Локальные `Retry` GraphQL (`graphqlCredentials`, `graphqlProjects`) не могут быть больше `graphqlGlobal`.
 
 #### Результат сверки `env` ↔ `application.yml`
 

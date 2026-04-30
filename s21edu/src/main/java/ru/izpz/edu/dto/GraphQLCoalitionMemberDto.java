@@ -4,7 +4,5 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record GraphQLCoalitionMemberDto(
-        GraphQLCoalitionDataDto coalition,
-        GraphQLCurrentTournamentPowerRankDto currentTournamentPowerRank
-) {
-}
+    GraphQLCoalitionDataDto coalition,
+    GraphQLCurrentTournamentPowerRankDto currentTournamentPowerRank) {}

@@ -3,3 +3,5 @@ spring:
     import:
       - optional:file:./env/test/s21rocket.env[.properties]
       - optional:file:../env/test/s21rocket.env[.properties]
+      - optional:file:./env/local/s21rocket.env[.properties]
+      - optional:file:../env/local/s21rocket.env[.properties]

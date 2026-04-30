@@ -1,17 +1,17 @@
 package ru.izpz.edu.scheduler.metrics;
 
 public enum SchedulerRunStatus {
-    SUCCESS("success"),
-    FAILED("failed"),
-    PARTIAL("partial");
+  SUCCESS("success"),
+  FAILED("failed"),
+  PARTIAL("partial");
 
-    private final String tag;
+  private final String metricTag;
 
-    SchedulerRunStatus(String tag) {
-        this.tag = tag;
-    }
+  SchedulerRunStatus(String metricTag) {
+    this.metricTag = metricTag;
+  }
 
-    public String tag() {
-        return tag;
-    }
+  public String tag() {
+    return metricTag;
+  }
 }

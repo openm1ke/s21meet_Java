@@ -12,12 +12,12 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LastCommandRequest {
-    @NotBlank(message = "TelegramId не должен быть пустым")
-    @Pattern(
-        regexp = "^\\d{5,13}$",
-        message = "Telegram ID должен содержать только цифры и быть длиной от 5 до 13 символов"
-    )
-    private String telegramId;
-    @NotNull(message = "command не должен быть null")
-    private LastCommandState command;
+  @NotBlank(message = "TelegramId не должен быть пустым")
+  @Pattern(
+      regexp = "^\\d{5,13}$",
+      message = "Telegram ID должен содержать только цифры и быть длиной от 5 до 13 символов")
+  private String telegramId;
+
+  @NotNull(message = "command не должен быть null")
+  private LastCommandState command;
 }

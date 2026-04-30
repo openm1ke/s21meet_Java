@@ -10,6 +10,9 @@ import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+/**
+ * Точка входа сервиса s21edu.
+ */
 @SpringBootApplication
 @EnableFeignClients(basePackages = "ru.izpz.edu.client")
 @EntityScan(basePackages = "ru.izpz.edu.model")
@@ -20,7 +23,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class S21EduApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(S21EduApplication.class, args);
-    }
+  /**
+   * Запускает Spring Boot приложение.
+   *
+   * @param args аргументы командной строки
+   */
+  public static void main(String[] args) {
+    SpringApplication.run(S21EduApplication.class, args);
+  }
 }

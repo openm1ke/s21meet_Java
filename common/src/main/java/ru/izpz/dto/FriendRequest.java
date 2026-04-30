@@ -11,13 +11,16 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FriendRequest {
-    @NotBlank
-    private String telegramId;
-    @NotBlank
-    private String login;
-    @NotNull
-    Action action;
-    String name;
+  @NotBlank private String telegramId;
+  @NotBlank private String login;
+  @NotNull Action action;
+  String name;
 
-    public enum Action { TOGGLE_FRIEND, TOGGLE_FAVORITE, TOGGLE_SUBSCRIBE, SET_NAME, NONE }
+  public enum Action {
+    TOGGLE_FRIEND,
+    TOGGLE_FAVORITE,
+    TOGGLE_SUBSCRIBE,
+    SET_NAME,
+    NONE
+  }
 }

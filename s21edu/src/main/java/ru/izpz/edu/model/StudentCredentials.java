@@ -11,11 +11,10 @@ import lombok.Setter;
 @Entity
 @Table(name = "student_credentials")
 public class StudentCredentials {
-    @Id
-    String login;
-    String studentId;
-    String userId;
-    String schoolId;
-    Boolean isActive;
-    Boolean isGraduate;
+  @Id String login;
+  String studentId;
+  String userId;
+  String schoolId;
+  Boolean isActive;
+  Boolean isGraduate;
 }

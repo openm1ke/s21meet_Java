@@ -1,79 +1,96 @@
 package ru.izpz.edu.client;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import io.github.resilience4j.retry.annotation.Retry;
-import ru.izpz.dto.ApiException;
-import ru.izpz.dto.api.CampusApi;
-import ru.izpz.dto.api.ClusterApi;
 import ru.izpz.dto.model.ClusterV1DTO;
 import ru.izpz.dto.model.WorkplaceV1DTO;
-import ru.izpz.edu.service.GraphQLService;
 import ru.izpz.edu.dto.StudentProjectData;
+import ru.izpz.edu.exception.PlatformClientException;
+import ru.izpz.edu.service.GraphQLService;
 
-import java.util.List;
-import java.util.UUID;
-
+/**
+ * Клиент доступа к данным кампусов и проектам участников.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CampusClient {
 
-    private final CampusApi campusApi;
-    private final ClusterApi clusterApi;
-    private final GraphQLService graphQLService;
+  private final PlatformApiFacade platformApi;
+  private final GraphQLService graphQlService;
 
-    /**
-     * Получение списка кластеров для кампуса
-     * @param campusId айди кампуса
-     * @throws ApiException исключение
-     */
-    @Retry(name = "platform")
-    public List<ClusterV1DTO> getClustersByCampus(String campusId) throws ApiException {
-        var response = campusApi.getClustersByCampus(UUID.fromString(campusId));
+  /**
+   * Возвращает список кластеров кампуса.
+   *
+   * @param campusId идентификатор кампуса
+   * @return список кластеров
+   */
+  public List<ClusterV1DTO> getClustersByCampus(String campusId) {
+    var response = platformApi.getClustersByCampus(UUID.fromString(campusId));
 
-        if (response == null) {
-            log.warn("API вернул null для кампуса {}", campusId);
-            throw new ApiException("API вернул null для кампуса " + campusId);
-        }
-        return response.getClusters();
+    if (response == null) {
+      log.warn("API вернул null для кампуса {}", campusId);
+      throw new PlatformClientException("API вернул null для кампуса " + campusId, null);
     }
+    return response.getClusters();
+  }
 
-    /**
-     * Метод получения списка занятых рабочих мест по кластерам
-     * @param clusterId айди кластера определенного кампуса
-     * @throws ApiException исключение
-     */
-    @Retry(name = "platform")
-    public List<WorkplaceV1DTO> getParticipantsByCluster(Long clusterId) throws ApiException {
-        // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем максимум)
-        var response = clusterApi.getParticipantsByCoalitionId1(clusterId, 1000, 0, true);
+  /**
+   * Возвращает занятые места в кластере.
+   *
+   * @param clusterId идентификатор кластера
+   * @return список занятых мест
+   */
+  public List<WorkplaceV1DTO> getParticipantsByCluster(Long clusterId) {
+    // получение занятых мест в кластере (самый большой кластер 138 мест, поэтому выставляем
+    // максимум)
+    var response = platformApi.getParticipantsByClusterId(clusterId, 1000, 0, true);
 
-        if (response == null) {
-           log.warn("API вернул null для кластера {}", clusterId);
-           throw new ApiException("API вернул null для кластера " + clusterId);
-        }
-        return response.getClusterMap();
+    if (response == null) {
+      log.warn("API вернул null для кластера {}", clusterId);
+      throw new PlatformClientException("API вернул null для кластера " + clusterId, null);
     }
+    return response.getClusterMap();
+  }
 
-    @Retry(name = "platform")
-    public List<GraphQLService.ClusterSeat> getParticipantsByClusterV2(Long clusterId) {
-        return graphQLService.getOccupiedSeats(String.valueOf(clusterId));
-    }
+  /**
+   * Возвращает занятые места в кластере через GraphQL.
+   *
+   * @param clusterId идентификатор кластера
+   * @return список мест
+   */
+  public List<GraphQLService.ClusterSeat> getParticipantsByClusterV2(Long clusterId) {
+    return graphQlService.getOccupiedSeats(String.valueOf(clusterId));
+  }
 
-    @Retry(name = "platform")
-    public List<StudentProjectData> getStudentProjectsByLogin(String login) {
-        return graphQLService.getStudentProjectsByLogin(login);
-    }
+  /**
+   * Возвращает проекты участника по логину.
+   *
+   * @param login логин участника
+   * @return список проектов
+   */
+  public List<StudentProjectData> getStudentProjectsByLogin(String login) {
+    return graphQlService.getStudentProjectsByLogin(login);
+  }
 
-    @Retry(name = "platform")
-    public List<String> getParticipantsByCampus(String campusId, long limit, long offset) throws ApiException {
-        var response = campusApi.getParticipantsByCampusId(UUID.fromString(campusId), limit, offset);
-        if (response == null) {
-            log.warn("API вернул null для списка участников кампуса {}", campusId);
-            throw new ApiException("API вернул null для списка участников кампуса " + campusId);
-        }
-        return response.getParticipants() == null ? List.of() : response.getParticipants();
+  /**
+   * Возвращает логины участников кампуса постранично.
+   *
+   * @param campusId идентификатор кампуса
+   * @param limit размер страницы
+   * @param offset смещение
+   * @return список логинов
+   */
+  public List<String> getParticipantsByCampus(String campusId, long limit, long offset) {
+    var response = platformApi.getParticipantsByCampusId(UUID.fromString(campusId), limit, offset);
+    if (response == null) {
+      log.warn("API вернул null для списка участников кампуса {}", campusId);
+      throw new PlatformClientException(
+          "API вернул null для списка участников кампуса " + campusId, null);
     }
+    return response.getParticipants();
+  }
 }

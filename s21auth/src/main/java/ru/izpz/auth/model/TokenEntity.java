@@ -1,11 +1,10 @@
 package ru.izpz.auth.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
 import ru.izpz.auth.utils.PasswordConverter;
-
-import java.time.LocalDateTime;
 
 @SuppressWarnings("JpaDataSourceORMInspection")
 @Getter
@@ -14,17 +13,16 @@ import java.time.LocalDateTime;
 @Table(name = "tokens")
 public class TokenEntity {
 
-    @Id
-    private String login;
+  @Id private String login;
 
-    @Convert(converter = PasswordConverter.class)
-    private String password;
+  @Convert(converter = PasswordConverter.class)
+  private String password;
 
-    @Column(columnDefinition = "TEXT")
-    private String accessToken;
+  @Column(columnDefinition = "TEXT")
+  private String accessToken;
 
-    @Column(columnDefinition = "TEXT")
-    private String refreshToken;
+  @Column(columnDefinition = "TEXT")
+  private String refreshToken;
 
-    private LocalDateTime expiresAt;
+  private LocalDateTime expiresAt;
 }

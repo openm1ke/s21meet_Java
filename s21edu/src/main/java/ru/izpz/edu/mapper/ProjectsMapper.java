@@ -6,5 +6,5 @@ import ru.izpz.edu.dto.StudentProjectData;
 
 @Mapper(componentModel = "spring")
 public interface ProjectsMapper {
-    ProjectsDto toDto(StudentProjectData projects);
+  ProjectsDto toDto(StudentProjectData projects);
 }

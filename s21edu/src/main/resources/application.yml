@@ -72,16 +72,8 @@ resilience4j:
         enableExponentialBackoff: ${EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF:true}
         exponentialBackoffMultiplier: ${EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER:2}
         retryExceptions:
-          - ru.izpz.dto.ApiException
+          - ru.izpz.edu.exception.PlatformClientException
           - ru.izpz.edu.client.GraphQlRemoteException
-          - io.github.resilience4j.ratelimiter.RequestNotPermitted
-      platform:
-        maxAttempts: ${PLATFORM_RETRY_MAX_ATTEMPTS:3}
-        waitDuration: ${PLATFORM_RETRY_WAIT_DURATION:500ms}
-        enableExponentialBackoff: ${PLATFORM_RETRY_EXPONENTIAL_BACKOFF:true}
-        exponentialBackoffMultiplier: ${PLATFORM_RETRY_EXPONENTIAL_MULTIPLIER:2}
-        retryExceptions:
-          - ru.izpz.dto.ApiException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
       campusWorkplace:
         maxAttempts: ${CAMPUS_WORKPLACE_RETRY_MAX_ATTEMPTS:2}
@@ -89,7 +81,7 @@ resilience4j:
         enableExponentialBackoff: ${CAMPUS_WORKPLACE_RETRY_EXPONENTIAL_BACKOFF:true}
         exponentialBackoffMultiplier: ${CAMPUS_WORKPLACE_RETRY_EXPONENTIAL_MULTIPLIER:2}
         retryExceptions:
-          - ru.izpz.dto.ApiException
+          - ru.izpz.edu.exception.PlatformClientException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
       projectsRest:
         maxAttempts: ${PROJECTS_REST_RETRY_MAX_ATTEMPTS:2}
@@ -97,13 +89,13 @@ resilience4j:
         enableExponentialBackoff: ${PROJECTS_REST_RETRY_EXPONENTIAL_BACKOFF:true}
         exponentialBackoffMultiplier: ${PROJECTS_REST_RETRY_EXPONENTIAL_MULTIPLIER:2}
         retryExceptions:
-          - ru.izpz.dto.ApiException
+          - ru.izpz.edu.exception.PlatformClientException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
       graphqlCredentials:
-        maxAttempts: ${GRAPHQL_CREDENTIALS_RETRY_MAX_ATTEMPTS:3}
+        maxAttempts: ${GRAPHQL_CREDENTIALS_RETRY_MAX_ATTEMPTS:2}
         waitDuration: ${GRAPHQL_CREDENTIALS_RETRY_WAIT_DURATION:250ms}
       graphqlProjects:
-        maxAttempts: ${GRAPHQL_PROJECTS_RETRY_MAX_ATTEMPTS:3}
+        maxAttempts: ${GRAPHQL_PROJECTS_RETRY_MAX_ATTEMPTS:2}
         waitDuration: ${GRAPHQL_PROJECTS_RETRY_WAIT_DURATION:300ms}
       graphqlGlobal:
         maxAttempts: ${GRAPHQL_GLOBAL_RETRY_MAX_ATTEMPTS:2}
@@ -120,10 +112,8 @@ logging:
 
 api:
   client:
-    enabled: ${API_CLIENT_ENABLED:true}
     connect-timeout: ${API_CLIENT_CONNECT_TIMEOUT:PT5S}
     read-timeout: ${API_CLIENT_READ_TIMEOUT:PT20S}
-    call-timeout: ${API_CLIENT_CALL_TIMEOUT:PT30S}
   graphql:
     enabled: ${GRAPHQL_API_ENABLED:true}
   campus:
@@ -135,8 +125,8 @@ api:
   coalition:
     enabled: ${COALITION_API_ENABLED:true}
 profile:
-  api.enabled: true
-  service.enabled: true
+  api.enabled: ${PROFILE_API_ENABLED:true}
+  service.enabled: ${PROFILE_SERVICE_ENABLED:true}
 participant:
   refresh-ttl: ${PARTICIPANT_REFRESH_TTL:PT15M}
 coalition:
@@ -167,14 +157,14 @@ projects:
 graphql:
 event:
   scheduler:
-    enabled: true
-    fixed-delay: PT1M
+    enabled: ${EVENT_SCHEDULER_ENABLED:true}
+    fixed-delay: ${EVENT_SCHEDULER_FIXED_DELAY:PT1M}
 notify:
   delivery:
-    enabled: false
+    enabled: ${NOTIFY_DELIVERY_ENABLED:false}
   scheduler:
-    enabled: true
-    fixed-delay: PT30S
+    enabled: ${NOTIFY_SCHEDULER_ENABLED:true}
+    fixed-delay: ${NOTIFY_SCHEDULER_FIXED_DELAY:PT30S}
 credentials:
   scheduler:
     enabled: ${CREDENTIALS_SCHEDULER_ENABLED:true}
@@ -184,13 +174,13 @@ credentials:
     batch-size: ${CREDENTIALS_SCHEDULER_BATCH_SIZE:200}
     concurrency: ${CREDENTIALS_SCHEDULER_CONCURRENCY:4}
 campus:
-  service.enabled: true
+  service.enabled: ${CAMPUS_SERVICE_ENABLED:true}
   workplace:
     provider: ${CAMPUS_WORKPLACE_PROVIDER:graphql}  # rest или graphql (по умолчанию graphql)
   scheduler:
-    enabled: true
-    fixed-delay: PT30S
-    participants-max-concurrency: 6
+    enabled: ${CAMPUS_SCHEDULER_ENABLED:true}
+    fixed-delay: ${CAMPUS_SCHEDULER_FIXED_DELAY:PT30S}
+    participants-max-concurrency: ${CAMPUS_SCHEDULER_PARTICIPANTS_MAX_CONCURRENCY:6}
     timeout:
-      global: PT45S
-      per-campus: PT60S
+      global: ${CAMPUS_SCHEDULER_TIMEOUT_GLOBAL:PT45S}
+      per-campus: ${CAMPUS_SCHEDULER_TIMEOUT_PER_CAMPUS:PT60S}

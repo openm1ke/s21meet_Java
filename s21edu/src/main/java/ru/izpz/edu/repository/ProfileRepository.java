@@ -1,13 +1,13 @@
 package ru.izpz.edu.repository;
 
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import ru.izpz.edu.model.Profile;
 
-import java.util.Optional;
-import java.util.UUID;
-
 public interface ProfileRepository extends JpaRepository<Profile, UUID> {
 
-    Optional<Profile> findByTelegramId(String telegramId);
-    boolean existsByS21login(String s21login);
+  Optional<Profile> findByTelegramId(String telegramId);
+
+  boolean existsByS21login(String s21login);
 }

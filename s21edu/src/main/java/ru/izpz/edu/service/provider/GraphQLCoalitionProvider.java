@@ -7,13 +7,15 @@ import ru.izpz.edu.service.GraphQLService;
 
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = {"profile.service.enabled", "api.graphql.enabled"}, havingValue = "true")
+@ConditionalOnProperty(
+    name = {"profile.service.enabled", "api.graphql.enabled"},
+    havingValue = "true")
 public class GraphQLCoalitionProvider implements CoalitionProvider {
 
-    private final GraphQLService graphQLService;
+  private final GraphQLService graphQLService;
 
-    @Override
-    public void refreshCoalitionByLogin(String login) {
-        graphQLService.refreshStudentCoalitionByLogin(login);
-    }
+  @Override
+  public void refreshCoalitionByLogin(String login) {
+    graphQLService.refreshStudentCoalitionByLogin(login);
+  }
 }
