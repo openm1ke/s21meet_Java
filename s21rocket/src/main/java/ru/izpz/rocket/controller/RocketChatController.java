@@ -16,19 +16,25 @@ import ru.izpz.rocket.service.RocketChatService;
 @RequiredArgsConstructor
 public class RocketChatController {
 
-    private final RocketChatService rocketChatService;
+  private final RocketChatService rocketChatService;
 
-    @PostMapping("/qr")
-    public ResponseEntity<RocketChatSendResponse> generateQr() {
-        return ResponseEntity.ok(rocketChatService.generateQrCode());
-    }
+  @PostMapping("/qr")
+  public ResponseEntity<RocketChatSendResponse> generateQr() {
+    return ResponseEntity.ok(rocketChatService.generateQrCode());
+  }
 
-    @PostMapping("/send")
-    public ResponseEntity<RocketChatSendResponse> sendMessage(@Valid @RequestBody RocketChatSendRequest request) {
-        if (request == null || request.getUsername() == null || request.getUsername().isBlank()
-                || request.getMessage() == null || request.getMessage().isBlank()) {
-            return ResponseEntity.badRequest().body(new RocketChatSendResponse(false, "Request body is invalid"));
-        }
-        return ResponseEntity.ok(rocketChatService.sendVerificationCode(request.getUsername(), request.getMessage()));
+  @PostMapping("/send")
+  public ResponseEntity<RocketChatSendResponse> sendMessage(
+      @Valid @RequestBody RocketChatSendRequest request) {
+    if (request == null
+        || request.getUsername() == null
+        || request.getUsername().isBlank()
+        || request.getMessage() == null
+        || request.getMessage().isBlank()) {
+      return ResponseEntity.badRequest()
+          .body(new RocketChatSendResponse(false, "Request body is invalid"));
     }
+    return ResponseEntity.ok(
+        rocketChatService.sendVerificationCode(request.getUsername(), request.getMessage()));
+  }
 }

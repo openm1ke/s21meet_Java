@@ -3,8 +3,4 @@ package ru.izpz.edu.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record GraphQLCoalitionDataDto(
-        String name,
-        Integer memberCount
-) {
-}
+public record GraphQLCoalitionDataDto(String name, Integer memberCount) {}

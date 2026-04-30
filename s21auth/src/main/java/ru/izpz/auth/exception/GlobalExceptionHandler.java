@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleAllExceptions(Exception ex) {
-        // Логирование с полным stack trace
-        log.error("Unhandled exception", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Произошла внутренняя ошибка");
-    }
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<String> handleAllExceptions(Exception ex) {
+    // Логирование с полным stack trace
+    log.error("Unhandled exception", ex);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body("Произошла внутренняя ошибка");
+  }
 }

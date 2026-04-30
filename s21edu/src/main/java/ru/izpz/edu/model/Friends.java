@@ -4,13 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import java.time.LocalDateTime;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -18,15 +17,16 @@ import java.util.UUID;
 @NoArgsConstructor
 @ToString
 public class Friends {
-    @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(updatable = false, nullable = false)
-    UUID id;
-    String telegramId;
-    String login;
-    String name = "";
-    Boolean isFriend = false;
-    Boolean isSubscribe = false;
-    Boolean isFavorite = false;
-    LocalDateTime date;
+  @Id
+  @GeneratedValue(generator = "UUID")
+  @Column(updatable = false, nullable = false)
+  UUID id;
+
+  String telegramId;
+  String login;
+  String name = "";
+  Boolean isFriend = false;
+  Boolean isSubscribe = false;
+  Boolean isFavorite = false;
+  LocalDateTime date;
 }

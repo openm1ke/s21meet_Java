@@ -10,8 +10,8 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 @Accessors(chain = true)
 public class ServiceErrorDto {
-    private Integer status;
-    private String exceptionUUID;
-    private String code;
-    private String message;
+  private Integer status;
+  private String exceptionUUID;
+  private String code;
+  private String message;
 }

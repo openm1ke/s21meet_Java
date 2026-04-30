@@ -8,7 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @EnableFeignClients(basePackages = "ru.izpz.web.client")
 public class S21WebApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(S21WebApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(S21WebApplication.class, args);
+  }
 }

@@ -5,12 +5,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import ru.izpz.dto.NotifyRequest;
 
-@FeignClient(
-    name = "botclient",
-    url = "${bot.service.url}",
-    path = "/api"
-)
+/**
+ * HTTP-клиент отправки уведомлений в бот-сервис.
+ */
+@FeignClient(name = "botclient", url = "${bot.service.url}", path = "/api")
 public interface BotClient {
-    @PostMapping("/notify")
-    void notify(@RequestBody NotifyRequest notifyRequest);
+  /**
+   * Отправляет уведомление в бот.
+   *
+   * @param notifyRequest тело уведомления
+   */
+  @PostMapping("/notify")
+  void notify(@RequestBody NotifyRequest notifyRequest);
 }

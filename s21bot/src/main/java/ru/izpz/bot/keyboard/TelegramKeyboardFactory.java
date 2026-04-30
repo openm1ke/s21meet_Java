@@ -1,5 +1,9 @@
 package ru.izpz.bot.keyboard;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
@@ -17,157 +21,158 @@ import ru.izpz.dto.EventsSliceDto;
 import ru.izpz.dto.FriendDto;
 import ru.izpz.dto.FriendsSliceDto;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 @Component
 @RequiredArgsConstructor
 public class TelegramKeyboardFactory {
 
-    private static final String LOGIN = "login";
-    private final CallbackPayloadSerializer serializer;
-    private final ListKeyboardFactory listKeyboardFactory;
+  private static final String LOGIN = "login";
+  private final CallbackPayloadSerializer serializer;
+  private final ListKeyboardFactory listKeyboardFactory;
 
-    public ReplyKeyboardMarkup createReplyKeyboard(List<String> buttonTexts, int buttonsPerRow) {
-        List<KeyboardRow> keyboard = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
+  public ReplyKeyboardMarkup createReplyKeyboard(List<String> buttonTexts, int buttonsPerRow) {
+    List<KeyboardRow> keyboard = new ArrayList<>();
+    KeyboardRow row = new KeyboardRow();
 
-        for (int i = 0; i < buttonTexts.size(); i++) {
-            row.add(new KeyboardButton(buttonTexts.get(i)));
+    for (int i = 0; i < buttonTexts.size(); i++) {
+      row.add(new KeyboardButton(buttonTexts.get(i)));
 
-            if ((i + 1) % buttonsPerRow == 0) {
-                keyboard.add(row);
-                row = new KeyboardRow();
-            }
-        }
-
-        if (!row.isEmpty()) {
-            keyboard.add(row);
-        }
-
-        return ReplyKeyboardMarkup.builder()
-            .keyboard(keyboard)
-            .resizeKeyboard(true)
-            .oneTimeKeyboard(false)
-            .build();
+      if ((i + 1) % buttonsPerRow == 0) {
+        keyboard.add(row);
+        row = new KeyboardRow();
+      }
     }
 
-    public InlineKeyboardMarkup createUrlKeyboard(Map<String, String> buttons, int rowSize) {
-        List<InlineKeyboardRow> rows = new ArrayList<>();
-        InlineKeyboardRow currentRow = new InlineKeyboardRow();
-
-        for (Map.Entry<String, String> entry : buttons.entrySet()) {
-            InlineKeyboardButton button = InlineKeyboardButton.builder()
-                .text(entry.getKey())
-                .url(entry.getValue())
-                .build();
-            currentRow.add(button);
-
-            if (currentRow.size() == rowSize) {
-                rows.add(currentRow);
-                currentRow = new InlineKeyboardRow();
-            }
-        }
-
-        if (!currentRow.isEmpty()) {
-            rows.add(currentRow);
-        }
-
-        return InlineKeyboardMarkup.builder()
-            .keyboard(rows)
-            .build();
+    if (!row.isEmpty()) {
+      keyboard.add(row);
     }
 
-    public InlineKeyboardMarkup createInlineKeyboardMarkup(Map<String, String> buttons, int rowSize) {
-        List<InlineKeyboardRow> rows = new ArrayList<>();
-        InlineKeyboardRow currentRow = new InlineKeyboardRow();
+    return ReplyKeyboardMarkup.builder()
+        .keyboard(keyboard)
+        .resizeKeyboard(true)
+        .oneTimeKeyboard(false)
+        .build();
+  }
 
-        for (Map.Entry<String, String> entry : buttons.entrySet()) {
-            InlineKeyboardButton button = InlineKeyboardButton.builder()
-                .text(entry.getKey())
-                .callbackData(entry.getValue())
-                .build();
-            currentRow.add(button);
+  public InlineKeyboardMarkup createUrlKeyboard(Map<String, String> buttons, int rowSize) {
+    List<InlineKeyboardRow> rows = new ArrayList<>();
+    InlineKeyboardRow currentRow = new InlineKeyboardRow();
 
-            if (currentRow.size() == rowSize) {
-                rows.add(currentRow);
-                currentRow = new InlineKeyboardRow();
-            }
-        }
+    for (Map.Entry<String, String> entry : buttons.entrySet()) {
+      InlineKeyboardButton button =
+          InlineKeyboardButton.builder().text(entry.getKey()).url(entry.getValue()).build();
+      currentRow.add(button);
 
-        if (!currentRow.isEmpty()) {
-            rows.add(currentRow);
-        }
-
-        return InlineKeyboardMarkup.builder()
-            .keyboard(rows)
-            .build();
+      if (currentRow.size() == rowSize) {
+        rows.add(currentRow);
+        currentRow = new InlineKeyboardRow();
+      }
     }
 
-    public InlineKeyboardMarkup eventsListKeyboard(EventsSliceDto events, int rowSize, int page) {
-        return listKeyboardFactory.eventsListKeyboard(events, rowSize, page);
+    if (!currentRow.isEmpty()) {
+      rows.add(currentRow);
     }
 
-    public InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page) {
-        return listKeyboardFactory.friendsListKeyboard(friends, rowSize, page);
+    return InlineKeyboardMarkup.builder().keyboard(rows).build();
+  }
+
+  public InlineKeyboardMarkup createInlineKeyboardMarkup(Map<String, String> buttons, int rowSize) {
+    List<InlineKeyboardRow> rows = new ArrayList<>();
+    InlineKeyboardRow currentRow = new InlineKeyboardRow();
+
+    for (Map.Entry<String, String> entry : buttons.entrySet()) {
+      InlineKeyboardButton button =
+          InlineKeyboardButton.builder()
+              .text(entry.getKey())
+              .callbackData(entry.getValue())
+              .build();
+      currentRow.add(button);
+
+      if (currentRow.size() == rowSize) {
+        rows.add(currentRow);
+        currentRow = new InlineKeyboardRow();
+      }
     }
 
-    public String eventsListText(EventsSliceDto events) {
-        return listKeyboardFactory.eventsListText(events);
+    if (!currentRow.isEmpty()) {
+      rows.add(currentRow);
     }
 
-    public String friendsListText(FriendsSliceDto friends) {
-        return listKeyboardFactory.friendsListText(friends);
-    }
+    return InlineKeyboardMarkup.builder().keyboard(rows).build();
+  }
 
-    public AnswerCallbackQuery createAnswerCallbackQuery(String callbackId, String text, boolean showAlert) {
-        AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery(callbackId);
-        answerCallbackQuery.setText(text);
-        answerCallbackQuery.setShowAlert(showAlert);
-        return answerCallbackQuery;
-    }
+  public InlineKeyboardMarkup eventsListKeyboard(EventsSliceDto events, int rowSize, int page) {
+    return listKeyboardFactory.eventsListKeyboard(events, rowSize, page);
+  }
 
-    public InlineKeyboardMarkup getFriendInlineKeyboard(String login, FriendDto friend) {
-        LinkedHashMap<String, String> data = new LinkedHashMap<>();
-        var isFriendLabel = Boolean.TRUE.equals(friend.getIsFriend()) ? "Удалить из друзей" : "Добавить в друзья";
-        var isFavoriteLabel = Boolean.TRUE.equals(friend.getIsFavorite()) ? "Удалить из избранного" : "Добавить в избранное";
-        var isSubscribedLabel = Boolean.TRUE.equals(friend.getIsSubscribe()) ? "Отписаться" : "Подписаться";
-        var setNameLabel = friend.getName() == null ? "Указать имя" : "Изменить имя";
+  public InlineKeyboardMarkup friendsListKeyboard(FriendsSliceDto friends, int rowSize, int page) {
+    return listKeyboardFactory.friendsListKeyboard(friends, rowSize, page);
+  }
 
-        data.put(isFriendLabel, serializer.serialize(new CallbackPayload("add_friend", Map.of(LOGIN, login))));
-        if (Boolean.TRUE.equals(friend.getIsFriend())) {
-            data.put(setNameLabel, serializer.serialize(new CallbackPayload("set_name", Map.of(LOGIN, login))));
-            data.put(isSubscribedLabel, serializer.serialize(new CallbackPayload("subscribe", Map.of(LOGIN, login))));
-            data.put(isFavoriteLabel, serializer.serialize(new CallbackPayload("favorite", Map.of(LOGIN, login))));
-        }
-        return this.defaultInlineKeyboard(data);
-    }
+  public String eventsListText(EventsSliceDto events) {
+    return listKeyboardFactory.eventsListText(events);
+  }
 
-    public EditMessageReplyMarkup editFriendInlineKeyboard(InlineKeyboardMarkup keyboard, Long chatId, int messageId) {
-        EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup();
-        editMessageReplyMarkup.setChatId(chatId);
-        editMessageReplyMarkup.setMessageId(messageId);
-        editMessageReplyMarkup.setReplyMarkup(keyboard);
-        return editMessageReplyMarkup;
-    }
+  public String friendsListText(FriendsSliceDto friends) {
+    return listKeyboardFactory.friendsListText(friends);
+  }
 
-    public ReplyKeyboard removeReplyKeyboard() {
-        return new ReplyKeyboardRemove(true);
-    }
+  public AnswerCallbackQuery createAnswerCallbackQuery(
+      String callbackId, String text, boolean showAlert) {
+    AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery(callbackId);
+    answerCallbackQuery.setText(text);
+    answerCallbackQuery.setShowAlert(showAlert);
+    return answerCallbackQuery;
+  }
 
-    /**
-     * Упрощённый метод для обычной клавиатуры 3 в ряд.
-     */
-    public ReplyKeyboardMarkup defaultReplyKeyboard(List<String> buttonTexts) {
-        return createReplyKeyboard(buttonTexts, 3);
-    }
+  public InlineKeyboardMarkup getFriendInlineKeyboard(String login, FriendDto friend) {
+    LinkedHashMap<String, String> data = new LinkedHashMap<>();
+    var isFriendLabel =
+        Boolean.TRUE.equals(friend.getIsFriend()) ? "Удалить из друзей" : "Добавить в друзья";
+    var isFavoriteLabel =
+        Boolean.TRUE.equals(friend.getIsFavorite())
+            ? "Удалить из избранного"
+            : "Добавить в избранное";
+    var isSubscribedLabel =
+        Boolean.TRUE.equals(friend.getIsSubscribe()) ? "Отписаться" : "Подписаться";
+    var setNameLabel = friend.getName() == null ? "Указать имя" : "Изменить имя";
 
-    /**
-     * Упрощённый метод для inline клавиатуры 2 в ряд.
-     */
-    public InlineKeyboardMarkup defaultInlineKeyboard(Map<String, String> buttonMap) {
-        return createInlineKeyboardMarkup(buttonMap, 2);
+    data.put(
+        isFriendLabel,
+        serializer.serialize(new CallbackPayload("add_friend", Map.of(LOGIN, login))));
+    if (Boolean.TRUE.equals(friend.getIsFriend())) {
+      data.put(
+          setNameLabel,
+          serializer.serialize(new CallbackPayload("set_name", Map.of(LOGIN, login))));
+      data.put(
+          isSubscribedLabel,
+          serializer.serialize(new CallbackPayload("subscribe", Map.of(LOGIN, login))));
+      data.put(
+          isFavoriteLabel,
+          serializer.serialize(new CallbackPayload("favorite", Map.of(LOGIN, login))));
     }
+    return this.defaultInlineKeyboard(data);
+  }
+
+  public EditMessageReplyMarkup editFriendInlineKeyboard(
+      InlineKeyboardMarkup keyboard, Long chatId, int messageId) {
+    EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup();
+    editMessageReplyMarkup.setChatId(chatId);
+    editMessageReplyMarkup.setMessageId(messageId);
+    editMessageReplyMarkup.setReplyMarkup(keyboard);
+    return editMessageReplyMarkup;
+  }
+
+  public ReplyKeyboard removeReplyKeyboard() {
+    return new ReplyKeyboardRemove(true);
+  }
+
+  /** Упрощённый метод для обычной клавиатуры 3 в ряд. */
+  public ReplyKeyboardMarkup defaultReplyKeyboard(List<String> buttonTexts) {
+    return createReplyKeyboard(buttonTexts, 3);
+  }
+
+  /** Упрощённый метод для inline клавиатуры 2 в ряд. */
+  public InlineKeyboardMarkup defaultInlineKeyboard(Map<String, String> buttonMap) {
+    return createInlineKeyboardMarkup(buttonMap, 2);
+  }
 }

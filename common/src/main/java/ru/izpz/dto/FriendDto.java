@@ -9,17 +9,17 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FriendDto {
-    String telegramId;
-    String login;
-    String name;
-    Boolean isFriend;
-    Boolean isSubscribe;
-    Boolean isFavorite;
-    Boolean isOnline;
-    ParticipantStatusEnum status;
-    String clusterName;
-    String row;
-    Integer number;
-    String stageGroupName;
-    String stageName;
+  String telegramId;
+  String login;
+  String name;
+  Boolean isFriend;
+  Boolean isSubscribe;
+  Boolean isFavorite;
+  Boolean isOnline;
+  ParticipantStatusEnum status;
+  String clusterName;
+  String row;
+  Integer number;
+  String stageGroupName;
+  String stageName;
 }

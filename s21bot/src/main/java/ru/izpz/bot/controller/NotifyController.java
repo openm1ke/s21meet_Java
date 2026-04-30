@@ -18,16 +18,15 @@ import ru.izpz.dto.NotifyRequest;
 @ConditionalOnProperty(name = "bot.notify.enabled", havingValue = "true", matchIfMissing = true)
 public class NotifyController {
 
-    private final MessageSender messageSender;
+  private final MessageSender messageSender;
 
-    @PostMapping("/notify")
-    public ResponseEntity<Void> notify(@RequestBody NotifyRequest req) {
-        if (req == null || req.getChanges() == null || req.getChanges().isEmpty()) {
-            return ResponseEntity.accepted().build();
-        }
-
-        messageSender.sendStatusChanges(req.getChanges());
-        return ResponseEntity.accepted().build();
+  @PostMapping("/notify")
+  public ResponseEntity<Void> notify(@RequestBody NotifyRequest req) {
+    if (req == null || req.getChanges() == null || req.getChanges().isEmpty()) {
+      return ResponseEntity.accepted().build();
     }
 
+    messageSender.sendStatusChanges(req.getChanges());
+    return ResponseEntity.accepted().build();
+  }
 }

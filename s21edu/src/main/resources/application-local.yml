@@ -5,5 +5,32 @@ spring:
       - optional:file:../env/test/s21edu.env[.properties]
       - optional:file:./env/local/s21edu.env[.properties]
       - optional:file:../env/local/s21edu.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:h2:file:${user.home}/.s21meet/h2/s21edu;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=ROW}
+    driver-class-name: org.h2.Driver
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
   liquibase:
-    enabled: true
+    enabled: false
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: ${DDL_AUTO:create-drop}
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        globally_quoted_identifiers: true
+        globally_quoted_identifiers_skip_column_definitions: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: false
+
+app:
+  h2:
+    tcp:
+      enabled: true
+      port: ${H2_TCP_PORT:9092}

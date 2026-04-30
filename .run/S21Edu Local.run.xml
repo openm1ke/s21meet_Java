@@ -2,7 +2,7 @@
   <configuration default="false" name="S21Edu Local" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="s21meet_Java.s21edu.main" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="ru.izpz.edu.S21EduApplication" />
-    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=local" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=local --spring.config.import=optional:file:env/local/s21edu.env" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <envs>
       <env name="SPRING_PROFILES_ACTIVE" value="local" />

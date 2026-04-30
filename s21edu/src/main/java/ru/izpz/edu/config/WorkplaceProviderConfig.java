@@ -1,5 +1,6 @@
 package ru.izpz.edu.config;
 
+import java.util.Locale;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -11,44 +12,42 @@ import ru.izpz.edu.service.provider.GraphQLWorkplaceProvider;
 import ru.izpz.edu.service.provider.RestApiWorkplaceProvider;
 import ru.izpz.edu.service.provider.WorkplaceProvider;
 
-/**
- * Configuration for WorkplaceProvider selection based on application.yml
- */
+/** Configuration for WorkplaceProvider selection based on application.yml */
 @Slf4j
 @Configuration
 public class WorkplaceProviderConfig {
 
-    @Bean
-    @Primary
-    public WorkplaceProvider workplaceProvider(
-            RestApiWorkplaceProvider restApiWorkplaceProvider,
-            GraphQLWorkplaceProvider graphQLWorkplaceProvider,
-            WorkplaceProperties properties) {
-        
-        String providerType = properties.getProvider();
-        log.info("Initializing WorkplaceProvider with type: {}", providerType);
+  @Bean
+  @Primary
+  public WorkplaceProvider workplaceProvider(
+      RestApiWorkplaceProvider restApiWorkplaceProvider,
+      GraphQLWorkplaceProvider graphQLWorkplaceProvider,
+      WorkplaceProperties properties) {
 
-        return switch (providerType.toLowerCase()) {
-            case "graphql" -> {
-                log.info("Using GraphQL WorkplaceProvider");
-                yield graphQLWorkplaceProvider;
-            }
-            default -> {
-                log.info("Using REST API WorkplaceProvider (default)");
-                yield restApiWorkplaceProvider;
-            }
-        };
-    }
+    String providerType = properties.getProvider();
+    log.info("Initializing WorkplaceProvider with type: {}", providerType);
 
-    @Bean
-    @ConfigurationProperties(prefix = "campus.workplace")
-    public WorkplaceProperties workplaceProperties() {
-        return new WorkplaceProperties();
-    }
+    return switch (providerType.toLowerCase(Locale.ROOT)) {
+      case "graphql" -> {
+        log.info("Using GraphQL WorkplaceProvider");
+        yield graphQLWorkplaceProvider;
+      }
+      default -> {
+        log.info("Using REST API WorkplaceProvider (default)");
+        yield restApiWorkplaceProvider;
+      }
+    };
+  }
 
-    @Setter
-    @Getter
-    public static class WorkplaceProperties {
-        String provider;
-    }
+  @Bean
+  @ConfigurationProperties(prefix = "campus.workplace")
+  public WorkplaceProperties workplaceProperties() {
+    return new WorkplaceProperties();
+  }
+
+  @Setter
+  @Getter
+  public static class WorkplaceProperties {
+    String provider;
+  }
 }

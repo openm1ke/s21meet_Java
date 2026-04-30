@@ -1,16 +1,16 @@
 package ru.izpz.edu.scheduler.metrics;
 
 public enum SchedulerPhaseRequestStatus {
-    SUCCESS("success"),
-    FAILED("failed");
+  SUCCESS("success"),
+  FAILED("failed");
 
-    private final String tag;
+  private final String metricTag;
 
-    SchedulerPhaseRequestStatus(String tag) {
-        this.tag = tag;
-    }
+  SchedulerPhaseRequestStatus(String metricTag) {
+    this.metricTag = metricTag;
+  }
 
-    public String tag() {
-        return tag;
-    }
+  public String tag() {
+    return metricTag;
+  }
 }

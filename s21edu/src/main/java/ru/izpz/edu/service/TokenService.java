@@ -8,21 +8,30 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.exception.TokenResponseException;
 
+/**
+ * Сервис получения service-token для запросов к платформе.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class TokenService {
 
-    @Value("${edu.tokenEndpoint}")
-    private String tokenEndpoint;
-    private final RestTemplate restTemplate;
+  @Value("${edu.tokenEndpoint}")
+  private String tokenEndpoint;
 
-    public String getToken() {
-        ResponseEntity<String> tokenResponse = restTemplate.getForEntity(tokenEndpoint, String.class);
-        String token = tokenResponse.getBody();
-        if (token == null || token.isEmpty()) {
-            throw new TokenResponseException("Не удалось получить access token");
-        }
-        return token;
+  private final RestTemplate restTemplate;
+
+  /**
+   * Запрашивает токен во внешнем auth-сервисе.
+   *
+   * @return access token
+   */
+  public String getToken() {
+    ResponseEntity<String> tokenResponse = restTemplate.getForEntity(tokenEndpoint, String.class);
+    String token = tokenResponse.getBody();
+    if (token == null || token.isEmpty()) {
+      throw new TokenResponseException("Не удалось получить access token");
     }
+    return token;
+  }
 }

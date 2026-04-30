@@ -11,7 +11,6 @@ import lombok.Setter;
 @Entity
 @Table(name = "participant_campus")
 public class ParticipantCampus {
-    @Id
-    private String id;
-    private String campusName;
+  @Id private String id;
+  private String campusName;
 }

@@ -1,5 +1,7 @@
 package ru.izpz.auth;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,33 +13,29 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.auth.config.RestTemplateConfig;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 @SpringBootTest
 @ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class ApplicationContextTest {
 
-    @Autowired
-    private ApplicationContext context;
-    
-    @Autowired
-    private RestTemplate restTemplate;
+  @Autowired private ApplicationContext context;
 
-    @BeforeEach
-    void setUp() {
-        // TokenClient will be created manually when needed
-    }
+  @Autowired private RestTemplate restTemplate;
 
-    @Test
-    void contextLoads() {
-        // Если контекст не загрузится, тест упадёт.
-    }
+  @BeforeEach
+  void setUp() {
+    // TokenClient will be created manually when needed
+  }
 
-    @Test
-    void myConfigBeanIsLoaded() {
-        // Пытаемся получить бин конфигурации из контекста
-        RestTemplateConfig myConfig = context.getBean(RestTemplateConfig.class);
-        assertNotNull(myConfig, "Бин RestTemplateConfig должен быть загружен в контексте");
-    }
+  @Test
+  void contextLoads() {
+    // Если контекст не загрузится, тест упадёт.
+  }
+
+  @Test
+  void myConfigBeanIsLoaded() {
+    // Пытаемся получить бин конфигурации из контекста
+    RestTemplateConfig myConfig = context.getBean(RestTemplateConfig.class);
+    assertNotNull(myConfig, "Бин RestTemplateConfig должен быть загружен в контексте");
+  }
 }

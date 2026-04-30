@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+  <!-- OpenAPI generated sources -->
+  <suppress files=".*/build/generated/.*" checks=".*"/>
+
+  <!-- Common DTO/utility module: keep strictness in business modules -->
+  <suppress
+      files=".*/common/src/main/java/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|AvoidStarImport|AbbreviationAsWordInName|AvoidEscapedUnicodeCharacters"/>
+
+  <!-- Generated/transport DTO naming and JavaDoc noise -->
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/dto/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|AbbreviationAsWordInName"/>
+
+  <!-- Repository interfaces are declarative and intentionally concise -->
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/repository/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|Indentation"/>
+
+  <!-- Technical layers in edu module -->
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/config/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|SummaryJavadoc|AbbreviationAsWordInName"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/mapper/.*"
+      checks="MissingJavadocType|MissingJavadocMethod"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/provider/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|AbbreviationAsWordInName|LineLength"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|NeedBraces|MissingSwitchDefault|LineLength"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/client/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|AbbreviationAsWordInName"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/exception/.*"
+      checks="MissingJavadocType|MissingJavadocMethod"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/model/.*"
+      checks="MissingJavadocType|AvoidStarImport"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/controller/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|AvoidStarImport"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/scheduler/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|LineLength|VariableDeclarationUsageDistance|MissingSwitchDefault|AbbreviationAsWordInName"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/utils/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|NeedBraces"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/GraphQLService\\.java"
+      checks="AvoidStarImport|AbbreviationAsWordInName"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/ProfileService\\.java"
+      checks="AvoidStarImport"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/GraphQLService\\.java"
+      checks="AvoidStarImport|AbbreviationAsWordInName"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/mapper/ProfileMapper\\.java"
+      checks="OverloadMethodsDeclarationOrder"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/S21EduApplication\\.java"
+      checks="MissingJavadocType|MissingJavadocMethod"/>
+
+  <!-- Spring boot entrypoints -->
+  <suppress
+      files=".*/src/main/java/.*/S21.*Application\\.java"
+      checks="MissingJavadocType|MissingJavadocMethod"/>
+
+  <!-- Known intentional API names with GraphQL abbreviation -->
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/client/GraphQLApiClient\\.java"
+      checks="AbbreviationAsWordInName"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/provider/GraphQL.*Provider\\.java"
+      checks="AbbreviationAsWordInName"/>
+
+  <!-- Temporary style debt to keep focus on functional code -->
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/NotifyService\\.java"
+      checks="LineLength|NeedBraces"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/CampusPersistenceService\\.java"
+      checks="NeedBraces"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/service/FriendService\\.java"
+      checks="MissingSwitchDefault"/>
+
+  <!-- Multi-line text block indentation in JPQL -->
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/repository/EventRepository\\.java"
+      checks="Indentation"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/edu/repository/FriendsRepository\\.java"
+      checks="Indentation"/>
+
+  <!-- Other modules: keep signal in sonar/tests, reduce global style noise -->
+  <suppress
+      files=".*/src/main/java/ru/izpz/rocket/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|LineLength"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/web/.*"
+      checks="MissingJavadocType|MissingJavadocMethod"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/auth/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|NeedBraces|AvoidStarImport"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/bot/.*"
+      checks="MissingJavadocType|MissingJavadocMethod|NeedBraces|AvoidStarImport|AvoidEscapedUnicodeCharacters|AbbreviationAsWordInName|LineLength"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/bot/service/ConfirmedFlow\\.java"
+      checks="MissingSwitchDefault"/>
+  <suppress
+      files=".*/src/main/java/ru/izpz/bot/service/MessageProcessor\\.java"
+      checks="MissingSwitchDefault"/>
+</suppressions>

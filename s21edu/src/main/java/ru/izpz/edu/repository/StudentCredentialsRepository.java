@@ -1,32 +1,34 @@
 package ru.izpz.edu.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.List;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.izpz.edu.model.StudentCredentials;
 
-import java.time.OffsetDateTime;
-import java.util.Collection;
-import java.util.List;
-
 public interface StudentCredentialsRepository extends JpaRepository<StudentCredentials, String> {
-    interface LoginSchoolIdView {
-        String getLogin();
-        String getSchoolId();
-    }
+  interface LoginSchoolIdView {
+    String getLogin();
 
-    @Query("select sc.login from StudentCredentials sc where sc.login in :logins")
-    List<String> findExistingLogins(@Param("logins") Collection<String> logins);
+    String getSchoolId();
+  }
 
-    @Query("""
+  @Query("select sc.login from StudentCredentials sc where sc.login in :logins")
+  List<String> findExistingLogins(@Param("logins") Collection<String> logins);
+
+  @Query(
+      """
         select sc.login as login, sc.schoolId as schoolId
         from StudentCredentials sc
         where sc.login in :logins
         """)
-    List<LoginSchoolIdView> findSchoolIdsByLogins(@Param("logins") Collection<String> logins);
+  List<LoginSchoolIdView> findSchoolIdsByLogins(@Param("logins") Collection<String> logins);
 
-    @Query("""
+  @Query(
+      """
         select sc
         from StudentCredentials sc
         where sc.isActive = true
@@ -34,9 +36,11 @@ public interface StudentCredentialsRepository extends JpaRepository<StudentCrede
           and sc.login > :cursor
         order by sc.login asc
         """)
-    List<StudentCredentials> findActiveCredentialsAfter(@Param("cursor") String cursor, Pageable pageable);
+  List<StudentCredentials> findActiveCredentialsAfter(
+      @Param("cursor") String cursor, Pageable pageable);
 
-    @Query("""
+  @Query(
+      """
         select sc
         from StudentCredentials sc
         where sc.isActive = true
@@ -51,14 +55,14 @@ public interface StudentCredentialsRepository extends JpaRepository<StudentCrede
           )
         order by sc.login asc
         """)
-    List<StudentCredentials> findStaleActiveCredentialsAfterBySchoolId(
-        @Param("cursor") String cursor,
-        @Param("schoolId") String schoolId,
-        @Param("staleBefore") OffsetDateTime staleBefore,
-        Pageable pageable
-    );
+  List<StudentCredentials> findStaleActiveCredentialsAfterBySchoolId(
+      @Param("cursor") String cursor,
+      @Param("schoolId") String schoolId,
+      @Param("staleBefore") OffsetDateTime staleBefore,
+      Pageable pageable);
 
-    @Query("""
+  @Query(
+      """
         select count(sc)
         from StudentCredentials sc
         where sc.isActive = true
@@ -71,17 +75,16 @@ public interface StudentCredentialsRepository extends JpaRepository<StudentCrede
                 and sp.updatedAt >= :staleBefore
           )
         """)
-    long countStaleActiveCredentialsBySchoolId(
-        @Param("schoolId") String schoolId,
-        @Param("staleBefore") OffsetDateTime staleBefore
-    );
+  long countStaleActiveCredentialsBySchoolId(
+      @Param("schoolId") String schoolId, @Param("staleBefore") OffsetDateTime staleBefore);
 
-    @Query("""
+  @Query(
+      """
         select count(sc)
         from StudentCredentials sc
         where sc.isActive = true
           and sc.userId is not null
           and sc.schoolId = :schoolId
         """)
-    long countActiveCredentialsBySchoolId(@Param("schoolId") String schoolId);
+  long countActiveCredentialsBySchoolId(@Param("schoolId") String schoolId);
 }

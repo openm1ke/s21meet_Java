@@ -1,17 +1,17 @@
 package ru.izpz.bot.service;
 
 public enum ButtonMetricType {
-    KEYBOARD("keyboard"),
-    LAST_COMMAND("last_command"),
-    INLINE("inline");
+  KEYBOARD("keyboard"),
+  LAST_COMMAND("last_command"),
+  INLINE("inline");
 
-    private final String tagValue;
+  private final String metricTagValue;
 
-    ButtonMetricType(String tagValue) {
-        this.tagValue = tagValue;
-    }
+  ButtonMetricType(String metricTagValue) {
+    this.metricTagValue = metricTagValue;
+  }
 
-    public String tagValue() {
-        return tagValue;
-    }
+  public String tagValue() {
+    return metricTagValue;
+  }
 }

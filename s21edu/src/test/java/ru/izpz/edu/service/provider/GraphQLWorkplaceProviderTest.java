@@ -1,5 +1,15 @@
 package ru.izpz.edu.service.provider;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -10,52 +20,40 @@ import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;
 import ru.izpz.edu.service.GraphQLService;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
-class GraphQLWorkplaceProviderTest {
+class GraphQlWorkplaceProviderTest {
 
-    @Mock
-    private GraphQLService graphQLService;
+  @Mock private GraphQLService graphQlService;
 
-    @Mock
-    private CampusMapper campusMapper;
+  @Mock private CampusMapper campusMapper;
 
-    @InjectMocks
-    private GraphQLWorkplaceProvider provider;
+  @InjectMocks private GraphQLWorkplaceProvider provider;
 
-    @Test
-    void fetchParticipantsByCluster_shouldReturnEmpty_whenNoSeats() {
-        when(graphQLService.getOccupiedSeats("1")).thenReturn(List.of());
+  @Test
+  void fetchParticipantsByCluster_shouldReturnEmpty_whenNoSeats() {
+    when(graphQlService.getOccupiedSeats("1")).thenReturn(List.of());
 
-        List<Workplace> result = provider.fetchParticipantsByCluster(1L);
+    List<Workplace> result = provider.fetchParticipantsByCluster(1L);
 
-        assertTrue(result.isEmpty());
-        verify(campusMapper, never()).toWorkplaceEntityV2(any(), anyLong());
-    }
+    assertTrue(result.isEmpty());
+    verify(campusMapper, never()).toWorkplaceEntityV2(any(), anyLong());
+  }
 
-    @Test
-    void fetchParticipantsByCluster_shouldReturnMappedList_whenSeatsPresent() {
-        GraphQLService.ClusterSeat seat = new GraphQLService.ClusterSeat(
-                "1", "A", 101, "login", 10, 1, "g", "s"
-        );
-        when(graphQLService.getOccupiedSeats("1")).thenReturn(List.of(seat));
+  @Test
+  void fetchParticipantsByCluster_shouldReturnMappedList_whenSeatsPresent() {
+    GraphQLService.ClusterSeat seat =
+        new GraphQLService.ClusterSeat("1", "A", 101, "login", 10, 1, "g", "s");
+    when(graphQlService.getOccupiedSeats("1")).thenReturn(List.of(seat));
 
-        Workplace workplace = new Workplace();
-        workplace.setId(new WorkplaceId(1L, "A", 101));
-        workplace.setLogin("login");
-        when(campusMapper.toWorkplaceEntityV2(seat, 1L)).thenReturn(workplace);
+    Workplace workplace = new Workplace();
+    workplace.setId(new WorkplaceId(1L, "A", 101));
+    workplace.setLogin("login");
+    when(campusMapper.toWorkplaceEntityV2(seat, 1L)).thenReturn(workplace);
 
-        List<Workplace> result = provider.fetchParticipantsByCluster(1L);
+    List<Workplace> result = provider.fetchParticipantsByCluster(1L);
 
-        verify(campusMapper).toWorkplaceEntityV2(seat, 1L);
-        assertEquals(1, result.size());
-        assertSame(workplace, result.getFirst());
-    }
+    verify(campusMapper).toWorkplaceEntityV2(seat, 1L);
+    assertEquals(1, result.size());
+    assertSame(workplace, result.getFirst());
+  }
 }

@@ -4,18 +4,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "bot")
 public record BotProperties(
-        String token,
-        Long admin,
-        Long group,
-        String groupInviteLink,
-        String webAppUrl,
-        ProxyProperties proxy
-) {
-    public record ProxyProperties(
-            Boolean enabled,
-            String type,
-            String host,
-            Integer port
-    ) {
-    }
+    String token,
+    Long admin,
+    Long group,
+    String groupInviteLink,
+    String webAppUrl,
+    ProxyProperties proxy) {
+  public record ProxyProperties(Boolean enabled, String type, String host, Integer port) {}
 }
