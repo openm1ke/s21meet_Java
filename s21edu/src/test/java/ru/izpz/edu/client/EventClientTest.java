@@ -32,8 +32,7 @@ class EventClientTest {
     OffsetDateTime to = from.plusHours(1);
 
     assertThrows(
-        PlatformClientException.class,
-        () -> eventClient.getEvents(from, to, null, 50L, 0L));
+        PlatformClientException.class, () -> eventClient.getEvents(from, to, null, 50L, 0L));
   }
 
   @Test
@@ -61,8 +60,7 @@ class EventClientTest {
 
     PlatformClientException ex =
         assertThrows(
-            PlatformClientException.class,
-            () -> eventClient.getEvents(from, to, null, 50L, 0L));
+            PlatformClientException.class, () -> eventClient.getEvents(from, to, null, 50L, 0L));
     assertNotNull(ex.getCause());
   }
 }

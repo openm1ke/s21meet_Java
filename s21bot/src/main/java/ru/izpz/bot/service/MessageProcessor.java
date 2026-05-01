@@ -1,6 +1,7 @@
 package ru.izpz.bot.service;
 
 import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import ru.izpz.dto.ProfileDto;
 @Service
 @RequiredArgsConstructor
 public class MessageProcessor {
+  private static final String MESSAGE_PROCESSOR = "message_processor";
 
   private final BotProperties botProperties;
 
@@ -29,12 +31,16 @@ public class MessageProcessor {
       ProfileDto profile = profileService.getProfile(chatId);
       log.info("Profile: {}", profile.toString());
       parseMessage(chatId, profile, text);
+    } catch (CallNotPermittedException e) {
+      metricsService.recordProcessingError(MESSAGE_PROCESSOR, "circuit_breaker_open");
+      messageSender.sendMessage(
+          chatId, "Сервис профилей временно недоступен, попробуйте позже", null);
     } catch (FeignException e) {
-      metricsService.recordProcessingError("message_processor", "feign_exception");
+      metricsService.recordProcessingError(MESSAGE_PROCESSOR, "feign_exception");
       messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
       messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
     } catch (Exception e) {
-      metricsService.recordProcessingError("message_processor", "unexpected_exception");
+      metricsService.recordProcessingError(MESSAGE_PROCESSOR, "unexpected_exception");
       log.error("Unexpected error while handling text message", e);
       messageSender.sendMessage(chatId, "Произошла внутренняя ошибка, попробуйте позже", null);
     }

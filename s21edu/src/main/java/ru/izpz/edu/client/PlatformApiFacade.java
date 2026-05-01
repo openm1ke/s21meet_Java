@@ -10,9 +10,7 @@ import ru.izpz.dto.model.ParticipantLoginsV1DTO;
 import ru.izpz.dto.model.ParticipantProjectsV1DTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 
-/**
- * Фасад REST-доступа к внешней платформе.
- */
+/** Фасад REST-доступа к внешней платформе. */
 public interface PlatformApiFacade {
 
   /**

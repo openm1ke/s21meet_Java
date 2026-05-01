@@ -389,18 +389,14 @@ class SchedulerMetricsServiceTest {
             .tags("scheduler", "credentials_sync")
             .summary();
     assertNotNull(batchSizeSummary);
-    assertEquals(
-        1L,
-        batchSizeSummary.count());
+    assertEquals(1L, batchSizeSummary.count());
     var batchDurationTimer =
         meterRegistry
             .find("edu_credentials_sync_batch_duration_seconds")
             .tags("scheduler", "credentials_sync")
             .timer();
     assertNotNull(batchDurationTimer);
-    assertFalse(
-        batchDurationTimer.totalTime(java.util.concurrent.TimeUnit.NANOSECONDS)
-            <= 0);
+    assertFalse(batchDurationTimer.totalTime(java.util.concurrent.TimeUnit.NANOSECONDS) <= 0);
   }
 
   @Test
@@ -432,9 +428,7 @@ class SchedulerMetricsServiceTest {
             .tags("scheduler", "credentials_sync")
             .summary();
     assertNotNull(batchSizeSummary);
-    assertEquals(
-        1L,
-        batchSizeSummary.count());
+    assertEquals(1L, batchSizeSummary.count());
   }
 
   @Test

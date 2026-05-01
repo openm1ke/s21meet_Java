@@ -3,7 +3,6 @@ plugins {
     id("org.openapi.generator") version "7.14.0"
 }
 
-val openApiVersion: String by project
 val squareupOkhttpVersion: String by project
 val okioJvmVersion: String by project
 val gsonVersion: String by project
@@ -70,6 +69,23 @@ openApiGenerate {
 
 
 tasks.named("openApiGenerate") {
+    val generatedJavaDir = layout.buildDirectory.dir("generated/src/main/java")
+    val skipOpenApiGenerate =
+        providers.gradleProperty("skipOpenApiGenerate")
+            .map { it.equals("true", ignoreCase = true) }
+            .orElse(false)
+    val isCi =
+        providers.environmentVariable("CI")
+            .map { it.equals("true", ignoreCase = true) }
+            .orElse(false)
+
+    // Fast local mode:
+    // -PskipOpenApiGenerate=true skips generation only when generated sources already exist.
+    onlyIf {
+        val hasGeneratedSources =
+            generatedJavaDir.get().asFile.walkTopDown().any { it.isFile && it.extension == "java" }
+        !(skipOpenApiGenerate.get() && hasGeneratedSources && !isCi.get())
+    }
 }
 
 tasks.test {

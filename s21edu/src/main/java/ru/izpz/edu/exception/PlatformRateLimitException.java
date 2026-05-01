@@ -4,9 +4,7 @@ import java.io.Serial;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Ошибка превышения лимита запросов внешней платформы.
- */
+/** Ошибка превышения лимита запросов внешней платформы. */
 public class PlatformRateLimitException extends PlatformClientException {
   @Serial private static final long serialVersionUID = 1L;
 

@@ -1,6 +1,7 @@
 package ru.izpz.auth.client;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.auth.dto.TokenResponse;
 import ru.izpz.exception.TokenResponseException;
@@ -34,6 +38,7 @@ public class TokenClient {
 
   @RateLimiter(name = "auth")
   @Retry(name = "auth")
+  @CircuitBreaker(name = "auth")
   public TokenResponse requestNewToken(String login, String password) {
 
     HttpHeaders headers = new HttpHeaders();
@@ -61,8 +66,14 @@ public class TokenClient {
       }
       log.warn("Пустой ответ при получении токена для {}", login);
       throw new TokenResponseException("Не удалось получить токен — пустой ответ");
-    } catch (Exception e) {
+    } catch (HttpServerErrorException | ResourceAccessException e) {
+      log.error("Временная ошибка при запросе токена для {}: {}", login, e.getMessage(), e);
+      throw e;
+    } catch (RestClientException e) {
       log.error("Ошибка запроса нового токена для {}: {}", login, e.getMessage(), e);
+      throw new TokenResponseException("Не удалось получить токен", e);
+    } catch (RuntimeException e) {
+      log.error("Непредвиденная ошибка запроса токена для {}: {}", login, e.getMessage(), e);
       throw new TokenResponseException("Не удалось получить токен", e);
     }
   }

@@ -9,29 +9,28 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.exception.TokenResponseException;
 
-@SpringBootTest(classes = {TokenService.class, RestTemplate.class})
-@TestPropertySource(properties = "edu.tokenEndpoint=http://localhost:8081/api/tokens/default")
 class TokenServiceTest {
 
-  @Autowired private TokenService tokenService;
+  private static final String TOKEN_ENDPOINT = "http://localhost:8081/api/tokens/default";
 
-  @Autowired private RestTemplate restTemplate;
+  private TokenService tokenService;
+  private RestTemplate restTemplate;
 
   private MockRestServiceServer mockServer;
 
   @BeforeEach
   void setUp() {
-    // Создаем сервер, который будет перехватывать вызовы RestTemplate
+    restTemplate = new RestTemplate();
+    tokenService = new TokenService(restTemplate);
+    ReflectionTestUtils.setField(tokenService, "tokenEndpoint", TOKEN_ENDPOINT);
+
     mockServer = MockRestServiceServer.createServer(restTemplate);
   }
 
@@ -40,7 +39,7 @@ class TokenServiceTest {
     String expectedToken = "myAccessToken";
     // Настраиваем ожидание вызова и ответ
     mockServer
-        .expect(requestTo("http://localhost:8081/api/tokens/default"))
+        .expect(requestTo(TOKEN_ENDPOINT))
         .andRespond(withSuccess(expectedToken, MediaType.TEXT_PLAIN));
 
     // Выполняем вызов сервиса
@@ -54,9 +53,7 @@ class TokenServiceTest {
   @Test
   void testGetTokenThrowsExceptionWhenEmptyResponse() {
     // Настраиваем ответ с пустым телом
-    mockServer
-        .expect(requestTo("http://localhost:8081/api/tokens/default"))
-        .andRespond(withSuccess("", MediaType.TEXT_PLAIN));
+    mockServer.expect(requestTo(TOKEN_ENDPOINT)).andRespond(withSuccess("", MediaType.TEXT_PLAIN));
 
     // Ожидаем, что будет выброшено исключение
     Exception ex = assertThrows(TokenResponseException.class, () -> tokenService.getToken());
@@ -69,10 +66,9 @@ class TokenServiceTest {
   void testGetTokenThrowsExceptionWhenNullResponseBody() {
     RestTemplate mockedRestTemplate = mock(RestTemplate.class);
     TokenService service = new TokenService(mockedRestTemplate);
-    ReflectionTestUtils.setField(
-        service, "tokenEndpoint", "http://localhost:8081/api/tokens/default");
+    ReflectionTestUtils.setField(service, "tokenEndpoint", TOKEN_ENDPOINT);
 
-    when(mockedRestTemplate.getForEntity("http://localhost:8081/api/tokens/default", String.class))
+    when(mockedRestTemplate.getForEntity(TOKEN_ENDPOINT, String.class))
         .thenReturn(ResponseEntity.ok().build());
 
     Exception ex = assertThrows(TokenResponseException.class, service::getToken);

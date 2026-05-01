@@ -1,6 +1,7 @@
 package ru.izpz.web.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import ru.izpz.dto.CampusRequest;
 import ru.izpz.dto.ProjectExecutorDto;
 import ru.izpz.dto.ProjectExecutorsRequest;
@@ -45,7 +47,7 @@ class ProjectDirectoryFacadeTest {
     List<ProjectExecutorDto> result = facade.getProjectExecutors(request);
 
     assertEquals(1, result.size());
-    assertEquals("mike", result.get(0).login());
+    assertEquals("mike", result.getFirst().login());
     verify(eduProfileClient).getProjectExecutors(new ProjectExecutorsRequest(PROJECT_NAME));
   }
 
@@ -59,5 +61,27 @@ class ProjectDirectoryFacadeTest {
 
     assertEquals(List.of("A1_Maze_C", "C2_SimpleBashUtils"), result);
     verify(eduProfileClient).getAllProjectNames();
+  }
+
+  @Test
+  void fallbackMethods_shouldReturnEmptyLists() {
+    ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
+
+    List<String> names =
+        ReflectionTestUtils.invokeMethod(
+            facade, "fallbackProjectNames", "123456", new RuntimeException("down"));
+    List<String> allNames =
+        ReflectionTestUtils.invokeMethod(
+            facade, "fallbackAllProjectNames", new RuntimeException("down"));
+    List<ProjectExecutorDto> executors =
+        ReflectionTestUtils.invokeMethod(
+            facade,
+            "fallbackProjectExecutors",
+            new ProjectExecutorsRequest(PROJECT_NAME),
+            new RuntimeException("down"));
+
+    assertTrue(names.isEmpty());
+    assertTrue(allNames.isEmpty());
+    assertTrue(executors.isEmpty());
   }
 }

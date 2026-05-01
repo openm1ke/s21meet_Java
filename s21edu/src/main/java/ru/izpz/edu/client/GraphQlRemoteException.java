@@ -2,9 +2,7 @@ package ru.izpz.edu.client;
 
 import java.io.Serial;
 
-/**
- * Исключение ошибок удалённого GraphQL-вызова.
- */
+/** Исключение ошибок удалённого GraphQL-вызова. */
 public class GraphQlRemoteException extends RuntimeException {
   @Serial private static final long serialVersionUID = 1L;
 

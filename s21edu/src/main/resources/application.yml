@@ -38,6 +38,40 @@ edu:
 bot.service.url: ${BOT_SERVICE_URL:}
 
 resilience4j:
+  circuitbreaker:
+    instances:
+      participantProfile:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${PARTICIPANT_PROFILE_CB_SLIDING_WINDOW_SIZE:20}
+        minimumNumberOfCalls: ${PARTICIPANT_PROFILE_CB_MIN_CALLS:10}
+        failureRateThreshold: ${PARTICIPANT_PROFILE_CB_FAILURE_RATE_THRESHOLD:50}
+        waitDurationInOpenState: ${PARTICIPANT_PROFILE_CB_WAIT_OPEN:30s}
+        permittedNumberOfCallsInHalfOpenState:
+          ${PARTICIPANT_PROFILE_CB_HALF_OPEN_CALLS:3}
+      graphqlCredentials:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${GRAPHQL_CREDENTIALS_CB_SLIDING_WINDOW_SIZE:20}
+        minimumNumberOfCalls: ${GRAPHQL_CREDENTIALS_CB_MIN_CALLS:10}
+        failureRateThreshold: ${GRAPHQL_CREDENTIALS_CB_FAILURE_RATE_THRESHOLD:50}
+        waitDurationInOpenState: ${GRAPHQL_CREDENTIALS_CB_WAIT_OPEN:30s}
+        permittedNumberOfCallsInHalfOpenState:
+          ${GRAPHQL_CREDENTIALS_CB_HALF_OPEN_CALLS:3}
+      graphqlProjects:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${GRAPHQL_PROJECTS_CB_SLIDING_WINDOW_SIZE:20}
+        minimumNumberOfCalls: ${GRAPHQL_PROJECTS_CB_MIN_CALLS:10}
+        failureRateThreshold: ${GRAPHQL_PROJECTS_CB_FAILURE_RATE_THRESHOLD:50}
+        waitDurationInOpenState: ${GRAPHQL_PROJECTS_CB_WAIT_OPEN:30s}
+        permittedNumberOfCallsInHalfOpenState:
+          ${GRAPHQL_PROJECTS_CB_HALF_OPEN_CALLS:3}
+      graphqlCoalition:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${GRAPHQL_COALITION_CB_SLIDING_WINDOW_SIZE:20}
+        minimumNumberOfCalls: ${GRAPHQL_COALITION_CB_MIN_CALLS:10}
+        failureRateThreshold: ${GRAPHQL_COALITION_CB_FAILURE_RATE_THRESHOLD:50}
+        waitDurationInOpenState: ${GRAPHQL_COALITION_CB_WAIT_OPEN:30s}
+        permittedNumberOfCallsInHalfOpenState:
+          ${GRAPHQL_COALITION_CB_HALF_OPEN_CALLS:3}
   ratelimiter:
     instances:
       externalGlobal:
@@ -97,6 +131,12 @@ resilience4j:
       graphqlProjects:
         maxAttempts: ${GRAPHQL_PROJECTS_RETRY_MAX_ATTEMPTS:2}
         waitDuration: ${GRAPHQL_PROJECTS_RETRY_WAIT_DURATION:300ms}
+      graphqlCoalition:
+        maxAttempts: ${GRAPHQL_COALITION_RETRY_MAX_ATTEMPTS:2}
+        waitDuration: ${GRAPHQL_COALITION_RETRY_WAIT_DURATION:300ms}
+        retryExceptions:
+          - ru.izpz.edu.client.GraphQlRemoteException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
       graphqlGlobal:
         maxAttempts: ${GRAPHQL_GLOBAL_RETRY_MAX_ATTEMPTS:2}
         waitDuration: ${GRAPHQL_GLOBAL_RETRY_WAIT_DURATION:500ms}
@@ -104,6 +144,15 @@ resilience4j:
         exponentialBackoffMultiplier: ${GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER:2}
         retryExceptions:
           - ru.izpz.edu.client.GraphQlRemoteException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
+      participantProfile:
+        maxAttempts: ${PARTICIPANT_PROFILE_RETRY_MAX_ATTEMPTS:3}
+        waitDuration: ${PARTICIPANT_PROFILE_RETRY_WAIT_DURATION:500ms}
+        enableExponentialBackoff: ${PARTICIPANT_PROFILE_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${PARTICIPANT_PROFILE_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - ru.izpz.edu.exception.PlatformRateLimitException
+          - ru.izpz.edu.exception.PlatformTransientException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
 
 logging:

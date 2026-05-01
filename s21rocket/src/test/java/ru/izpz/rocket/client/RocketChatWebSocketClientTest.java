@@ -59,7 +59,7 @@ class RocketChatWebSocketClientTest {
         };
 
     // When
-    RocketChatSendResponse result = timeoutClient.execute(1);
+    RocketChatSendResponse result = timeoutClient.execute(0);
 
     // Then
     assertNotNull(result);
@@ -79,7 +79,7 @@ class RocketChatWebSocketClientTest {
         };
 
     // When
-    RocketChatSendResponse result = errorClient.execute(5);
+    RocketChatSendResponse result = errorClient.execute(1);
 
     // Then
     assertNotNull(result);
@@ -102,7 +102,7 @@ class RocketChatWebSocketClientTest {
     // When
     Thread.currentThread().interrupt();
     try {
-      RocketChatSendResponse result = interruptedClient.execute(5);
+      RocketChatSendResponse result = interruptedClient.execute(1);
 
       // Then
       assertNotNull(result);
@@ -133,7 +133,7 @@ class RocketChatWebSocketClientTest {
         };
 
     // When
-    RocketChatSendResponse result = successClient.execute(5);
+    RocketChatSendResponse result = successClient.execute(1);
 
     // Then
     assertNotNull(result);
@@ -161,7 +161,7 @@ class RocketChatWebSocketClientTest {
           }
         };
 
-    RocketChatSendResponse result = emptyClient.execute(5);
+    RocketChatSendResponse result = emptyClient.execute(1);
 
     assertNotNull(result);
     assertFalse(result.isSuccess());

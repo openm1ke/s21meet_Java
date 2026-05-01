@@ -6,7 +6,6 @@ plugins {
     java
     id("org.springframework.boot")
     id("io.spring.dependency-management")
-    id("org.openapi.generator") version "7.13.0"
 }
 
 val testcontainersVersion: String by project
@@ -16,7 +15,6 @@ val squareupOkhttpVersion: String by project
 val apacheCommonsVersion: String by project
 val telegramBotsVersion: String by project
 val okioJvmVersion: String by project
-val openFeignVersion: String by project
 val springSecurityCryptoVersion: String by project
 val resilience4jVersion: String by project
 
@@ -24,7 +22,6 @@ dependencies {
     implementation(project(":common"))
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-logging")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus")

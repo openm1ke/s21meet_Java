@@ -10,6 +10,13 @@ management:
 spring:
   application:
       name: s21bot
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: ${BOT_FEIGN_CONNECT_TIMEOUT_MS:5000}
+            readTimeout: ${BOT_FEIGN_READ_TIMEOUT_MS:20000}
 
 bot:
   token: ${BOT_TOKEN}
@@ -29,6 +36,15 @@ bot:
     enabled: false
 
 resilience4j:
+  circuitbreaker:
+    instances:
+      profileEdu:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${PROFILE_EDU_CB_SLIDING_WINDOW_SIZE:20}
+        minimumNumberOfCalls: ${PROFILE_EDU_CB_MIN_CALLS:10}
+        failureRateThreshold: ${PROFILE_EDU_CB_FAILURE_RATE_THRESHOLD:50}
+        waitDurationInOpenState: ${PROFILE_EDU_CB_WAIT_OPEN:30s}
+        permittedNumberOfCallsInHalfOpenState: ${PROFILE_EDU_CB_HALF_OPEN_CALLS:3}
   ratelimiter:
     instances:
       telegram:
@@ -43,6 +59,13 @@ resilience4j:
         ignoreExceptions:
           - org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
           - org.telegram.telegrambots.meta.exceptions.TelegramApiValidationException
+      profileEdu:
+        maxAttempts: ${PROFILE_EDU_RETRY_MAX_ATTEMPTS:3}
+        waitDuration: ${PROFILE_EDU_RETRY_WAIT_DURATION:500ms}
+        enableExponentialBackoff: ${PROFILE_EDU_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${PROFILE_EDU_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - feign.FeignException
 
 logging:
   level:

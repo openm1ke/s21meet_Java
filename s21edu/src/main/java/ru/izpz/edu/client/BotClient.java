@@ -5,9 +5,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import ru.izpz.dto.NotifyRequest;
 
-/**
- * HTTP-клиент отправки уведомлений в бот-сервис.
- */
+/** HTTP-клиент отправки уведомлений в бот-сервис. */
 @FeignClient(name = "botclient", url = "${bot.service.url}", path = "/api")
 public interface BotClient {
   /**

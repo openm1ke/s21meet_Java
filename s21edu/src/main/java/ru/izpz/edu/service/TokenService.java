@@ -8,9 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.exception.TokenResponseException;
 
-/**
- * Сервис получения service-token для запросов к платформе.
- */
+/** Сервис получения service-token для запросов к платформе. */
 @Slf4j
 @Service
 @RequiredArgsConstructor

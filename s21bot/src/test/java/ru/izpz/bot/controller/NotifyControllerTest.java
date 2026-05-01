@@ -37,8 +37,7 @@ class NotifyControllerTest {
 
     ResponseEntity<Void> response = controller.notify(null);
 
-    org.junit.jupiter.api.Assertions.assertEquals(
-        202, response.getStatusCode().value());
+    org.junit.jupiter.api.Assertions.assertEquals(202, response.getStatusCode().value());
     verifyNoInteractions(sender);
   }
 
@@ -76,10 +75,7 @@ class NotifyControllerTest {
     NotifyController controller = new NotifyController(sender);
     MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
 
-    mvc.perform(
-            post("/api/notify")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+    mvc.perform(post("/api/notify").contentType(MediaType.APPLICATION_JSON).content(requestBody))
         .andExpect(status().isAccepted());
 
     verify(sender).sendStatusChanges(anyList());

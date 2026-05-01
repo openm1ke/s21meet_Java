@@ -1,6 +1,7 @@
 package ru.izpz.edu.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -12,15 +13,15 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import ru.izpz.dto.ServiceErrorDto;
 
-/**
- * Глобальный обработчик исключений REST-слоя.
- */
+/** Глобальный обработчик исключений REST-слоя. */
 @Slf4j
 @ControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
   private final ObjectMapper objectMapper;
+  private static final String STATUS_FIELD = "status";
+  private static final String MESSAGE_FIELD = "message";
 
   /**
    * Обрабатывает исключения клиента платформы.
@@ -30,6 +31,14 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(PlatformClientException.class)
   public ResponseEntity<Object> handlePlatformException(PlatformClientException ex) {
+    if (ex instanceof PlatformRateLimitException) {
+      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+          .body(Map.of(STATUS_FIELD, 429, MESSAGE_FIELD, "Внешний сервис временно перегружен"));
+    }
+    if (ex instanceof PlatformTransientException) {
+      return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+          .body(Map.of(STATUS_FIELD, 502, MESSAGE_FIELD, "Внешний сервис временно недоступен"));
+    }
     try {
       ServiceErrorDto error = objectMapper.readValue(ex.getResponseBody(), ServiceErrorDto.class);
       log.warn("Ошибка от внешнего API [{}]: {}", error.getCode(), error.getMessage());
@@ -37,12 +46,15 @@ public class GlobalExceptionHandler {
     } catch (Exception parseEx) {
       log.warn("Не удалось распарсить тело ошибки API: {}", ex.getResponseBody(), parseEx);
       return ResponseEntity.status(ex.getCode())
-          .body(
-              Map.of(
-                  "status", ex.getCode(),
-                  "message", ex.getMessage(),
-                  "raw", ex.getResponseBody()));
+          .body(Map.of(STATUS_FIELD, ex.getCode(), MESSAGE_FIELD, "Ошибка внешнего сервиса"));
     }
+  }
+
+  @ExceptionHandler(CallNotPermittedException.class)
+  public ResponseEntity<Object> handleCircuitOpen(CallNotPermittedException ex) {
+    log.warn("Circuit breaker open: {}", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+        .body(Map.of(STATUS_FIELD, 503, MESSAGE_FIELD, "Внешний сервис временно недоступен"));
   }
 
   /**
@@ -74,9 +86,9 @@ public class GlobalExceptionHandler {
 
     Map<String, Object> body =
         Map.of(
-            "status",
+            STATUS_FIELD,
             HttpStatus.BAD_REQUEST.value(),
-            "message",
+            MESSAGE_FIELD,
             "Ошибка валидации",
             "errors",
             errors);

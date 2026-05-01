@@ -16,7 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import ru.izpz.auth.dto.TokenResponse;
@@ -134,6 +137,26 @@ class TokenClientTest {
 
     assertEquals("Не удалось получить токен", exception.getMessage());
     assertNotNull(exception.getCause());
+  }
+
+  @Test
+  void requestNewToken_shouldRethrowHttpServerErrorException() {
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+    assertThrows(
+        HttpServerErrorException.class,
+        () -> tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD));
+  }
+
+  @Test
+  void requestNewToken_shouldRethrowResourceAccessException() {
+    when(restTemplate.postForEntity(anyString(), any(), eq(TokenResponse.class)))
+        .thenThrow(new ResourceAccessException("timeout"));
+
+    assertThrows(
+        ResourceAccessException.class,
+        () -> tokenClient.requestNewToken(TEST_LOGIN, TEST_PASSWORD));
   }
 
   @Test
