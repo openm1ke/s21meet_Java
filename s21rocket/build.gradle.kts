@@ -13,6 +13,7 @@ apply(plugin = "jacoco")
 val javaWebSocketVersion: String by project
 val jsonVersion: String by project
 val slf4jVersion: String by project
+val resilience4jVersion: String by project
 
 group = "ru.izpz"
 version = "0.0.1-SNAPSHOT"
@@ -27,9 +28,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-logging")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("io.micrometer:micrometer-registry-prometheus")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}")
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:${resilience4jVersion}")
 
     implementation("org.java-websocket:Java-WebSocket:${javaWebSocketVersion}")
     implementation("org.json:json:${jsonVersion}")

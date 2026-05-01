@@ -5,9 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Базовое исключение ошибок внешней платформы.
- */
+/** Базовое исключение ошибок внешней платформы. */
 public class PlatformClientException extends RuntimeException {
   @Serial private static final long serialVersionUID = 1L;
 

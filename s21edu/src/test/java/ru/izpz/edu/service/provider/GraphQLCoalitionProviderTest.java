@@ -20,6 +20,6 @@ class GraphQlCoalitionProviderTest {
   void refreshCoalitionByLogin_shouldDelegateToGraphQlService() {
     provider.refreshCoalitionByLogin("testuser");
 
-    verify(graphQlService).refreshStudentCoalitionByLogin("testuser");
+    verify(graphQlService).refreshStudentCoalitionByLoginWithLimits("testuser");
   }
 }

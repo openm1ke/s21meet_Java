@@ -132,8 +132,7 @@ class PasswordConverterTest {
   void convertToEntityAttribute_shouldThrowException_whenDataIsCorrupted() {
     String corruptedEncrypted =
         "enc:"
-            + Base64.getEncoder()
-                .encodeToString("corruptedData".getBytes(StandardCharsets.UTF_8));
+            + Base64.getEncoder().encodeToString("corruptedData".getBytes(StandardCharsets.UTF_8));
 
     assertThrows(
         IllegalStateException.class,

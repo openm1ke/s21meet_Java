@@ -11,6 +11,8 @@ import feign.FeignException;
 import feign.Request;
 import feign.RequestTemplate;
 import feign.Response;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -149,6 +151,23 @@ class MessageProcessorTest {
 
     verify(metricsService).recordProcessingError("message_processor", "unexpected_exception");
     verify(messageSender).sendMessage(1L, "Произошла внутренняя ошибка, попробуйте позже", null);
+  }
+
+  @Test
+  void handleTextMessage_whenCircuitBreakerOpen_sendsServiceUnavailableAndRecordsMetric() {
+    Message msg = mock(Message.class);
+    when(msg.getChatId()).thenReturn(1L);
+    when(msg.getText()).thenReturn("hi");
+    CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("profile-cb");
+    CallNotPermittedException exception =
+        CallNotPermittedException.createCallNotPermittedException(circuitBreaker);
+    when(profileService.getProfile(1L)).thenThrow(exception);
+
+    messageProcessor.handleTextMessage(msg);
+
+    verify(metricsService).recordProcessingError("message_processor", "circuit_breaker_open");
+    verify(messageSender)
+        .sendMessage(1L, "Сервис профилей временно недоступен, попробуйте позже", null);
   }
 
   private FeignException createFeignException(int status, String message) {

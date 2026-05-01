@@ -4,9 +4,7 @@ import java.io.Serial;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Ошибка отсутствия ресурса во внешней платформе.
- */
+/** Ошибка отсутствия ресурса во внешней платформе. */
 public class PlatformNotFoundException extends PlatformClientException {
   @Serial private static final long serialVersionUID = 1L;
 

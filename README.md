@@ -136,6 +136,9 @@ chmod +x gradlew dev.sh
 
 Для `Sonar Local (tests + upload)` используется `env/local/sonar.env` (включая `SONAR_TOKEN`).
 
+Подробная актуальная карта локальных параметров:
+- [Local Profile (`spring.profiles.active=local`)](docs/local-profile.md)
+
 #### `compose.env` (оркестрация Docker Compose)
 
 - `APP_ENV` — имя окружения для env-файлов (в текущей схеме используется `test`).
@@ -163,6 +166,13 @@ chmod +x gradlew dev.sh
 - `EDU_LOGIN`, `EDU_PASS` — учетные данные внешнего API кампуса.
 - `CRYPTO_KEY_BASE64` — ключ шифрования/дешифрования токена.
 - `TOKEN_URI` — endpoint выдачи токена во внешнем API.
+- `AUTH_CLIENT_CONNECT_TIMEOUT`, `AUTH_CLIENT_READ_TIMEOUT` — connect/read timeout `RestTemplate` для запросов к `auth.21-school.ru`.
+- Параметры circuit breaker `auth`:
+  - `AUTH_CB_SLIDING_WINDOW_SIZE`
+  - `AUTH_CB_MIN_CALLS`
+  - `AUTH_CB_FAILURE_RATE_THRESHOLD`
+  - `AUTH_CB_WAIT_OPEN`
+  - `AUTH_CB_HALF_OPEN_CALLS`
 
 #### `s21bot.env`
 
@@ -172,8 +182,13 @@ chmod +x gradlew dev.sh
 - `BOT_GROUP_INVITE_LINK` — инвайт-ссылка в группу.
 - `BOT_WEB_APP_URL` — публичный HTTPS URL Web App (должен совпадать с доменом `WEB_PUBLIC_DOMAIN`).
 - `BOT_PROXY_ENABLED`, `BOT_PROXY_TYPE`, `BOT_PROXY_HOST`, `BOT_PROXY_PORT` — параметры прокси для Telegram API.
+- `BOT_NOTIFY_ENABLED` — включает отправку notify-сообщений (по умолчанию `false`).
 - `PROFILE_SERVICE_URL` — URL сервиса профилей (`s21edu`).
 - `ROCKETCHAT_SERVICE_URL` — URL сервиса Rocket.Chat (`s21rocket`).
+- `BOT_FEIGN_CONNECT_TIMEOUT_MS`, `BOT_FEIGN_READ_TIMEOUT_MS` — таймауты Feign-клиентов в миллисекундах.
+- Параметры resilience4j для `profileEdu`:
+  - Retry: `PROFILE_EDU_RETRY_MAX_ATTEMPTS`, `PROFILE_EDU_RETRY_WAIT_DURATION`, `PROFILE_EDU_RETRY_EXPONENTIAL_BACKOFF`, `PROFILE_EDU_RETRY_EXPONENTIAL_MULTIPLIER`
+  - Circuit breaker: `PROFILE_EDU_CB_SLIDING_WINDOW_SIZE`, `PROFILE_EDU_CB_MIN_CALLS`, `PROFILE_EDU_CB_FAILURE_RATE_THRESHOLD`, `PROFILE_EDU_CB_WAIT_OPEN`, `PROFILE_EDU_CB_HALF_OPEN_CALLS`
 
 #### `s21rocket.env`
 
@@ -182,12 +197,25 @@ chmod +x gradlew dev.sh
 - `ROCKET_CHAT_QR_BOT` — username бота для QR-верификации.
 - `ROCKET_CHAT_QR_TIMEOUT` — timeout ожидания QR (сек).
 - `ROCKET_CHAT_MESSAGE_TIMEOUT` — timeout отправки сообщения (сек).
+- Параметры resilience4j для `rocketchatOperation`:
+  - Retry: `ROCKETCHAT_RETRY_MAX_ATTEMPTS`, `ROCKETCHAT_RETRY_WAIT_DURATION`, `ROCKETCHAT_RETRY_EXPONENTIAL_BACKOFF`, `ROCKETCHAT_RETRY_EXPONENTIAL_MULTIPLIER`
+  - Circuit breaker: `ROCKETCHAT_CB_SLIDING_WINDOW_SIZE`, `ROCKETCHAT_CB_MIN_CALLS`, `ROCKETCHAT_CB_FAILURE_RATE_THRESHOLD`, `ROCKETCHAT_CB_WAIT_OPEN`, `ROCKETCHAT_CB_HALF_OPEN_CALLS`
 
 #### `s21web.env`
 
 - `PROFILE_SERVICE_URL` — URL `s21edu` для API веб-модуля.
 - `BOT_TOKEN` — токен Telegram-бота для проверки `initData` из Mini App.
 - `TELEGRAM_WEBAPP_AUTH_ENABLED` — включение проверки подписи запросов Telegram Web App.
+- Опциональные параметры Telegram WebApp auth (в `application.yml` есть дефолты):
+  - `TELEGRAM_WEBAPP_MAX_AGE` (по умолчанию `PT1H`)
+  - `TELEGRAM_WEBAPP_HEADER` (по умолчанию `X-Telegram-Init-Data`)
+- Опциональные параметры rate-limit для `/api/projects`:
+  - `PROJECT_EXECUTORS_RATE_LIMIT_ENABLED` (по умолчанию `true`)
+  - `PROJECT_EXECUTORS_RATE_LIMIT_FOR_PERIOD` (по умолчанию `60`)
+  - `PROJECT_EXECUTORS_RATE_LIMIT_REFRESH_PERIOD` (по умолчанию `PT1M`)
+- Опциональные таймауты Feign-клиентов:
+  - `WEB_FEIGN_CONNECT_TIMEOUT_MS` (по умолчанию `5000`)
+  - `WEB_FEIGN_READ_TIMEOUT_MS` (по умолчанию `20000`)
 
 #### `s21edu.env` (основная бизнес-конфигурация)
 
@@ -202,10 +230,11 @@ chmod +x gradlew dev.sh
 
 - `API_CLIENT_CONNECT_TIMEOUT`, `API_CLIENT_READ_TIMEOUT` — connect/read timeout для внешнего API клиента.
 - `GRAPHQL_API_ENABLED`, `CAMPUS_API_ENABLED`, `CLUSTER_API_ENABLED`, `PARTICIPANT_API_ENABLED`, `COALITION_API_ENABLED` — включение отдельных внешних API направлений.
+- `PROFILE_API_ENABLED`, `PROFILE_SERVICE_ENABLED` — включение profile API и profile service.
 
 Провайдеры и TTL:
 
-- `COALITION_PROVIDER` — выбор провайдера коалиций (`auto|graphql|rest`).
+- `COALITION_PROVIDER` — выбор провайдера коалиций (`auto|graphql|rest`), дефолт в `application.yml` — `graphql`.
 - `COALITION_REFRESH_TTL` — TTL данных коалиций.
 - `PARTICIPANT_REFRESH_TTL` — TTL кэша профиля участника (XP/level и связанные данные `Participant`).
 - `COALITION_REST_FETCH_MEMBER_COUNT` — догружать ли count участников через REST.
@@ -230,6 +259,11 @@ chmod +x gradlew dev.sh
 - `PROJECTS_SCHEDULER_GRAPHQL_SCHOOL_ID` — legacy fallback id для GraphQL routing (используется как запасной источник).
 - `CREDENTIALS_SCHEDULER_ENABLED`, `CREDENTIALS_SCHEDULER_CRON`, `CREDENTIALS_SCHEDULER_ZONE` — включение и расписание sync credentials.
 - `CREDENTIALS_SCHEDULER_PAGE_SIZE`, `CREDENTIALS_SCHEDULER_BATCH_SIZE`, `CREDENTIALS_SCHEDULER_CONCURRENCY` — параметры batch обработки credentials.
+- `EVENT_SCHEDULER_ENABLED`, `EVENT_SCHEDULER_FIXED_DELAY` — расписание sync событий.
+- `NOTIFY_SCHEDULER_ENABLED`, `NOTIFY_SCHEDULER_FIXED_DELAY` — расписание notify scheduler.
+- `CAMPUS_SCHEDULER_ENABLED`, `CAMPUS_SCHEDULER_FIXED_DELAY`, `CAMPUS_SCHEDULER_PARTICIPANTS_MAX_CONCURRENCY` — настройки campus scheduler.
+- `CAMPUS_SCHEDULER_TIMEOUT_GLOBAL`, `CAMPUS_SCHEDULER_TIMEOUT_PER_CAMPUS` — таймауты campus scheduler.
+- `CAMPUS_SERVICE_ENABLED` — включение campus service.
 
 Rate limit / retry resilience4j:
 
@@ -241,10 +275,12 @@ Rate limit / retry resilience4j:
 - `GRAPHQL_CREDENTIALS_RETRY_MAX_ATTEMPTS`, `GRAPHQL_CREDENTIALS_RETRY_WAIT_DURATION` — retry GraphQL credentials.
 - `GRAPHQL_PROJECTS_LIMIT_FOR_PERIOD`, `GRAPHQL_PROJECTS_LIMIT_REFRESH_PERIOD`, `GRAPHQL_PROJECTS_TIMEOUT_DURATION` — limiter GraphQL projects.
 - `GRAPHQL_PROJECTS_RETRY_MAX_ATTEMPTS`, `GRAPHQL_PROJECTS_RETRY_WAIT_DURATION` — retry GraphQL projects.
+- `GRAPHQL_COALITION_RETRY_MAX_ATTEMPTS`, `GRAPHQL_COALITION_RETRY_WAIT_DURATION` — retry GraphQL coalition.
 - `GRAPHQL_GLOBAL_LIMIT_FOR_PERIOD`, `GRAPHQL_GLOBAL_LIMIT_REFRESH_PERIOD`, `GRAPHQL_GLOBAL_TIMEOUT_DURATION` — общий limiter всех GraphQL вызовов.
 - `GRAPHQL_GLOBAL_RETRY_MAX_ATTEMPTS`, `GRAPHQL_GLOBAL_RETRY_WAIT_DURATION`, `GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF`, `GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER` — retry GraphQL global limiter.
 - `PROJECTS_REST_LIMIT_FOR_PERIOD`, `PROJECTS_REST_LIMIT_REFRESH_PERIOD`, `PROJECTS_REST_TIMEOUT_DURATION` — limiter REST-проектов.
 - `PROJECTS_REST_RETRY_MAX_ATTEMPTS`, `PROJECTS_REST_RETRY_WAIT_DURATION`, `PROJECTS_REST_RETRY_EXPONENTIAL_BACKOFF`, `PROJECTS_REST_RETRY_EXPONENTIAL_MULTIPLIER` — retry REST-проектов.
+- `PARTICIPANT_PROFILE_*` и `GRAPHQL_*_CB_*` — параметры retry/circuit breaker для `participantProfile`, `graphqlCredentials`, `graphqlProjects`, `graphqlCoalition`.
 
 Ограничения конфигурации:
 
@@ -257,11 +293,7 @@ Rate limit / retry resilience4j:
 
 - Все обязательные переменные из `application.yml` покрыты шаблонами `env/test/*.env.example`.
 - Переменные `DB_NAME`, `DB_PORT` присутствуют в `s21edu.env.example`, но напрямую не читаются `application.yml` (используются косвенно, если собираете `DB_URL` из частей).
-- Для `s21web` есть опциональные параметры с дефолтами в `application.yml`, которых нет в env-шаблоне:
-  - `PROJECT_EXECUTORS_RATE_LIMIT_ENABLED`
-  - `PROJECT_EXECUTORS_RATE_LIMIT_FOR_PERIOD`
-  - `PROJECT_EXECUTORS_RATE_LIMIT_REFRESH_PERIOD`
-  По умолчанию фильтр включен и лимит составляет `60` запросов за `PT1M`.
+- Опциональные параметры `s21web` (`TELEGRAM_WEBAPP_MAX_AGE`, `TELEGRAM_WEBAPP_HEADER`, `PROJECT_EXECUTORS_RATE_LIMIT_*`) добавлены в `env/local|test/s21web.env.example` с дефолтами из `application.yml`.
 
 ### HTTPS для `s21web` через `web-edge` (Caddy)
 

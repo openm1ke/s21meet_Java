@@ -11,6 +11,26 @@ management:
       exposure:
         include: health,info,prometheus
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      rocketchatOperation:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${ROCKETCHAT_CB_SLIDING_WINDOW_SIZE:20}
+        minimumNumberOfCalls: ${ROCKETCHAT_CB_MIN_CALLS:10}
+        failureRateThreshold: ${ROCKETCHAT_CB_FAILURE_RATE_THRESHOLD:50}
+        waitDurationInOpenState: ${ROCKETCHAT_CB_WAIT_OPEN:30s}
+        permittedNumberOfCallsInHalfOpenState: ${ROCKETCHAT_CB_HALF_OPEN_CALLS:3}
+  retry:
+    instances:
+      rocketchatOperation:
+        maxAttempts: ${ROCKETCHAT_RETRY_MAX_ATTEMPTS:3}
+        waitDuration: ${ROCKETCHAT_RETRY_WAIT_DURATION:500ms}
+        enableExponentialBackoff: ${ROCKETCHAT_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${ROCKETCHAT_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - java.lang.RuntimeException
+
 rocketchat:
   websocket-uri: ${ROCKET_CHAT_URL}
   bot-username: ${ROCKET_CHAT_QR_BOT}

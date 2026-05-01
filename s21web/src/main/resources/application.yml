@@ -10,6 +10,13 @@ management:
 spring:
   application:
     name: s21web
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: ${WEB_FEIGN_CONNECT_TIMEOUT_MS:5000}
+            readTimeout: ${WEB_FEIGN_READ_TIMEOUT_MS:20000}
 
 profile:
   service:
@@ -20,6 +27,26 @@ rate-limit:
     enabled: ${PROJECT_EXECUTORS_RATE_LIMIT_ENABLED:true}
     limit-for-period: ${PROJECT_EXECUTORS_RATE_LIMIT_FOR_PERIOD:60}
     refresh-period: ${PROJECT_EXECUTORS_RATE_LIMIT_REFRESH_PERIOD:PT1M}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      profileWeb:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${PROFILE_WEB_CB_SLIDING_WINDOW_SIZE:20}
+        minimumNumberOfCalls: ${PROFILE_WEB_CB_MIN_CALLS:10}
+        failureRateThreshold: ${PROFILE_WEB_CB_FAILURE_RATE_THRESHOLD:50}
+        waitDurationInOpenState: ${PROFILE_WEB_CB_WAIT_OPEN:30s}
+        permittedNumberOfCallsInHalfOpenState: ${PROFILE_WEB_CB_HALF_OPEN_CALLS:3}
+  retry:
+    instances:
+      profileWeb:
+        maxAttempts: ${PROFILE_WEB_RETRY_MAX_ATTEMPTS:3}
+        waitDuration: ${PROFILE_WEB_RETRY_WAIT_DURATION:500ms}
+        enableExponentialBackoff: ${PROFILE_WEB_RETRY_EXPONENTIAL_BACKOFF:true}
+        exponentialBackoffMultiplier: ${PROFILE_WEB_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        retryExceptions:
+          - feign.FeignException
 
 telegram:
   webapp:

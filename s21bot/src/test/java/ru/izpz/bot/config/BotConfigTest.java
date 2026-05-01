@@ -10,8 +10,13 @@ import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -25,6 +30,9 @@ import ru.izpz.bot.service.MetricsService;
 
 @ExtendWith(MockitoExtension.class)
 class BotConfigTest {
+  private static final String TOKEN = "test-token";
+  private static final String INVITE = "https://example.org/invite";
+  private static final String WEBAPP = "https://example.org/webapp";
 
   @Mock private TelegramBotsLongPollingApplication botsApplication;
 
@@ -33,49 +41,41 @@ class BotConfigTest {
   @Mock private BotSession botSession;
 
   @Mock private MetricsService metricsService;
+  private BotConfig config;
+
+  @BeforeEach
+  void setUp() {
+    config = new BotConfig();
+  }
 
   @Test
   void botSession_registersBotAndReturnsSession() throws Exception {
-    BotConfig config = new BotConfig();
     SimpleBot simpleBot = new SimpleBot(messageProcessor);
-    BotProperties properties =
-        new BotProperties(
-            "test-token", 1L, 1L, "https://example.org/invite", "https://example.org/webapp", null);
+    BotProperties properties = properties(null);
 
-    when(botsApplication.registerBot("test-token", simpleBot)).thenReturn(botSession);
+    when(botsApplication.registerBot(TOKEN, simpleBot)).thenReturn(botSession);
     when(botSession.isRunning()).thenReturn(true);
 
     assertSame(botSession, config.botSession(botsApplication, simpleBot, properties));
-    verify(botsApplication).registerBot("test-token", simpleBot);
+    verify(botsApplication).registerBot(TOKEN, simpleBot);
   }
 
   @Test
   void simpleBot_createsInstance() {
-    BotConfig config = new BotConfig();
     assertNotNull(config.simpleBot(messageProcessor));
   }
 
   @Test
   void botsApplication_createsInstance() {
-    BotConfig config = new BotConfig();
-    BotProperties properties =
-        new BotProperties(
-            "test-token", 1L, 1L, "https://example.org/invite", "https://example.org/webapp", null);
+    BotProperties properties = properties(null);
     okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
     assertNotNull(config.botsApplication(metricsService, okHttpClient));
   }
 
   @Test
   void telegramClient_proxyDisabled_usesDefaultClient() {
-    BotConfig config = new BotConfig();
     BotProperties properties =
-        new BotProperties(
-            "test-token",
-            1L,
-            1L,
-            "https://example.org/invite",
-            "https://example.org/webapp",
-            new BotProperties.ProxyProperties(false, "SOCKS", "xray-client", 1080));
+        properties(new BotProperties.ProxyProperties(false, "SOCKS", "xray-client", 1080));
 
     okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
     OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
@@ -88,10 +88,7 @@ class BotConfigTest {
 
   @Test
   void telegramClient_proxyNull_usesDefaultClient() {
-    BotConfig config = new BotConfig();
-    BotProperties properties =
-        new BotProperties(
-            "test-token", 1L, 1L, "https://example.org/invite", "https://example.org/webapp", null);
+    BotProperties properties = properties(null);
 
     okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
     OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
@@ -101,136 +98,52 @@ class BotConfigTest {
     assertSame(null, rawClient.proxy());
   }
 
-  @Test
-  void telegramClient_proxyEnabled_socksConfigApplied() {
-    BotConfig config = new BotConfig();
+  @ParameterizedTest
+  @MethodSource("validProxyCases")
+  void telegramClient_proxyEnabled_appliesResolvedProxyConfig(
+      String type, int port, Proxy.Type expectedType) {
     BotProperties properties =
-        new BotProperties(
-            "test-token",
-            1L,
-            1L,
-            "https://example.org/invite",
-            "https://example.org/webapp",
-            new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", 1080));
+        properties(new BotProperties.ProxyProperties(true, type, "xray-client", port));
 
     okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
     OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
     okhttp3.OkHttpClient rawClient = extractInternalClient(client);
     Proxy proxy = rawClient.proxy();
-    final InetSocketAddress address = assertInstanceOf(InetSocketAddress.class, proxy.address());
+    InetSocketAddress address = assertInstanceOf(InetSocketAddress.class, proxy.address());
 
-    assertNotNull(client);
-    assertNotNull(proxy);
-    assertEquals(Proxy.Type.SOCKS, proxy.type());
     assertEquals("xray-client", address.getHostString());
-    assertEquals(1080, address.getPort());
-  }
-
-  @Test
-  void telegramClient_proxyEnabled_httpConfigApplied() {
-    BotConfig config = new BotConfig();
-    BotProperties properties =
-        new BotProperties(
-            "test-token",
-            1L,
-            1L,
-            "https://example.org/invite",
-            "https://example.org/webapp",
-            new BotProperties.ProxyProperties(true, "HTTP", "xray-client", 3128));
-
-    okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
-    OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
-    okhttp3.OkHttpClient rawClient = extractInternalClient(client);
-    Proxy proxy = rawClient.proxy();
-    final InetSocketAddress address = assertInstanceOf(InetSocketAddress.class, proxy.address());
-
     assertNotNull(client);
     assertNotNull(proxy);
-    assertEquals(Proxy.Type.HTTP, proxy.type());
-    assertEquals("xray-client", address.getHostString());
-    assertEquals(3128, address.getPort());
+    assertEquals(expectedType, proxy.type());
+    assertEquals(port, address.getPort());
   }
 
-  @Test
-  void telegramClient_proxyEnabled_blankType_defaultsToSocks() {
-    BotConfig config = new BotConfig();
+  @ParameterizedTest
+  @MethodSource("invalidProxyCases")
+  void telegramClient_proxyEnabled_invalidConfig_throwsException(
+      String type, String host, Integer port) {
     BotProperties properties =
-        new BotProperties(
-            "test-token",
-            1L,
-            1L,
-            "https://example.org/invite",
-            "https://example.org/webapp",
-            new BotProperties.ProxyProperties(true, "", "xray-client", 1080));
-
-    okhttp3.OkHttpClient okHttpClient = config.telegramOkHttpClient(properties);
-    OkHttpTelegramClient client = config.telegramClient(okHttpClient, properties);
-    okhttp3.OkHttpClient rawClient = extractInternalClient(client);
-    Proxy proxy = rawClient.proxy();
-
-    assertNotNull(client);
-    assertNotNull(proxy);
-    assertEquals(Proxy.Type.SOCKS, proxy.type());
-  }
-
-  @Test
-  void telegramClient_proxyEnabled_invalidHostOrPort_throwsException() {
-    BotConfig config = new BotConfig();
-    BotProperties properties =
-        new BotProperties(
-            "test-token",
-            1L,
-            1L,
-            "https://example.org/invite",
-            "https://example.org/webapp",
-            new BotProperties.ProxyProperties(true, "SOCKS", "", 0));
-
+        properties(new BotProperties.ProxyProperties(true, type, host, port));
     assertThrows(IllegalStateException.class, () -> config.telegramOkHttpClient(properties));
   }
 
-  @Test
-  void telegramClient_proxyEnabled_nullPort_throwsException() {
-    BotConfig config = new BotConfig();
-    BotProperties properties =
-        new BotProperties(
-            "test-token",
-            1L,
-            1L,
-            "https://example.org/invite",
-            "https://example.org/webapp",
-            new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", null));
-
-    assertThrows(IllegalStateException.class, () -> config.telegramOkHttpClient(properties));
+  private static Stream<Arguments> validProxyCases() {
+    return Stream.of(
+        Arguments.of("SOCKS", 1080, Proxy.Type.SOCKS),
+        Arguments.of("HTTP", 3128, Proxy.Type.HTTP),
+        Arguments.of("", 1080, Proxy.Type.SOCKS));
   }
 
-  @Test
-  void telegramClient_proxyEnabled_negativePort_throwsException() {
-    BotConfig config = new BotConfig();
-    BotProperties properties =
-        new BotProperties(
-            "test-token",
-            1L,
-            1L,
-            "https://example.org/invite",
-            "https://example.org/webapp",
-            new BotProperties.ProxyProperties(true, "SOCKS", "xray-client", -1));
-
-    assertThrows(IllegalStateException.class, () -> config.telegramOkHttpClient(properties));
+  private static Stream<Arguments> invalidProxyCases() {
+    return Stream.of(
+        Arguments.of("SOCKS", "", 0),
+        Arguments.of("SOCKS", "xray-client", null),
+        Arguments.of("SOCKS", "xray-client", -1),
+        Arguments.of("INVALID", "xray-client", 1080));
   }
 
-  @Test
-  void telegramClient_proxyEnabled_unsupportedType_throwsException() {
-    BotConfig config = new BotConfig();
-    BotProperties properties =
-        new BotProperties(
-            "test-token",
-            1L,
-            1L,
-            "https://example.org/invite",
-            "https://example.org/webapp",
-            new BotProperties.ProxyProperties(true, "INVALID", "xray-client", 1080));
-
-    assertThrows(IllegalStateException.class, () -> config.telegramOkHttpClient(properties));
+  private static BotProperties properties(BotProperties.ProxyProperties proxy) {
+    return new BotProperties(TOKEN, 1L, 1L, INVITE, WEBAPP, proxy);
   }
 
   private okhttp3.OkHttpClient extractInternalClient(OkHttpTelegramClient telegramClient) {

@@ -10,9 +10,7 @@ import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-/**
- * Точка входа сервиса s21edu.
- */
+/** Точка входа сервиса s21edu. */
 @SpringBootApplication
 @EnableFeignClients(basePackages = "ru.izpz.edu.client")
 @EntityScan(basePackages = "ru.izpz.edu.model")

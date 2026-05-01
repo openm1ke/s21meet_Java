@@ -105,8 +105,7 @@ class CampusSchedulerErrorHandlingTest {
   }
 
   private Object invokeProcessSingleCampusParticipants(String campusId) {
-    return ReflectionTestUtils.invokeMethod(
-        scheduler, "processSingleCampusParticipants", campusId);
+    return ReflectionTestUtils.invokeMethod(scheduler, "processSingleCampusParticipants", campusId);
   }
 
   private Object success(Object taskResult) {

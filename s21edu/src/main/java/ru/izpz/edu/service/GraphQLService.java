@@ -1,6 +1,8 @@
 package ru.izpz.edu.service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -28,6 +30,7 @@ import ru.izpz.edu.dto.GraphQLStudentQueriesDto;
 import ru.izpz.edu.dto.GraphQLStudentTournamentDataDto;
 import ru.izpz.edu.dto.GraphQLUserTournamentWidgetDto;
 import ru.izpz.edu.dto.StudentProjectData;
+import ru.izpz.edu.exception.PlatformClientException;
 import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.model.StudentCredentials;
 import ru.izpz.edu.model.StudentProject;
@@ -49,6 +52,7 @@ public class GraphQLService {
       "edu_graphql_projects_refresh_duration_seconds";
   private static final String TAG_OUTCOME = "outcome";
   private static final String USER_ID_PARAM = "userId";
+  private static final String GRAPHQL_CREDENTIALS = "graphqlCredentials";
   private final PlatformGraphQlFacade client;
   private final StudentCredentialsRepository studentCredentialsRepository;
   private final StudentCoalitionRepository studentCoalitionRepository;
@@ -242,15 +246,19 @@ public class GraphQLService {
     return studentCredentialsRepository
         .findById(login)
         .map(this::toDto)
-        .orElseGet(() -> fetchAndStoreCredentials(login));
+        .orElseGet(() -> fetchAndStoreCredentialsWithLimits(login));
   }
 
-  @RateLimiter(name = "graphqlCredentials")
+  @RateLimiter(name = GRAPHQL_CREDENTIALS)
+  @Retry(name = GRAPHQL_CREDENTIALS)
+  @CircuitBreaker(name = GRAPHQL_CREDENTIALS, fallbackMethod = "fallbackCredentialsFromCache")
   public GraphQLStudentCredentialsDto fetchAndStoreCredentialsWithLimits(String login) {
     return fetchAndStoreCredentials(login);
   }
 
-  @RateLimiter(name = "graphqlCredentials")
+  @RateLimiter(name = GRAPHQL_CREDENTIALS)
+  @Retry(name = GRAPHQL_CREDENTIALS)
+  @CircuitBreaker(name = GRAPHQL_CREDENTIALS, fallbackMethod = "fallbackCredentialsFromCache")
   public GraphQLStudentCredentialsDto refreshCredentialsWithLimits(String login) {
     return fetchAndStoreCredentials(login);
   }
@@ -355,8 +363,17 @@ public class GraphQLService {
   }
 
   @RateLimiter(name = "graphqlProjects")
+  @Retry(name = "graphqlProjects")
+  @CircuitBreaker(name = "graphqlProjects")
   public void refreshStudentProjectsByLoginWithLimits(String login) {
     refreshStudentProjectsByLogin(login);
+  }
+
+  @RateLimiter(name = "graphqlCoalition")
+  @Retry(name = "graphqlCoalition")
+  @CircuitBreaker(name = "graphqlCoalition")
+  public void refreshStudentCoalitionByLoginWithLimits(String login) {
+    refreshStudentCoalitionByLogin(login);
   }
 
   public void refreshStudentCoalitionByLogin(String login) {
@@ -492,5 +509,16 @@ public class GraphQLService {
         project.getGoalStatus(),
         project.getAmountMembers(),
         project.getLocalCourseId());
+  }
+
+  @SuppressWarnings("unused")
+  GraphQLStudentCredentialsDto fallbackCredentialsFromCache(String login, Throwable throwable) {
+    return studentCredentialsRepository
+        .findById(login)
+        .map(this::toDto)
+        .orElseThrow(
+            () ->
+                new PlatformClientException(
+                    "Временная ошибка получения credentials, попробуйте позже", 503, null, null));
   }
 }

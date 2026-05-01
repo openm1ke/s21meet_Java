@@ -4,9 +4,7 @@ import java.io.Serial;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Временная ошибка внешней платформы (5xx).
- */
+/** Временная ошибка внешней платформы (5xx). */
 public class PlatformTransientException extends PlatformClientException {
   @Serial private static final long serialVersionUID = 1L;
 

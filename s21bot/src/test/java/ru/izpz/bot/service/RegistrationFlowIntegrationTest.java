@@ -10,25 +10,30 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import feign.Request;
 import feign.RequestTemplate;
 import feign.Response;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import ru.izpz.bot.client.ProfileClient;
 import ru.izpz.bot.client.RocketChatClient;
 import ru.izpz.bot.dto.CallbackPayload;
 import ru.izpz.bot.keyboard.CallbackPayloadSerializer;
+import ru.izpz.bot.keyboard.ListKeyboardFactory;
 import ru.izpz.bot.keyboard.TelegramButtons;
+import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
+import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.ParticipantDto;
 import ru.izpz.dto.ParticipantStatusEnum;
 import ru.izpz.dto.ProfileCodeResponse;
@@ -37,19 +42,67 @@ import ru.izpz.dto.ProfileRequest;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.RocketChatSendResponse;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class RegistrationFlowIntegrationTest {
 
-  @Autowired private MessageProcessor messageProcessor;
+  private MessageProcessor messageProcessor;
 
-  @Autowired private CallbackPayloadSerializer callbackPayloadSerializer;
+  private CallbackPayloadSerializer callbackPayloadSerializer;
 
-  @MockitoBean private ProfileClient profileClient;
+  @Mock private ProfileClient profileClient;
 
-  @MockitoBean private RocketChatClient rocketChatClient;
+  @Mock private RocketChatClient rocketChatClient;
 
-  @MockitoBean private MessageSender messageSender;
+  @Mock private MessageSender messageSender;
+
+  @Mock private ConfirmedFlow confirmedFlow;
+
+  @BeforeEach
+  void setUp() {
+    BotProperties botProperties =
+        new BotProperties(
+            "token",
+            1L,
+            2L,
+            "https://t.me/some-group",
+            "https://example.org/webapp",
+            new BotProperties.ProxyProperties(false, null, null, null));
+    callbackPayloadSerializer = new CallbackPayloadSerializer(new ObjectMapper());
+    ListKeyboardFactory listKeyboardFactory = new ListKeyboardFactory(callbackPayloadSerializer);
+    TelegramKeyboardFactory telegramKeyboardFactory =
+        new TelegramKeyboardFactory(callbackPayloadSerializer, listKeyboardFactory);
+    TelegramButtons telegramButtons = new TelegramButtons(botProperties, callbackPayloadSerializer);
+    MetricsService metricsService = new MetricsService(new SimpleMeterRegistry());
+    ProfileService profileService = new ProfileService(profileClient, rocketChatClient);
+    TelegramWebAppMenuService telegramWebAppMenuService =
+        new TelegramWebAppMenuService(messageSender, botProperties);
+    RegistrationFlow registrationFlow =
+        new RegistrationFlow(
+            botProperties,
+            profileService,
+            telegramButtons,
+            messageSender,
+            telegramKeyboardFactory,
+            metricsService,
+            telegramWebAppMenuService);
+    CallbackHandler callbackHandler =
+        new CallbackHandler(
+            botProperties,
+            profileService,
+            telegramKeyboardFactory,
+            callbackPayloadSerializer,
+            messageSender,
+            metricsService);
+    messageProcessor =
+        new MessageProcessor(
+            botProperties,
+            profileService,
+            messageSender,
+            callbackHandler,
+            registrationFlow,
+            confirmedFlow,
+            metricsService);
+  }
 
   @Test
   void registration_happyPath_shouldReachConfirmedStatus() {
@@ -304,7 +357,7 @@ class RegistrationFlowIntegrationTest {
         .filter(invocation -> "updateProfileStatus".equals(invocation.getMethod().getName()))
         .forEach(
             invocation -> {
-              ProfileRequest request = (ProfileRequest) invocation.getArgument(0);
+              ProfileRequest request = invocation.getArgument(0);
               statuses.add(request.getStatus());
             });
     return statuses;

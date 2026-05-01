@@ -1,0 +1,153 @@
+# Local Profile (`spring.profiles.active=local`)
+
+Этот документ фиксирует актуальные параметры локального профиля:
+
+- источники: `env/local/*.env.example`
+- соответствие runtime-конфигам: `*/src/main/resources/application.yml`
+
+## Как запускается local-профиль
+
+Для каждого сервиса используется:
+
+- `--spring.profiles.active=local`
+- `--spring.config.import=optional:file:env/local/<service>.env`
+
+## Файлы окружения local
+
+- `env/local/s21auth.env`
+- `env/local/s21edu.env`
+- `env/local/s21bot.env`
+- `env/local/s21rocket.env`
+- `env/local/s21web.env`
+
+## Параметры и значения (шаблоны `env/local/*.env.example`)
+
+### `s21auth` (`env/local/s21auth.env.example`)
+
+- `DB_URL=jdbc:h2:file:/Users/<your-user>/.s21meet/h2/s21auth;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE`
+- `H2_TCP_PORT=9093`
+- `DDL_AUTO=update`
+- `DB_USER=sa`
+- `DB_PASSWORD=`
+- `EDU_LOGIN=your_login`
+- `EDU_PASS=your_password`
+- `CRYPTO_KEY_BASE64=base64_aes_key`
+- `TOKEN_URI=/auth/realms/EduPowerKeycloak/protocol/openid-connect/token`
+- `AUTH_CB_SLIDING_WINDOW_SIZE=20`
+- `AUTH_CB_MIN_CALLS=10`
+- `AUTH_CB_FAILURE_RATE_THRESHOLD=50`
+- `AUTH_CB_WAIT_OPEN=30s`
+- `AUTH_CB_HALF_OPEN_CALLS=3`
+
+### `s21edu` (`env/local/s21edu.env.example`)
+
+- `DB_URL=jdbc:h2:file:/Users/<your-user>/.s21meet/h2/s21edu;...`
+- `H2_TCP_PORT=9092`
+- `DDL_AUTO=update`
+- `DB_USER=sa`
+- `DB_PASSWORD=`
+- `TOKEN_ENDPOINT=http://localhost:8081/api/tokens/default`
+- `BOT_SERVICE_URL=http://localhost:8083`
+- `NOTIFY_DELIVERY_ENABLED=false`
+- `GRAPHQL_API_ENABLED=true`
+- `CAMPUS_WORKPLACE_PROVIDER=graphql`
+- `COALITION_PROVIDER=graphql`
+- `NOTIFY_SCHEDULER_ENABLED=false`
+- `EVENT_SCHEDULER_ENABLED=true`
+- `PROJECTS_SCHEDULER_ENABLED=true`
+- `CREDENTIALS_SCHEDULER_ENABLED=true`
+- `CAMPUS_SCHEDULER_ENABLED=true`
+- `GRAPHQL_GLOBAL_RETRY_MAX_ATTEMPTS=3`
+- `PARTICIPANT_PROFILE_RETRY_MAX_ATTEMPTS=3`
+- `PARTICIPANT_PROFILE_RETRY_WAIT_DURATION=500ms`
+- `PARTICIPANT_PROFILE_RETRY_EXPONENTIAL_BACKOFF=true`
+- `PARTICIPANT_PROFILE_RETRY_EXPONENTIAL_MULTIPLIER=2`
+- `PARTICIPANT_PROFILE_CB_SLIDING_WINDOW_SIZE=20`
+- `PARTICIPANT_PROFILE_CB_MIN_CALLS=10`
+- `PARTICIPANT_PROFILE_CB_FAILURE_RATE_THRESHOLD=50`
+- `PARTICIPANT_PROFILE_CB_WAIT_OPEN=30s`
+- `PARTICIPANT_PROFILE_CB_HALF_OPEN_CALLS=3`
+- `GRAPHQL_COALITION_RETRY_MAX_ATTEMPTS=2`
+- `GRAPHQL_COALITION_RETRY_WAIT_DURATION=300ms`
+- `GRAPHQL_CREDENTIALS_CB_SLIDING_WINDOW_SIZE=20`
+- `GRAPHQL_CREDENTIALS_CB_MIN_CALLS=10`
+- `GRAPHQL_CREDENTIALS_CB_FAILURE_RATE_THRESHOLD=50`
+- `GRAPHQL_CREDENTIALS_CB_WAIT_OPEN=30s`
+- `GRAPHQL_CREDENTIALS_CB_HALF_OPEN_CALLS=3`
+- `GRAPHQL_PROJECTS_CB_SLIDING_WINDOW_SIZE=20`
+- `GRAPHQL_PROJECTS_CB_MIN_CALLS=10`
+- `GRAPHQL_PROJECTS_CB_FAILURE_RATE_THRESHOLD=50`
+- `GRAPHQL_PROJECTS_CB_WAIT_OPEN=30s`
+- `GRAPHQL_PROJECTS_CB_HALF_OPEN_CALLS=3`
+- `GRAPHQL_COALITION_CB_SLIDING_WINDOW_SIZE=20`
+- `GRAPHQL_COALITION_CB_MIN_CALLS=10`
+- `GRAPHQL_COALITION_CB_FAILURE_RATE_THRESHOLD=50`
+- `GRAPHQL_COALITION_CB_WAIT_OPEN=30s`
+- `GRAPHQL_COALITION_CB_HALF_OPEN_CALLS=3`
+
+### `s21bot` (`env/local/s21bot.env.example`)
+
+- `BOT_TOKEN=`
+- `BOT_ADMIN=`
+- `BOT_GROUP=`
+- `BOT_GROUP_INVITE_LINK=`
+- `BOT_WEB_APP_URL=https://REPLACE_WITH_PUBLIC_WEBAPP_DOMAIN/`
+- `BOT_PROXY_ENABLED=false`
+- `BOT_PROXY_TYPE=SOCKS`
+- `BOT_PROXY_HOST=127.0.0.1`
+- `BOT_PROXY_PORT=0`
+- `BOT_NOTIFY_ENABLED=false`
+- `PROFILE_SERVICE_URL=http://localhost:8082`
+- `ROCKETCHAT_SERVICE_URL=http://localhost:8084`
+- `PROFILE_EDU_RETRY_MAX_ATTEMPTS=3`
+- `PROFILE_EDU_RETRY_WAIT_DURATION=500ms`
+- `PROFILE_EDU_RETRY_EXPONENTIAL_BACKOFF=true`
+- `PROFILE_EDU_RETRY_EXPONENTIAL_MULTIPLIER=2`
+- `PROFILE_EDU_CB_SLIDING_WINDOW_SIZE=20`
+- `PROFILE_EDU_CB_MIN_CALLS=10`
+- `PROFILE_EDU_CB_FAILURE_RATE_THRESHOLD=50`
+- `PROFILE_EDU_CB_WAIT_OPEN=30s`
+- `PROFILE_EDU_CB_HALF_OPEN_CALLS=3`
+
+### `s21rocket` (`env/local/s21rocket.env.example`)
+
+- `ROCKET_CHAT_TOKEN=`
+- `ROCKET_CHAT_URL=`
+- `ROCKET_CHAT_QR_BOT=`
+- `ROCKET_CHAT_QR_TIMEOUT=30`
+- `ROCKET_CHAT_MESSAGE_TIMEOUT=15`
+- `PROFILE_SERVICE_URL=http://localhost:8082`
+- `ROCKETCHAT_RETRY_MAX_ATTEMPTS=3`
+- `ROCKETCHAT_RETRY_WAIT_DURATION=500ms`
+- `ROCKETCHAT_RETRY_EXPONENTIAL_BACKOFF=true`
+- `ROCKETCHAT_RETRY_EXPONENTIAL_MULTIPLIER=2`
+- `ROCKETCHAT_CB_SLIDING_WINDOW_SIZE=20`
+- `ROCKETCHAT_CB_MIN_CALLS=10`
+- `ROCKETCHAT_CB_FAILURE_RATE_THRESHOLD=50`
+- `ROCKETCHAT_CB_WAIT_OPEN=30s`
+- `ROCKETCHAT_CB_HALF_OPEN_CALLS=3`
+
+### `s21web` (`env/local/s21web.env.example`)
+
+- `PROFILE_SERVICE_URL=http://localhost:8082`
+- `TELEGRAM_WEBAPP_AUTH_ENABLED=false`
+- `BOT_TOKEN=`
+- `TELEGRAM_WEBAPP_MAX_AGE=PT1H`
+- `TELEGRAM_WEBAPP_HEADER=X-Telegram-Init-Data`
+- `PROJECT_EXECUTORS_RATE_LIMIT_ENABLED=true`
+- `PROJECT_EXECUTORS_RATE_LIMIT_FOR_PERIOD=60`
+- `PROJECT_EXECUTORS_RATE_LIMIT_REFRESH_PERIOD=PT1M`
+
+## Параметры с дефолтами в `application.yml`, которые можно не задавать
+
+Ниже параметры читаются из env, но имеют встроенный fallback:
+
+- `s21bot`: `BOT_WEB_APP_URL` (fallback `https://localhost:8085/`)
+- `s21web`: `PROFILE_SERVICE_URL`, `TELEGRAM_WEBAPP_AUTH_ENABLED`, `TELEGRAM_WEBAPP_MAX_AGE`, `TELEGRAM_WEBAPP_HEADER`, `PROJECT_EXECUTORS_RATE_LIMIT_*`
+- `s21rocket`: `ROCKET_CHAT_QR_TIMEOUT=30`, `ROCKET_CHAT_MESSAGE_TIMEOUT=15`, `ROCKETCHAT_RETRY_*`, `ROCKETCHAT_CB_*`
+
+## Проверено на текущем состоянии репозитория
+
+- `README.md`
+- `env/local/*.env.example`
+- `s21auth/s21bot/s21edu/s21rocket/s21web` `application.yml`

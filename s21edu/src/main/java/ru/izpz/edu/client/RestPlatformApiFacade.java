@@ -1,5 +1,6 @@
 package ru.izpz.edu.client;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import java.time.OffsetDateTime;
@@ -28,11 +29,10 @@ import ru.izpz.edu.exception.PlatformRateLimitException;
 import ru.izpz.edu.exception.PlatformTransientException;
 import ru.izpz.edu.exception.PlatformUnauthorizedException;
 
-/**
- * Реализация фасада доступа к REST API платформы через сгенерированные OpenAPI-клиенты.
- */
+/** Реализация фасада доступа к REST API платформы через сгенерированные OpenAPI-клиенты. */
 public class RestPlatformApiFacade implements PlatformApiFacade {
   private static final String EXTERNAL_GLOBAL = "externalGlobal";
+  private static final String PARTICIPANT_PROFILE = "participantProfile";
   private static final String REQUEST_FAILED_MESSAGE = "Platform request failed";
   private static final int HTTP_UNAUTHORIZED = 401;
   private static final int HTTP_FORBIDDEN = 403;
@@ -156,7 +156,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
 
   @Override
   @RateLimiter(name = EXTERNAL_GLOBAL)
-  @Retry(name = EXTERNAL_GLOBAL)
+  @Retry(name = PARTICIPANT_PROFILE)
+  @CircuitBreaker(name = PARTICIPANT_PROFILE)
   public ParticipantV1DTO getParticipantByLogin(String login) {
     try {
       return participantApi.getParticipantByLogin(login);

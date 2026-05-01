@@ -2,11 +2,11 @@ package ru.izpz.edu.exception;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -60,8 +60,31 @@ class GlobalExceptionHandlerTest {
     assertInstanceOf(Map.class, response.getBody());
     Map<?, ?> body = (Map<?, ?>) response.getBody();
     assertEquals(502, body.get("status"));
-    assertNotNull(body.get("message"));
-    assertEquals("not-json", body.get("raw"));
+    assertEquals("Ошибка внешнего сервиса", body.get("message"));
+  }
+
+  @Test
+  void handlePlatformException_shouldReturnFriendlyMessageForRateLimit() {
+    PlatformClientException ex = new PlatformRateLimitException("429", 429, Map.of(), "{}");
+
+    ResponseEntity<Object> response = handler.handlePlatformException(ex);
+    assertEquals(429, response.getStatusCode().value());
+    assertInstanceOf(Map.class, response.getBody());
+    Map<?, ?> body = (Map<?, ?>) response.getBody();
+    assertEquals(429, body.get("status"));
+    assertEquals("Внешний сервис временно перегружен", body.get("message"));
+  }
+
+  @Test
+  void handlePlatformException_shouldReturnFriendlyMessageForTransientErrors() {
+    PlatformClientException ex = new PlatformTransientException("500", 500, Map.of(), "{}");
+
+    ResponseEntity<Object> response = handler.handlePlatformException(ex);
+    assertEquals(502, response.getStatusCode().value());
+    assertInstanceOf(Map.class, response.getBody());
+    Map<?, ?> body = (Map<?, ?>) response.getBody();
+    assertEquals(502, body.get("status"));
+    assertEquals("Внешний сервис временно недоступен", body.get("message"));
   }
 
   @Test
@@ -103,5 +126,19 @@ class GlobalExceptionHandlerTest {
 
     assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     assertEquals("bad state", response.getBody());
+  }
+
+  @Test
+  void handleCircuitOpen_shouldReturn503() {
+    ResponseEntity<Object> response =
+        handler.handleCircuitOpen(
+            CallNotPermittedException.createCallNotPermittedException(
+                io.github.resilience4j.circuitbreaker.CircuitBreaker.ofDefaults("cb")));
+
+    assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+    assertInstanceOf(Map.class, response.getBody());
+    Map<?, ?> body = (Map<?, ?>) response.getBody();
+    assertEquals(503, body.get("status"));
+    assertEquals("Внешний сервис временно недоступен", body.get("message"));
   }
 }

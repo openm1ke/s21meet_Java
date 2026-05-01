@@ -48,6 +48,7 @@ import ru.izpz.edu.dto.GraphQLStudentTournamentDataDto;
 import ru.izpz.edu.dto.GraphQLUserDto;
 import ru.izpz.edu.dto.GraphQLUserTournamentWidgetDto;
 import ru.izpz.edu.dto.StudentProjectData;
+import ru.izpz.edu.exception.PlatformClientException;
 import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.model.StudentCredentials;
 import ru.izpz.edu.model.StudentProject;
@@ -438,9 +439,7 @@ class GraphQlServiceTest {
             .tag("outcome", "success")
             .counter();
     assertNotNull(coalitionSuccessCounter);
-    assertEquals(
-        1.0,
-        coalitionSuccessCounter.count());
+    assertEquals(1.0, coalitionSuccessCounter.count());
     assertNotNull(
         meterRegistry
             .find("edu_graphql_coalition_refresh_duration_seconds")
@@ -489,9 +488,7 @@ class GraphQlServiceTest {
             .tag("outcome", "skipped_ttl")
             .counter();
     assertNotNull(coalitionSkippedCounter);
-    assertEquals(
-        1.0,
-        coalitionSkippedCounter.count());
+    assertEquals(1.0, coalitionSkippedCounter.count());
     assertNotNull(
         meterRegistry
             .find("edu_graphql_coalition_refresh_duration_seconds")
@@ -525,9 +522,7 @@ class GraphQlServiceTest {
     var coalitionErrorCounter =
         meterRegistry.find("edu_graphql_coalition_refresh_total").tag("outcome", "error").counter();
     assertNotNull(coalitionErrorCounter);
-    assertEquals(
-        1.0,
-        coalitionErrorCounter.count());
+    assertEquals(1.0, coalitionErrorCounter.count());
     assertNotNull(
         meterRegistry
             .find("edu_graphql_coalition_refresh_duration_seconds")
@@ -578,9 +573,7 @@ class GraphQlServiceTest {
             .tag("outcome", "success")
             .counter();
     assertNotNull(projectsSuccessCounter);
-    assertEquals(
-        1.0,
-        projectsSuccessCounter.count());
+    assertEquals(1.0, projectsSuccessCounter.count());
   }
 
   @Test
@@ -621,9 +614,7 @@ class GraphQlServiceTest {
             .tag("outcome", "skipped_ttl")
             .counter();
     assertNotNull(projectsSkippedCounter);
-    assertEquals(
-        1.0,
-        projectsSkippedCounter.count());
+    assertEquals(1.0, projectsSkippedCounter.count());
   }
 
   @Test
@@ -653,9 +644,7 @@ class GraphQlServiceTest {
             .tag("outcome", "skipped_no_user_id")
             .counter();
     assertNotNull(projectsNoUserCounter);
-    assertEquals(
-        1.0,
-        projectsNoUserCounter.count());
+    assertEquals(1.0, projectsNoUserCounter.count());
   }
 
   @Test
@@ -683,9 +672,7 @@ class GraphQlServiceTest {
     var projectsErrorCounter =
         meterRegistry.find("edu_graphql_projects_refresh_total").tag("outcome", "error").counter();
     assertNotNull(projectsErrorCounter);
-    assertEquals(
-        1.0,
-        projectsErrorCounter.count());
+    assertEquals(1.0, projectsErrorCounter.count());
   }
 
   @Test
@@ -812,5 +799,44 @@ class GraphQlServiceTest {
 
     assertEquals(1, result.size());
     assertEquals("g-ok", result.getFirst().goalId());
+  }
+
+  @Test
+  void fallbackCredentialsFromCache_shouldReturnDto_whenCredentialsPresent() {
+    String login = "cached-user";
+    StudentCredentials credentials = new StudentCredentials();
+    credentials.setLogin(login);
+    credentials.setStudentId("s-1");
+    credentials.setUserId("u-1");
+    credentials.setSchoolId("school-1");
+    credentials.setIsActive(true);
+    credentials.setIsGraduate(false);
+    when(studentCredentialsRepository.findById(login)).thenReturn(Optional.of(credentials));
+
+    GraphQLStudentCredentialsDto result =
+        graphQlService.fallbackCredentialsFromCache(login, new RuntimeException("down"));
+
+    assertNotNull(result);
+    assertEquals("s-1", result.studentId());
+    assertEquals("u-1", result.userId());
+    assertEquals("school-1", result.schoolId());
+    assertTrue(result.isActive());
+    assertEquals(false, result.isGraduate());
+  }
+
+  @Test
+  void fallbackCredentialsFromCache_shouldThrow_whenCredentialsMissing() {
+    String login = "missing-user";
+    RuntimeException cause = new RuntimeException("down");
+
+    when(studentCredentialsRepository.findById(login)).thenReturn(Optional.empty());
+
+    PlatformClientException ex =
+        assertThrows(
+            PlatformClientException.class,
+            () -> graphQlService.fallbackCredentialsFromCache(login, cause));
+
+    assertEquals("Временная ошибка получения credentials, попробуйте позже", ex.getMessage());
+    assertEquals(503, ex.getCode());
   }
 }

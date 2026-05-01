@@ -12,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -75,7 +76,7 @@ class RocketChatServiceTest {
                 executeCalls.incrementAndGet();
                 executeStarted.countDown();
                 try {
-                  if (!allowExecuteFinish.await(3, TimeUnit.SECONDS)) {
+                  if (!allowExecuteFinish.await(300, TimeUnit.MILLISECONDS)) {
                     return new RocketChatSendResponse(false, "blocked");
                   }
                 } catch (InterruptedException e) {
@@ -92,14 +93,14 @@ class RocketChatServiceTest {
     try {
       // When
       Future<RocketChatSendResponse> f1 = executor.submit(service::generateQrCode);
-      assertTrue(executeStarted.await(2, TimeUnit.SECONDS), "execute() should start");
+      assertTrue(executeStarted.await(300, TimeUnit.MILLISECONDS), "execute() should start");
 
       // Start second call while first execute() is still blocked.
       Future<RocketChatSendResponse> f2 = executor.submit(service::generateQrCode);
       allowExecuteFinish.countDown();
 
-      RocketChatSendResponse r1 = f1.get(3, TimeUnit.SECONDS);
-      RocketChatSendResponse r2 = f2.get(3, TimeUnit.SECONDS);
+      RocketChatSendResponse r1 = f1.get(500, TimeUnit.MILLISECONDS);
+      RocketChatSendResponse r2 = f2.get(500, TimeUnit.MILLISECONDS);
 
       // Then
       assertNotNull(r1);
@@ -319,7 +320,15 @@ class RocketChatServiceTest {
   void awaitQr_shouldReturnTimeoutResponse_whenFutureDoesNotComplete() {
     properties.setQrTimeout(0L);
 
-    RocketChatSendResponse result = invokeAwaitQr(new CompletableFuture<>());
+    CompletableFuture<RocketChatSendResponse> future =
+        new CompletableFuture<>() {
+          @Override
+          public RocketChatSendResponse get(long timeout, TimeUnit unit) throws TimeoutException {
+            throw new TimeoutException("forced-timeout");
+          }
+        };
+
+    RocketChatSendResponse result = invokeAwaitQr(future);
 
     assertNotNull(result);
     assertFalse(result.isSuccess());
@@ -344,9 +353,9 @@ class RocketChatServiceTest {
             });
 
     thread.start();
-    assertTrue(started.await(1, TimeUnit.SECONDS), "awaitQr() thread should start");
+    assertTrue(started.await(300, TimeUnit.MILLISECONDS), "awaitQr() thread should start");
     thread.interrupt();
-    thread.join(2000);
+    thread.join(500);
 
     assertFalse(thread.isAlive(), "awaitQr() thread should finish after interruption");
     assertTrue(interruptedFlag.get(), "Interrupt flag should be restored");
@@ -484,6 +493,98 @@ class RocketChatServiceTest {
     assertNotNull(result);
     assertFalse(result.isSuccess());
     assertEquals("Target username cannot be null or empty", result.getMessage());
+  }
+
+  @Test
+  void generateQrCodeResilient_shouldReturnResponse_whenGenerateQrCodeSucceeds() {
+    RocketChatService service =
+        new RocketChatService(properties) {
+          @Override
+          public RocketChatSendResponse generateQrCode() {
+            return new RocketChatSendResponse(true, "ok");
+          }
+        };
+
+    RocketChatSendResponse result = service.generateQrCodeResilient();
+
+    assertNotNull(result);
+    assertTrue(result.isSuccess());
+    assertEquals("ok", result.getMessage());
+  }
+
+  @Test
+  void generateQrCodeResilient_shouldThrowRocketChatOperationException_whenGenerateQrCodeFails() {
+    RocketChatService service =
+        new RocketChatService(properties) {
+          @Override
+          public RocketChatSendResponse generateQrCode() {
+            return new RocketChatSendResponse(false, "fail");
+          }
+        };
+
+    RocketChatOperationException exception =
+        assertThrows(RocketChatOperationException.class, service::generateQrCodeResilient);
+
+    assertEquals("fail", exception.getMessage());
+  }
+
+  @Test
+  void sendVerificationCodeResilient_shouldReturnResponse_whenSendVerificationCodeSucceeds() {
+    RocketChatService service =
+        new RocketChatService(properties) {
+          @Override
+          public RocketChatSendResponse sendVerificationCode(
+              String targetUsername, String message) {
+            return new RocketChatSendResponse(true, "sent");
+          }
+        };
+
+    RocketChatSendResponse result =
+        service.sendVerificationCodeResilient("testuser", "Test verification code");
+
+    assertNotNull(result);
+    assertTrue(result.isSuccess());
+    assertEquals("sent", result.getMessage());
+  }
+
+  @Test
+  void sendVerificationCodeResilient_shouldThrowRocketChatOperationException_whenSendFails() {
+    RocketChatService service =
+        new RocketChatService(properties) {
+          @Override
+          public RocketChatSendResponse sendVerificationCode(
+              String targetUsername, String message) {
+            return new RocketChatSendResponse(false, "send-failed");
+          }
+        };
+
+    RocketChatOperationException exception =
+        assertThrows(
+            RocketChatOperationException.class,
+            () -> service.sendVerificationCodeResilient("testuser", "Test verification code"));
+
+    assertEquals("send-failed", exception.getMessage());
+  }
+
+  @Test
+  void generateQrCodeResilientFallback_shouldReturnServiceUnavailableMessage() {
+    RocketChatSendResponse result =
+        rocketChatService.generateQrCodeResilientFallback(new RuntimeException("down"));
+
+    assertNotNull(result);
+    assertFalse(result.isSuccess());
+    assertEquals("Сервис Rocket.Chat временно недоступен, попробуйте позже", result.getMessage());
+  }
+
+  @Test
+  void sendVerificationCodeResilientFallback_shouldReturnServiceUnavailableMessage() {
+    RocketChatSendResponse result =
+        rocketChatService.sendVerificationCodeResilientFallback(
+            "testuser", "code", new RuntimeException("down"));
+
+    assertNotNull(result);
+    assertFalse(result.isSuccess());
+    assertEquals("Сервис Rocket.Chat временно недоступен, попробуйте позже", result.getMessage());
   }
 
   private RocketChatSendResponse invokeAwaitQr(CompletableFuture<RocketChatSendResponse> future) {

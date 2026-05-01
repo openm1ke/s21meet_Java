@@ -1,6 +1,8 @@
 package ru.izpz.bot.service;
 
 import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,10 +19,13 @@ import ru.izpz.utils.FeignErrorParser;
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
+  private static final String PROFILE_EDU = "profileEdu";
 
   private final ProfileClient profileClient;
   private final RocketChatClient rocketChatClient;
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public ProfileDto getProfile(Long chatId) {
     log.info("Получение профиля {}", chatId);
     try {
@@ -31,6 +36,8 @@ public class ProfileService {
     }
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public ParticipantDto checkEduLogin(String login) {
     log.info("Получен запрос на проверку логина: login = {}", login);
     try {
@@ -44,6 +51,8 @@ public class ProfileService {
     }
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public ProfileDto updateProfileStatus(Long chatId, ProfileStatus status) {
     log.info("Обновление статуса профиля {} на {}", chatId, status);
     ProfileRequest profileRequest =
@@ -56,6 +65,8 @@ public class ProfileService {
     }
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public ProfileDto checkAndSetLogin(Long chatId, String login) {
     log.info("Сохранение логина профиля {} для {}", chatId, login);
     ProfileRequest profileRequest =
@@ -68,6 +79,8 @@ public class ProfileService {
     }
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public ProfileCodeResponse getVerificationCode(String s21login) {
     ProfileCodeRequest request = ProfileCodeRequest.builder().s21login(s21login).build();
     try {
@@ -97,6 +110,8 @@ public class ProfileService {
     }
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public CampusResponse showCampusMap(Long chatId) {
     var request = CampusRequest.builder().telegramId(chatId.toString()).build();
     try {
@@ -107,6 +122,8 @@ public class ProfileService {
     }
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public ParticipantDto showParticipant(String telegramId, String eduLogin) {
     var request = ParticipantRequest.builder().telegramId(telegramId).eduLogin(eduLogin).build();
     try {
@@ -117,10 +134,14 @@ public class ProfileService {
     }
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public void setLastCommand(Long chatId, LastCommandState command) {
     profileClient.setLastCommand(new LastCommandRequest(chatId.toString(), command));
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public FriendDto applyFriend(
       Long telegramId, String login, FriendRequest.Action action, @Nullable String name) {
     var builder =
@@ -131,18 +152,26 @@ public class ProfileService {
     return profileClient.applyFriend(builder.build());
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public FriendsSliceDto getFriends(Long chatId, int page, int pageSize) {
     return profileClient.getFriends(chatId.toString(), page, pageSize);
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public EventDto getEvent(long eventId) {
     return profileClient.getEvent(eventId);
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public EventsSliceDto getEvents(Long chatId, int page, int pageSize) {
     return profileClient.getEvents(chatId.toString(), page, pageSize);
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
   public List<ProjectsDto> getProjects(String login) {
     return profileClient.getProjects(login);
   }

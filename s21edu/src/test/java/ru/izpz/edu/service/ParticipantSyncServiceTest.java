@@ -10,6 +10,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.model.ParticipantCampusV1DTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.client.PlatformApiFacade;
+import ru.izpz.edu.exception.PlatformClientException;
+import ru.izpz.edu.exception.PlatformNotFoundException;
+import ru.izpz.edu.exception.PlatformRateLimitException;
+import ru.izpz.edu.exception.PlatformUnauthorizedException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.model.Participant;
 import ru.izpz.edu.model.ParticipantCampus;
@@ -128,6 +134,76 @@ class ParticipantSyncServiceTest {
     verify(platformApi).getParticipantByLogin("testuser");
     verify(participantCampusRepository).save(campusEntity);
     verify(participantRepository).save(participantEntity);
+  }
+
+  @Test
+  void getOrSyncByEduLogin_shouldReturnStored_whenRefreshFailsAndCacheExists() {
+    Participant stored = new Participant();
+    stored.setLogin("testuser");
+    stored.setCampus(new ParticipantCampus());
+    stored.setUpdatedAt(OffsetDateTime.now().minusHours(1));
+    when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(stored));
+    when(platformApi.getParticipantByLogin("testuser"))
+        .thenThrow(new PlatformRateLimitException("too many requests", 429, Map.of(), "{}"));
+
+    Participant result = participantSyncService.getOrSyncByEduLogin("testuser");
+
+    assertSame(stored, result);
+    verify(participantRepository, never()).save(any());
+  }
+
+  @Test
+  void getOrSyncByEduLogin_shouldThrow_whenRefreshFailsAndCacheMissing() {
+    Participant stored = new Participant();
+    stored.setLogin("testuser");
+    stored.setCampus(null);
+    stored.setUpdatedAt(OffsetDateTime.now().minusHours(1));
+    when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(stored));
+    when(platformApi.getParticipantByLogin("testuser"))
+        .thenThrow(
+            new PlatformRateLimitException(
+                "too many requests", 429, Map.of("Retry-After", List.of("1")), "{}"));
+
+    assertThrows(
+        PlatformClientException.class,
+        () -> participantSyncService.getOrSyncByEduLogin("testuser"));
+    verify(participantRepository, never()).save(any());
+  }
+
+  @Test
+  void getOrSyncByEduLogin_shouldRethrowNotFoundException() {
+    Participant stored = new Participant();
+    stored.setLogin("testuser");
+    stored.setCampus(new ParticipantCampus());
+    stored.setUpdatedAt(OffsetDateTime.now().minusHours(1));
+    when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(stored));
+    PlatformNotFoundException error =
+        new PlatformNotFoundException("not found", 404, Map.of(), "{}");
+    when(platformApi.getParticipantByLogin("testuser")).thenThrow(error);
+
+    PlatformNotFoundException ex =
+        assertThrows(
+            PlatformNotFoundException.class,
+            () -> participantSyncService.getOrSyncByEduLogin("testuser"));
+    assertSame(error, ex);
+  }
+
+  @Test
+  void getOrSyncByEduLogin_shouldRethrowUnauthorizedException() {
+    Participant stored = new Participant();
+    stored.setLogin("testuser");
+    stored.setCampus(new ParticipantCampus());
+    stored.setUpdatedAt(OffsetDateTime.now().minusHours(1));
+    when(participantRepository.findByLogin("testuser")).thenReturn(Optional.of(stored));
+    PlatformUnauthorizedException error =
+        new PlatformUnauthorizedException("unauthorized", 401, Map.of(), "{}");
+    when(platformApi.getParticipantByLogin("testuser")).thenThrow(error);
+
+    PlatformUnauthorizedException ex =
+        assertThrows(
+            PlatformUnauthorizedException.class,
+            () -> participantSyncService.getOrSyncByEduLogin("testuser"));
+    assertSame(error, ex);
   }
 
   @Test

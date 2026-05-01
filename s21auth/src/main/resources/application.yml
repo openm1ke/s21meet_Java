@@ -36,6 +36,15 @@ security:
     key-base64: ${CRYPTO_KEY_BASE64}
 
 resilience4j:
+  circuitbreaker:
+    instances:
+      auth:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${AUTH_CB_SLIDING_WINDOW_SIZE:20}
+        minimumNumberOfCalls: ${AUTH_CB_MIN_CALLS:10}
+        failureRateThreshold: ${AUTH_CB_FAILURE_RATE_THRESHOLD:50}
+        waitDurationInOpenState: ${AUTH_CB_WAIT_OPEN:30s}
+        permittedNumberOfCallsInHalfOpenState: ${AUTH_CB_HALF_OPEN_CALLS:3}
   ratelimiter:
     instances:
       auth:
@@ -47,6 +56,9 @@ resilience4j:
       auth:
         maxAttempts: 3
         waitDuration: 500ms
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
 
 logging:
   level:
@@ -56,3 +68,8 @@ logging:
 edu:
   login: ${EDU_LOGIN}
   password: ${EDU_PASS}
+
+auth:
+  client:
+    connect-timeout: ${AUTH_CLIENT_CONNECT_TIMEOUT:PT5S}
+    read-timeout: ${AUTH_CLIENT_READ_TIMEOUT:PT20S}

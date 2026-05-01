@@ -24,6 +24,8 @@ import ru.izpz.edu.service.GraphQLService;
 
 @ExtendWith(MockitoExtension.class)
 class CampusClientTest {
+  private static final String CAMPUS_ID = "00000000-0000-0000-0000-000000000001";
+  private static final UUID CAMPUS_UUID = UUID.fromString(CAMPUS_ID);
 
   @Mock private PlatformApiFacade platformApi;
 
@@ -33,23 +35,20 @@ class CampusClientTest {
 
   @Test
   void getClustersByCampus_shouldThrow_whenResponseNull() {
-    String campusId = UUID.randomUUID().toString();
-    when(platformApi.getClustersByCampus(UUID.fromString(campusId))).thenReturn(null);
+    when(platformApi.getClustersByCampus(CAMPUS_UUID)).thenReturn(null);
 
-    assertThrows(PlatformClientException.class, () -> campusClient.getClustersByCampus(campusId));
+    assertThrows(PlatformClientException.class, () -> campusClient.getClustersByCampus(CAMPUS_ID));
   }
 
   @Test
   void getClustersByCampus_shouldReturnClusters_whenResponseNotNull() {
-    String campusId = UUID.randomUUID().toString();
-
     ClusterV1DTO c1 = new ClusterV1DTO();
     ClustersV1DTO resp = new ClustersV1DTO();
     resp.setClusters(List.of(c1));
 
-    when(platformApi.getClustersByCampus(UUID.fromString(campusId))).thenReturn(resp);
+    when(platformApi.getClustersByCampus(CAMPUS_UUID)).thenReturn(resp);
 
-    List<ClusterV1DTO> result = campusClient.getClustersByCampus(campusId);
+    List<ClusterV1DTO> result = campusClient.getClustersByCampus(CAMPUS_ID);
 
     assertEquals(1, result.size());
     assertSame(c1, result.getFirst());
@@ -101,24 +100,20 @@ class CampusClientTest {
 
   @Test
   void getParticipantsByCampus_shouldThrow_whenResponseNull() {
-    String campusId = UUID.randomUUID().toString();
-    when(platformApi.getParticipantsByCampusId(UUID.fromString(campusId), 1000L, 0L))
-        .thenReturn(null);
+    when(platformApi.getParticipantsByCampusId(CAMPUS_UUID, 1000L, 0L)).thenReturn(null);
 
     assertThrows(
         PlatformClientException.class,
-        () -> campusClient.getParticipantsByCampus(campusId, 1000L, 0L));
+        () -> campusClient.getParticipantsByCampus(CAMPUS_ID, 1000L, 0L));
   }
 
   @Test
   void getParticipantsByCampus_shouldReturnLogins_whenResponseNotNull() {
-    String campusId = UUID.randomUUID().toString();
     ParticipantLoginsV1DTO response = new ParticipantLoginsV1DTO();
     response.setParticipants(List.of("u1", "u2"));
-    when(platformApi.getParticipantsByCampusId(UUID.fromString(campusId), 1000L, 0L))
-        .thenReturn(response);
+    when(platformApi.getParticipantsByCampusId(CAMPUS_UUID, 1000L, 0L)).thenReturn(response);
 
-    List<String> result = campusClient.getParticipantsByCampus(campusId, 1000L, 0L);
+    List<String> result = campusClient.getParticipantsByCampus(CAMPUS_ID, 1000L, 0L);
 
     assertEquals(List.of("u1", "u2"), result);
   }
