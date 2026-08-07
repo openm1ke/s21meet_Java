@@ -126,7 +126,7 @@ public class ConfirmedFlow {
   private void handleLastCommand(
       Long chatId, ProfileDto profile, String text, LastCommandType cmd) {
     if (cmd == LastCommandType.SEARCH) {
-      callbackHandler.showProfile(chatId, text);
+      callbackHandler.showProfile(chatId, text.toLowerCase(Locale.ROOT));
     } else if (cmd == LastCommandType.SET_NAME) {
       if (text.length() > MAX_FRIEND_NAME_LENGTH) {
         messageSender.sendMessage(chatId, "Имя должно быть не более 100 символов", null);

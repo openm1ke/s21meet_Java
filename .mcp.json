@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "graphify": {
+      "command": "graphify-mcp",
+      "args": ["graphify-out/graph.json"]
+    },
+    "github": {
+      "command": "scripts/mcp_github.sh",
+      "args": []
+    },
+    "postgres-test": {
+      "command": "scripts/mcp_postgres_test.sh",
+      "args": []
+    },
+    "docker-readonly": {
+      "command": "scripts/mcp_docker_readonly.sh",
+      "args": []
+    },
+    "docker-compose-safe": {
+      "command": "scripts/mcp_docker_compose_safe.sh",
+      "args": []
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--isolated",
+        "--output-dir",
+        ".mcp-output/playwright"
+      ]
+    }
+  }
+}
