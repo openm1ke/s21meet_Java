@@ -419,7 +419,7 @@ class ConfirmedFlowTest {
     LastCommandState state = new LastCommandState(LastCommandType.SEARCH, null);
     ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, state);
 
-    confirmedFlow.startConfirmed(chatId, profile, "xyz");
+    confirmedFlow.startConfirmed(chatId, profile, "XyZ");
 
     verify(callbackHandler).showProfile(chatId, "xyz");
     verify(callbackHandler).setLastCommand(chatId, null, null);

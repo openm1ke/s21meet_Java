@@ -44,3 +44,5 @@ env/*/*.env
 env/*/xray/config.json
 !env/*/xray/config.json.example
 env/*/ssh/*
+graphify-out/
+.mcp-output/

@@ -1,0 +1,17 @@
+# Keep Graphify focused on source navigation. CI workflows are checked manually
+# with rg before workflow changes because local qwen2.5-coder often wraps their
+# semantic JSON in Markdown fences.
+.github/workflows/*.yml
+.github/workflows/*.yaml
+
+# Large/generated operational artifacts add noise and are not useful for method
+# discovery or Java impact analysis.
+monitoring/dashboards/*.json
+**/swagger.json
+**/old_swagger.json
+**/additional-spring-configuration-metadata.json
+
+# Build output and IDE metadata should never influence the local graph.
+**/build/**
+.gradle/**
+.idea/**
