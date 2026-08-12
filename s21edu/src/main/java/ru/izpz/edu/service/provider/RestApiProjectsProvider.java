@@ -2,6 +2,7 @@ package ru.izpz.edu.service.provider;
 
 import java.io.Serial;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -83,7 +84,8 @@ public class RestApiProjectsProvider implements ProjectsProvider {
     return java.util.Optional.ofNullable(studentProjectRepository.findMaxUpdatedAtByLogin(login))
         .map(
             updatedAt ->
-                updatedAt.isBefore(OffsetDateTime.now().minus(projectsProperties.getRefreshTtl())))
+                updatedAt.isBefore(
+                    OffsetDateTime.now(ZoneOffset.UTC).minus(projectsProperties.getRefreshTtl())))
         .orElse(true);
   }
 
