@@ -12,10 +12,10 @@ plugins {
     id("jacoco-report-aggregation")
     id("checkstyle")
     id("pmd")
-    id("com.github.spotbugs") version "6.5.1" apply false
+    id("com.github.spotbugs") version "6.5.10" apply false
     id("com.diffplug.spotless") version "6.25.0" apply false
-    id("org.sonarqube") version "7.1.0.6387"
-    id("org.springframework.boot") version "3.5.10" apply false
+    id("org.sonarqube") version "7.4.0.8496"
+    id("org.springframework.boot") version "3.5.16" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
 }
 fun sonarConfig(key: String): String? {
@@ -67,6 +67,7 @@ subprojects {
     val springBootVersion: String by project
     val jacksonVersion: String by project
     val spotbugsAnnotationsVersion: String by project
+    val slf4jVersion: String by project
     configure<DependencyManagementExtension> {
         imports {
             mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion") {
@@ -108,10 +109,11 @@ subprojects {
 
         annotationProcessor("org.projectlombok:lombok")
         add("mockitoAgent", "org.mockito:mockito-core:$mockitoVersion")
-        // SpotBugs runtime: add logger backend and Lombok annotation classes
-        add("spotbugs", "com.github.spotbugs:spotbugs:4.9.8")
-        add("spotbugs", "org.slf4j:slf4j-nop:2.0.17")
-        add("spotbugs", "org.projectlombok:lombok:1.18.30")
+        add("spotbugs", "com.github.spotbugs:spotbugs:4.10.3")
+        // SpotBugs 4.10.x uses Strings, which is unavailable in the
+        // commons-lang3 version managed by the Spring Boot BOM.
+        add("spotbugs", "org.apache.commons:commons-lang3:3.20.0")
+        add("spotbugs", "org.slf4j:slf4j-nop:$slf4jVersion")
     }
 
     tasks.withType<Test>().configureEach {
@@ -158,14 +160,15 @@ subprojects {
     }
 
     configure<PmdExtension> {
-        toolVersion = "7.13.0"
-        ruleSetFiles = files()
-        ruleSets = listOf("category/java/errorprone.xml")
+        toolVersion = "7.26.0"
+        ruleSetFiles = files(rootProject.file("config/pmd/pmd-main-ruleset.xml"))
+        ruleSets = listOf()
         isConsoleOutput = true
         isIgnoreFailures = false
     }
 
     configure<SpotBugsExtension> {
+        toolVersion.set("4.10.3")
         ignoreFailures = false
         effort = Effort.MAX
         reportLevel = Confidence.MEDIUM
@@ -197,7 +200,7 @@ subprojects {
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         java {
             target("src/main/java/**/*.java", "src/test/java/**/*.java")
-            googleJavaFormat("1.19.2")
+            googleJavaFormat("1.36.1")
             trimTrailingWhitespace()
             endWithNewline()
         }
@@ -205,7 +208,7 @@ subprojects {
 
     plugins.withId("jacoco") {
         jacoco {
-            toolVersion = "0.8.12"
+            toolVersion = "0.8.15"
         }
 
         tasks.withType<Test> {

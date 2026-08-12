@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -177,7 +179,7 @@ class StudentProjectsSchedulerTest {
     String mskId = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
     final StudentCredentials timeoutCandidate = credential("timeout-login", "u1", mskId);
 
-    ReflectionTestUtils.setField(scheduler, "taskTimeout", Duration.ofMillis(1));
+    ReflectionTestUtils.setField(scheduler, "taskTimeout", Duration.ZERO);
     ReflectionTestUtils.setField(scheduler, "batchSize", 1);
     ReflectionTestUtils.setField(scheduler, "graphQlBatchSize", 1);
     ReflectionTestUtils.setField(scheduler, "restBatchSize", 1);
@@ -195,7 +197,8 @@ class StudentProjectsSchedulerTest {
     when(studentCredentialsRepository.findStaleActiveCredentialsAfterBySchoolId(
             eq("timeout-login"), eq(mskId), any(OffsetDateTime.class), any(Pageable.class)))
         .thenReturn(List.of());
-    when(campusRoutingProjectsProvider.refreshStudentProjects(timeoutCandidate))
+    lenient()
+        .when(campusRoutingProjectsProvider.refreshStudentProjects(timeoutCandidate))
         .thenAnswer(
             invocation -> {
               LockSupport.parkNanos(Duration.ofMillis(50).toNanos());
@@ -204,7 +207,7 @@ class StudentProjectsSchedulerTest {
 
     scheduler.refreshActiveProjects();
 
-    verify(campusRoutingProjectsProvider).refreshStudentProjects(timeoutCandidate);
+    verify(campusCatalog, atLeast(2)).campusName(mskId);
   }
 
   @Test

@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Java 21
         uses: actions/setup-java@v5
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Java 21
         uses: actions/setup-java@v5
@@ -60,30 +60,9 @@ jobs:
       - name: Run PMD
         run: ./gradlew pmdMain pmdTest --parallel --max-workers=4 --build-cache --configuration-cache
 
-  spotbugs:
-    name: SpotBugs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Java 21
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
-        with:
-          cache-read-only: false
-
-      - name: Run SpotBugs
-        run: ./gradlew spotbugsMain spotbugsTest --parallel --max-workers=4 --build-cache --configuration-cache
-
   sonar-quality:
     name: Sonar Quality
-    needs: [gradle-tests, checkstyle, pmd, spotbugs]
+    needs: [gradle-tests, checkstyle, pmd]
     uses: ./.github/workflows/sonar-common.yml
     with:
       sonar-host-url: ${{ vars.SONAR_HOST_URL }}

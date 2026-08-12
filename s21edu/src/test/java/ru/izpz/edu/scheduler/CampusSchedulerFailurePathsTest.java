@@ -51,7 +51,7 @@ class CampusSchedulerFailurePathsTest {
   void setUp() {
     mocks = MockitoAnnotations.openMocks(this);
     executor = Executors.newFixedThreadPool(3);
-    CampusCatalog campusCatalog = new CampusCatalog();
+    CampusCatalog campusCatalog = mskKznNskCatalog();
     schedulerProperties = new CampusSchedulerProperties();
     scheduler =
         new CampusScheduler(
@@ -70,7 +70,7 @@ class CampusSchedulerFailurePathsTest {
   }
 
   @Test
-  void parseMskKznNsk_clustersExceedTimeout_marksRunAsFailed() {
+  void parseTargetCampuses_clustersExceedTimeout_marksRunAsFailed() {
     schedulerProperties.getTimeout().setGlobal(Duration.ofMillis(1));
     when(campusClient.getClustersByCampus(anyString()))
         .thenAnswer(
@@ -79,7 +79,7 @@ class CampusSchedulerFailurePathsTest {
               return List.<ClusterV1DTO>of();
             });
 
-    scheduler.parseMskKznNsk();
+    scheduler.parseTargetCampuses();
 
     verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.FAILED);
     verify(campusService, never())
@@ -87,7 +87,7 @@ class CampusSchedulerFailurePathsTest {
   }
 
   @Test
-  void parseMskKznNsk_participantsExceedTimeout_marksRunAsFailed() {
+  void parseTargetCampuses_participantsExceedTimeout_marksRunAsFailed() {
     schedulerProperties.getTimeout().setGlobal(Duration.ofMillis(1));
     ClusterV1DTO cluster = new ClusterV1DTO();
     cluster.setId(100L);
@@ -101,13 +101,13 @@ class CampusSchedulerFailurePathsTest {
         .when(campusService)
         .fetchParticipantsByClusterWithProvider(cluster.getId());
 
-    scheduler.parseMskKznNsk();
+    scheduler.parseTargetCampuses();
 
     verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.FAILED);
   }
 
   @Test
-  void parseMskKznNsk_perCampusTimeoutAfterPartialSuccess_marksRunAsPartial() {
+  void parseTargetCampuses_perCampusTimeoutAfterPartialSuccess_marksRunAsPartial() {
     schedulerProperties.getTimeout().setGlobal(Duration.ofSeconds(2));
     schedulerProperties.getTimeout().setPerCampus(Duration.ofMillis(20));
     ClusterV1DTO mskCluster = new ClusterV1DTO();
@@ -140,7 +140,7 @@ class CampusSchedulerFailurePathsTest {
         .when(campusService)
         .fetchParticipantsByClusterWithProvider(nskCluster.getId());
 
-    scheduler.parseMskKznNsk();
+    scheduler.parseTargetCampuses();
 
     verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.PARTIAL);
     verify(campusService).refreshParticipantMetrics();
@@ -149,7 +149,7 @@ class CampusSchedulerFailurePathsTest {
   }
 
   @Test
-  void parseMskKznNsk_globalTimeoutAfterPartialSuccess_marksRunAsPartial() {
+  void parseTargetCampuses_globalTimeoutAfterPartialSuccess_marksRunAsPartial() {
     schedulerProperties.getTimeout().setGlobal(Duration.ofMillis(120));
     schedulerProperties.getTimeout().setPerCampus(Duration.ofSeconds(5));
 
@@ -183,7 +183,7 @@ class CampusSchedulerFailurePathsTest {
         .when(campusService)
         .fetchParticipantsByClusterWithProvider(nskCluster.getId());
 
-    scheduler.parseMskKznNsk();
+    scheduler.parseTargetCampuses();
 
     verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.PARTIAL);
     verify(campusService).refreshParticipantMetrics();
@@ -192,7 +192,7 @@ class CampusSchedulerFailurePathsTest {
   }
 
   @Test
-  void parseMskKznNsk_partialErrors_recordsPartialStatus() {
+  void parseTargetCampuses_partialErrors_recordsPartialStatus() {
     schedulerProperties.getTimeout().setGlobal(Duration.ofSeconds(1));
     AtomicInteger callOrdinal = new AtomicInteger();
     when(campusClient.getClustersByCampus(anyString()))
@@ -210,13 +210,13 @@ class CampusSchedulerFailurePathsTest {
     when(campusService.fetchParticipantsByClusterWithProvider(1L))
         .thenReturn(List.of(new Workplace()));
 
-    scheduler.parseMskKznNsk();
+    scheduler.parseTargetCampuses();
 
     verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.PARTIAL);
   }
 
   @Test
-  void parseMskKznNsk_participantsError_recordsPartialStatus() {
+  void parseTargetCampuses_participantsError_recordsPartialStatus() {
     schedulerProperties.getTimeout().setGlobal(Duration.ofSeconds(1));
     ClusterV1DTO cluster = new ClusterV1DTO();
     cluster.setId(2L);
@@ -226,7 +226,7 @@ class CampusSchedulerFailurePathsTest {
         .when(campusService)
         .fetchParticipantsByClusterWithProvider(cluster.getId());
 
-    scheduler.parseMskKznNsk();
+    scheduler.parseTargetCampuses();
 
     verify(metricsService).recordRunStatus("campus_parser", SchedulerRunStatus.PARTIAL);
   }
@@ -238,5 +238,14 @@ class CampusSchedulerFailurePathsTest {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+  }
+
+  private static CampusCatalog mskKznNskCatalog() {
+    return new CampusCatalog() {
+      @Override
+      public List<String> targetCampusIds() {
+        return List.of(MSK, KZN, NSK);
+      }
+    };
   }
 }

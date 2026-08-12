@@ -54,10 +54,10 @@ public class CampusScheduler {
   private static final String OPERATION_GET_PARTICIPANTS = "get_participants";
 
   @Scheduled(fixedDelayString = "${campus.scheduler.fixed-delay:PT30S}")
-  public void parseMskKznNsk() {
+  public void parseTargetCampuses() {
     List<String> campuses = campusCatalog.targetCampusIds();
 
-    log.info("Обновление снапшота кампусов для Москвы, Казани и Новосибирска");
+    log.info("Обновление снапшота целевых кампусов: campuses={}", campuses.size());
     StopWatch stopWatch = new StopWatch("campus");
 
     Timer.Sample clustersSample = schedulerMetricsService.startPhaseTimer();
@@ -93,7 +93,7 @@ public class CampusScheduler {
 
     logCycleSummary(
         clustersOutcome.hasErrors() ? "partial" : "success", clustersOutcome, stopWatch);
-    log.info("Данные участников из Москвы, Казани и Новосибирска по кластерам обновлены.");
+    log.info("Данные участников целевых кампусов по кластерам обновлены.");
     log.info("Время обновления: {}", stopWatch.prettyPrint());
   }
 

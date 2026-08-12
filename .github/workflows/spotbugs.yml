@@ -1,19 +1,22 @@
-name: Reusable Tests
+name: SpotBugs
 
 on:
-  workflow_call:
   workflow_dispatch:
+  schedule:
+    - cron: "30 2 * * *"
 
 permissions:
   contents: read
 
+concurrency:
+  group: spotbugs-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  gradle-tests:
+  spotbugs:
+    name: SpotBugs main sources
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        module: [s21auth, s21bot, s21edu, s21rocket]
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -29,5 +32,5 @@ jobs:
         with:
           cache-read-only: false
 
-      - name: Run tests
-        run: ./gradlew :${{ matrix.module }}:test :${{ matrix.module }}:jacocoTestReport --parallel --max-workers=4 --build-cache --configuration-cache
+      - name: Run SpotBugs for main sources
+        run: ./gradlew spotbugsMain --parallel --max-workers=4 --build-cache --configuration-cache

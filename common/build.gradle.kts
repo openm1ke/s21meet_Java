@@ -1,6 +1,6 @@
 plugins {
     id("java-library")
-    id("org.openapi.generator") version "7.14.0"
+    id("org.openapi.generator") version "7.24.0"
 }
 
 val squareupOkhttpVersion: String by project
@@ -9,6 +9,8 @@ val gsonVersion: String by project
 val gsonfireVersion: String by project
 val jacksonDatabindNullable: String by project
 val springSecurityCryptoVersion: String by project
+val junitJupiterVersion: String by project
+val lombokVersion: String by project
 
 group = "ru.izpz"
 version = "0.0.1-SNAPSHOT"
@@ -36,11 +38,11 @@ dependencies {
     implementation("org.springframework.security:spring-security-crypto:$springSecurityCryptoVersion")
 
     // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter
-    testImplementation("org.junit.jupiter:junit-jupiter:5.13.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
 
     implementation("jakarta.validation:jakarta.validation-api:3.1.1")
-    compileOnly("org.projectlombok:lombok:1.18.30")
-    annotationProcessor("org.projectlombok:lombok:1.18.30")
+    compileOnly("org.projectlombok:lombok:$lombokVersion")
+    annotationProcessor("org.projectlombok:lombok:$lombokVersion")
 }
 
 
@@ -94,14 +96,6 @@ tasks.test {
 
 tasks.compileJava {
     dependsOn(tasks.openApiGenerate)
-}
-
-tasks.named<com.github.spotbugs.snom.SpotBugsTask>("spotbugsMain") {
-    classes = files(
-        classes?.asFileTree?.matching {
-            exclude("ru/izpz/dto/**")
-        }
-    )
 }
 
 sourceSets {

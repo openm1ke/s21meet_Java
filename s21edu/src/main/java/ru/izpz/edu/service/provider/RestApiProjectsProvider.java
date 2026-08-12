@@ -2,6 +2,7 @@ package ru.izpz.edu.service.provider;
 
 import java.io.Serial;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.model.ParticipantProjectV1DTO;
 import ru.izpz.dto.model.ParticipantProjectsV1DTO;
+import ru.izpz.dto.model.TeamMemberV1DTO;
 import ru.izpz.edu.config.ProjectsProviderConfig;
 import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.exception.PlatformClientException;
@@ -82,7 +84,8 @@ public class RestApiProjectsProvider implements ProjectsProvider {
     return java.util.Optional.ofNullable(studentProjectRepository.findMaxUpdatedAtByLogin(login))
         .map(
             updatedAt ->
-                updatedAt.isBefore(OffsetDateTime.now().minus(projectsProperties.getRefreshTtl())))
+                updatedAt.isBefore(
+                    OffsetDateTime.now(ZoneOffset.UTC).minus(projectsProperties.getRefreshTtl())))
         .orElse(true);
   }
 
@@ -122,6 +125,7 @@ public class RestApiProjectsProvider implements ProjectsProvider {
   }
 
   private StudentProjectData toProjectData(ParticipantProjectV1DTO project) {
+    List<TeamMemberV1DTO> teamMembers = project.getTeamMembers();
     return new StudentProjectData(
         Long.toString(project.getId()),
         project.getTitle(),
@@ -132,7 +136,7 @@ public class RestApiProjectsProvider implements ProjectsProvider {
         null,
         toNullableString(project.getType()),
         toNullableString(project.getStatus()),
-        project.getTeamMembers() == null ? null : project.getTeamMembers().size(),
+        teamMembers == null ? null : teamMembers.size(),
         toInteger(project.getCourseId()));
   }
 

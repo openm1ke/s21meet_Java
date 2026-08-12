@@ -57,10 +57,11 @@ public class TokenClient {
       if (response.hasBody()) {
         TokenResponse tokenResponse = response.getBody();
         if (tokenResponse != null && tokenResponse.getAccessToken() != null) {
+          String accessToken = tokenResponse.getAccessToken();
           log.info(
               "Получен новый токен для {}: {}",
               login,
-              tokenResponse.getAccessToken().substring(0, 10) + "...");
+              accessToken.substring(0, Math.min(accessToken.length(), 10)) + "...");
           return tokenResponse;
         }
       }
