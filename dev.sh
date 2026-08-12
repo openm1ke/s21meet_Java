@@ -55,6 +55,7 @@ Options:
   --with-deps   # do not use --no-deps (recreate deps too)
   --proxy MODE  # proxy mode: vless | ssh | none
   --down        # stop stack (down)
+  --stop        # alias for --down
   --ps          # show compose ps
 
 Examples:
@@ -78,6 +79,7 @@ SHOW_PS=0
 PROXY_MODE_ARG=""
 
 TARGETS=()
+IMAGE_TARGETS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -96,7 +98,7 @@ while [[ $# -gt 0 ]]; do
       PROXY_MODE_ARG="$2"
       shift 2
       ;;
-    --down) DO_DOWN=1; shift ;;
+    --down|--stop) DO_DOWN=1; shift ;;
     --ps) SHOW_PS=1; shift ;;
     all) TARGETS=("${APP_SERVICES[@]}"); shift ;;
     infra) TARGETS=("${INFRA_SERVICES[@]}"); shift ;;

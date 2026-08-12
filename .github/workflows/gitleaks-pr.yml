@@ -21,16 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
-          # gitleaks-action builds a git range (base^..head) for pull_request events.
-          # Full history is required so both commits always exist locally.
+          # The action determines the PR commit range from the pull_request event.
+          # Full history keeps the merge-base available after branch rebases.
           fetch-depth: 0
 
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Force base commit from current PR metadata.
-          # This avoids stale "first commit in PR" SHAs after history rewrites.
-          BASE_REF: ${{ github.event.pull_request.base.sha }}

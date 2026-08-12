@@ -59,9 +59,24 @@ jobs:
             exit 1
           fi
 
+      - name: Validate Sonar token
+        if: ${{ steps.sonar-check.outputs.ready == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VALIDATION_RESPONSE="$(curl -sS -u "${SONAR_TOKEN}:" -w '\n%{http_code}' "${SONAR_HOST_URL}/api/authentication/validate")" # gitleaks:allow
+          VALIDATION_STATUS="${VALIDATION_RESPONSE##*$'\n'}"
+          VALIDATION_BODY="${VALIDATION_RESPONSE%$'\n'*}"
+
+          if [[ "${VALIDATION_STATUS}" != "200" || "${VALIDATION_BODY}" != *'"valid":true'* ]]; then
+            echo "SONAR_TOKEN is configured but Sonar rejected it. Rotate the GitHub repository secret SONAR_TOKEN."
+            exit 1
+          fi
+
       - name: Checkout
         if: ${{ steps.sonar-check.outputs.ready == '1' }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

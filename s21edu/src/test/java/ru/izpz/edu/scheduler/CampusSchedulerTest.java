@@ -51,7 +51,7 @@ class CampusSchedulerTest {
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
     executorService = Executors.newFixedThreadPool(4);
-    CampusCatalog campusCatalog = new CampusCatalog();
+    CampusCatalog campusCatalog = mskKznNskCatalog();
     CampusSchedulerProperties schedulerProperties = new CampusSchedulerProperties();
     scheduler =
         new CampusScheduler(
@@ -72,7 +72,7 @@ class CampusSchedulerTest {
   }
 
   @Test
-  void parseMskKznNsk_success_updatesClustersAndParticipants() {
+  void parseTargetCampuses_success_updatesClustersAndParticipants() {
     ClusterV1DTO c1 = new ClusterV1DTO();
     c1.setId(1L);
     c1.setName("c1");
@@ -93,7 +93,7 @@ class CampusSchedulerTest {
     when(campusService.fetchParticipantsByClusterWithProvider(3L))
         .thenReturn(List.of(new Workplace()));
 
-    assertDoesNotThrow(() -> scheduler.parseMskKznNsk());
+    assertDoesNotThrow(() -> scheduler.parseTargetCampuses());
 
     ArgumentCaptor<String> campusIdCaptor = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<List<ClusterV1DTO>> clustersCaptor = clusterListCaptor();
@@ -123,7 +123,7 @@ class CampusSchedulerTest {
   }
 
   @Test
-  void parseMskKznNsk_whenApiExceptions_doesNotThrowAndContinues() {
+  void parseTargetCampuses_whenApiExceptions_doesNotThrowAndContinues() {
     ClusterV1DTO c1 = new ClusterV1DTO();
     c1.setId(1L);
     c1.setName("c1");
@@ -140,7 +140,7 @@ class CampusSchedulerTest {
     when(campusService.fetchParticipantsByClusterWithProvider(3L))
         .thenReturn(List.of(new Workplace()));
 
-    assertDoesNotThrow(() -> scheduler.parseMskKznNsk());
+    assertDoesNotThrow(() -> scheduler.parseTargetCampuses());
 
     ArgumentCaptor<String> campusIdCaptor = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<List<ClusterV1DTO>> clustersCaptor = clusterListCaptor();
@@ -168,5 +168,14 @@ class CampusSchedulerTest {
   private static ArgumentCaptor<List<ClusterV1DTO>> clusterListCaptor() {
     return (ArgumentCaptor<List<ClusterV1DTO>>)
         (ArgumentCaptor<?>) ArgumentCaptor.forClass(List.class);
+  }
+
+  private static CampusCatalog mskKznNskCatalog() {
+    return new CampusCatalog() {
+      @Override
+      public List<String> targetCampusIds() {
+        return List.of(MSK, KZN, NSK);
+      }
+    };
   }
 }
