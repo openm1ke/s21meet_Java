@@ -12,16 +12,12 @@
     <Class name="ru.izpz.dto.ServerVariable"/>
     <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
   </Match>
-  <!-- Exclude DTO and OpenAPI client layer -->
-  <Match>
-    <Class name="~ru\\.izpz\\.dto\\..*"/>
-  </Match>
   <!-- Exclude OpenAPI generated packages -->
   <Match>
-    <Class name="~ru\\.izpz\\.dto\\.(api|auth|model)\\..*"/>
+    <Class name="~ru\.izpz\.dto\.(api|auth|model)\..*"/>
   </Match>
   <!-- Exclude OpenAPI generated helper classes -->
   <Match>
-    <Class name="~ru\\.izpz\\.dto\\.(ApiClient|ServerConfiguration|ServerVariable|StringUtil|RFC3339.*|JavaTimeFormatter)"/>
+    <Class name="~ru\.izpz\.dto\.(ApiClient|ServerConfiguration|ServerVariable|StringUtil|RFC3339.*|JavaTimeFormatter)"/>
   </Match>
 </FindBugsFilter>

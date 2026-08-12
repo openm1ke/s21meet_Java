@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.model.ParticipantProjectV1DTO;
 import ru.izpz.dto.model.ParticipantProjectsV1DTO;
+import ru.izpz.dto.model.TeamMemberV1DTO;
 import ru.izpz.edu.config.ProjectsProviderConfig;
 import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.exception.PlatformClientException;
@@ -122,6 +123,7 @@ public class RestApiProjectsProvider implements ProjectsProvider {
   }
 
   private StudentProjectData toProjectData(ParticipantProjectV1DTO project) {
+    List<TeamMemberV1DTO> teamMembers = project.getTeamMembers();
     return new StudentProjectData(
         Long.toString(project.getId()),
         project.getTitle(),
@@ -132,7 +134,7 @@ public class RestApiProjectsProvider implements ProjectsProvider {
         null,
         toNullableString(project.getType()),
         toNullableString(project.getStatus()),
-        project.getTeamMembers() == null ? null : project.getTeamMembers().size(),
+        teamMembers == null ? null : teamMembers.size(),
         toInteger(project.getCourseId()));
   }
 

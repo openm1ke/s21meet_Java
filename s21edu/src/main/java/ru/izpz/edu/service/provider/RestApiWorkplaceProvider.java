@@ -1,5 +1,6 @@
 package ru.izpz.edu.service.provider;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,9 @@ public class RestApiWorkplaceProvider implements WorkplaceProvider {
 
   @Override
   @RateLimiter(name = "campusWorkplace")
+  @SuppressFBWarnings(
+      value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
+      justification = "The remote API and test doubles may return a null clusterMap")
   public List<Workplace> fetchParticipantsByCluster(Long clusterId) {
     log.debug("Fetching participants for cluster {} via REST API", clusterId);
     var response = platformApi.getParticipantsByClusterId(clusterId, 1000, 0, true);

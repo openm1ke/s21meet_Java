@@ -98,14 +98,6 @@ tasks.compileJava {
     dependsOn(tasks.openApiGenerate)
 }
 
-tasks.named<com.github.spotbugs.snom.SpotBugsTask>("spotbugsMain") {
-    classes = files(
-        classes?.asFileTree?.matching {
-            exclude("ru/izpz/dto/**")
-        }
-    )
-}
-
 sourceSets {
     main {
         java {

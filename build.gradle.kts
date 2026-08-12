@@ -67,7 +67,6 @@ subprojects {
     val springBootVersion: String by project
     val jacksonVersion: String by project
     val spotbugsAnnotationsVersion: String by project
-    val lombokVersion: String by project
     val slf4jVersion: String by project
     configure<DependencyManagementExtension> {
         imports {
@@ -110,12 +109,11 @@ subprojects {
 
         annotationProcessor("org.projectlombok:lombok")
         add("mockitoAgent", "org.mockito:mockito-core:$mockitoVersion")
-        // Keep the SpotBugs engine independent from the annotations version.
-        // SpotBugs 4.10.x requires commons-lang3 APIs that are downgraded by
-        // the Spring Boot dependency management used by this project.
-        add("spotbugs", "com.github.spotbugs:spotbugs:4.9.8")
+        add("spotbugs", "com.github.spotbugs:spotbugs:4.10.3")
+        // SpotBugs 4.10.x uses Strings, which is unavailable in the
+        // commons-lang3 version managed by the Spring Boot BOM.
+        add("spotbugs", "org.apache.commons:commons-lang3:3.20.0")
         add("spotbugs", "org.slf4j:slf4j-nop:$slf4jVersion")
-        add("spotbugs", "org.projectlombok:lombok:$lombokVersion")
     }
 
     tasks.withType<Test>().configureEach {
@@ -170,6 +168,7 @@ subprojects {
     }
 
     configure<SpotBugsExtension> {
+        toolVersion.set("4.10.3")
         ignoreFailures = false
         effort = Effort.MAX
         reportLevel = Confidence.MEDIUM
