@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,7 @@ import ru.izpz.edu.model.Workplace;
 import ru.izpz.edu.model.WorkplaceId;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
 class RestApiWorkplaceProviderTest {
 
   @Mock private PlatformApiFacade platformApi;

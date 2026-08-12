@@ -8,11 +8,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import ru.izpz.dto.ProjectExecutorDto;
+import ru.izpz.dto.ProjectExecutorsPageRequest;
 import ru.izpz.dto.ProjectExecutorsRequest;
 import ru.izpz.edu.repository.StudentCredentialsRepository;
 import ru.izpz.edu.repository.StudentProjectRepository;
@@ -47,7 +53,7 @@ class ProjectDirectoryServiceTest {
     String rawProjectName = "A_100%\\core";
     String escapedProjectName = "A\\_100\\%\\\\core";
     when(studentProjectRepository.findExecutorsByProjectName(escapedProjectName))
-        .thenReturn(List.of(new ProjectExecutorDto("login1", null, "IN_PROGRESS", null)));
+        .thenReturn(List.of(new ProjectExecutorDto("login1", null, "IN_PROGRESS", null, null)));
     when(studentCredentialsRepository.findSchoolIdsByLogins(List.of("login1")))
         .thenReturn(
             List.of(
@@ -93,7 +99,10 @@ class ProjectDirectoryServiceTest {
         new ProjectDirectoryService(
             studentProjectRepository, studentCredentialsRepository, campusCatalog);
     when(studentProjectRepository.findExecutorsByProjectName("A1\\_Maze\\_C"))
-        .thenReturn(List.of(new ProjectExecutorDto("login2", "MSK", "WAITING_FOR_START", null)));
+        .thenReturn(
+            List.of(
+                new ProjectExecutorDto(
+                    "login2", "MSK", "WAITING_FOR_START", null, "22_10_MSK")));
     when(studentCredentialsRepository.findSchoolIdsByLogins(List.of("login2")))
         .thenReturn(List.of());
 
@@ -111,7 +120,9 @@ class ProjectDirectoryServiceTest {
             studentProjectRepository, studentCredentialsRepository, campusCatalog);
     when(studentProjectRepository.findExecutorsByProjectName("A1\\_Maze\\_C"))
         .thenReturn(
-            List.of(new ProjectExecutorDto("login2", "21 Moscow", "WAITING_FOR_START", null)));
+            List.of(
+                new ProjectExecutorDto(
+                    "login2", "21 Moscow", "WAITING_FOR_START", null, "22_10_MSK")));
     when(studentCredentialsRepository.findSchoolIdsByLogins(List.of("login2")))
         .thenReturn(List.of());
 
@@ -120,5 +131,73 @@ class ProjectDirectoryServiceTest {
 
     assertEquals(1, result.size());
     assertEquals("MSK", result.getFirst().campusName());
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {10, 20, 50})
+  void getProjectExecutorsPage_shouldRespectPageSizeAndReturnTotals(int size) {
+    ProjectDirectoryService service =
+        new ProjectDirectoryService(
+            studentProjectRepository, studentCredentialsRepository, campusCatalog);
+    List<ProjectExecutorDto> rows =
+        IntStream.range(0, Math.min(size, 3))
+            .mapToObj(i -> new ProjectExecutorDto("login" + i, "MSK", "IN_PROGRESS", null, null))
+            .toList();
+    when(studentProjectRepository.findExecutorsByProjectNamePaged(
+            org.mockito.ArgumentMatchers.eq("A1\\_Maze\\_C"),
+            org.mockito.ArgumentMatchers.anyList(),
+            org.mockito.ArgumentMatchers.anyBoolean(),
+            org.mockito.ArgumentMatchers.anyList(),
+            org.mockito.ArgumentMatchers.anyBoolean(),
+            org.mockito.ArgumentMatchers.any(Pageable.class)))
+        .thenReturn(new PageImpl<>(rows, Pageable.ofSize(size), 1333));
+    when(studentProjectRepository.findDistinctCampusesByProjectName("A1\\_Maze\\_C"))
+        .thenReturn(List.of("MSK"));
+    when(studentProjectRepository.findDistinctStatusesByProjectName("A1\\_Maze\\_C"))
+        .thenReturn(List.of("IN_PROGRESS"));
+
+    var result =
+        service.getProjectExecutorsPage(
+            new ProjectExecutorsPageRequest("A1_Maze_C", 0, size, List.of(), List.of(), "asc"));
+
+    assertEquals(rows, result.items());
+    assertEquals(size, result.size());
+    assertEquals(1333, result.totalItems());
+    assertEquals((int) Math.ceil(1333.0 / size), result.totalPages());
+    assertEquals(List.of("MSK"), result.availableCampuses());
+  }
+
+  @Test
+  void getProjectExecutorsPage_shouldApplyFiltersAndEscapeProjectName() {
+    ProjectDirectoryService service =
+        new ProjectDirectoryService(
+            studentProjectRepository, studentCredentialsRepository, campusCatalog);
+    when(studentProjectRepository.findExecutorsByProjectNamePaged(
+            org.mockito.ArgumentMatchers.eq("A\\_100\\%\\\\core"),
+            org.mockito.ArgumentMatchers.eq(List.of("MSK")),
+            org.mockito.ArgumentMatchers.eq(false),
+            org.mockito.ArgumentMatchers.eq(List.of("IN_PROGRESS")),
+            org.mockito.ArgumentMatchers.eq(false),
+            org.mockito.ArgumentMatchers.any(Pageable.class)))
+        .thenReturn(new PageImpl<>(List.of(), Pageable.ofSize(20), 0));
+    when(studentProjectRepository.findDistinctCampusesByProjectName("A\\_100\\%\\\\core"))
+        .thenReturn(List.of());
+    when(studentProjectRepository.findDistinctStatusesByProjectName("A\\_100\\%\\\\core"))
+        .thenReturn(List.of());
+
+    var result =
+        service.getProjectExecutorsPage(
+            new ProjectExecutorsPageRequest(
+                "A_100%\\core", 0, 20, List.of(" msk "), List.of("IN_PROGRESS"), "invalid"));
+
+    assertEquals(0, result.totalItems());
+    verify(studentProjectRepository)
+        .findExecutorsByProjectNamePaged(
+            org.mockito.ArgumentMatchers.eq("A\\_100\\%\\\\core"),
+            org.mockito.ArgumentMatchers.eq(List.of("MSK")),
+            org.mockito.ArgumentMatchers.eq(false),
+            org.mockito.ArgumentMatchers.eq(List.of("IN_PROGRESS")),
+            org.mockito.ArgumentMatchers.eq(false),
+            org.mockito.ArgumentMatchers.any(Pageable.class));
   }
 }

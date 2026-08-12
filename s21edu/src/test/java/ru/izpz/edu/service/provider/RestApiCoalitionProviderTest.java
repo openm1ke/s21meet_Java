@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.AbstractList;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,7 @@ import ru.izpz.edu.model.StudentCoalition;
 import ru.izpz.edu.repository.StudentCoalitionRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
 class RestApiCoalitionProviderTest {
 
   @Mock private PlatformApiFacade platformApi;

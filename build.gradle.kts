@@ -106,6 +106,8 @@ subprojects {
         compileOnly("org.projectlombok:lombok")
         compileOnly(
             "com.github.spotbugs:spotbugs-annotations:$spotbugsAnnotationsVersion")
+        testCompileOnly(
+            "com.github.spotbugs:spotbugs-annotations:$spotbugsAnnotationsVersion")
 
         annotationProcessor("org.projectlombok:lombok")
         add("mockitoAgent", "org.mockito:mockito-core:$mockitoVersion")

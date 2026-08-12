@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,7 @@ import ru.izpz.edu.repository.StudentProjectRepository;
 import ru.izpz.edu.service.StudentProjectRefreshService;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
 class RestApiProjectsProviderTest {
 
   @Mock private RestProjectsApiFacade restProjectsApiFacade;
