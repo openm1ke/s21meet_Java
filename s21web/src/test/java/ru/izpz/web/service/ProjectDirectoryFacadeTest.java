@@ -16,6 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import ru.izpz.dto.CampusRequest;
 import ru.izpz.dto.ProjectExecutorDto;
+import ru.izpz.dto.ProjectExecutorsPageDto;
+import ru.izpz.dto.ProjectExecutorsPageRequest;
 import ru.izpz.dto.ProjectExecutorsRequest;
 import ru.izpz.web.client.EduProfileClient;
 
@@ -52,7 +54,7 @@ class ProjectDirectoryFacadeTest {
   void getProjectExecutors_shouldDelegateWithRequest() {
     ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
     when(eduProfileClient.getProjectExecutors(any(ProjectExecutorsRequest.class)))
-        .thenReturn(List.of(new ProjectExecutorDto("mike", "MSK", "IN_PROGRESS", null)));
+        .thenReturn(List.of(new ProjectExecutorDto("mike", "MSK", "IN_PROGRESS", null, null)));
 
     ProjectExecutorsRequest request = new ProjectExecutorsRequest(PROJECT_NAME);
     List<ProjectExecutorDto> result = facade.getProjectExecutors(request);
@@ -60,6 +62,50 @@ class ProjectDirectoryFacadeTest {
     assertEquals(1, result.size());
     assertEquals("mike", result.getFirst().login());
     verify(eduProfileClient).getProjectExecutors(new ProjectExecutorsRequest(PROJECT_NAME));
+  }
+
+  @Test
+  void getProjectExecutorsPage_shouldDelegateWithRequest() {
+    ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
+    ProjectExecutorsPageRequest request =
+        new ProjectExecutorsPageRequest(PROJECT_NAME, 0, 20, List.of(), List.of(), "asc");
+    ProjectExecutorsPageDto expected =
+        new ProjectExecutorsPageDto(
+            List.of(new ProjectExecutorDto("mike", "MSK", "IN_PROGRESS", null, "22_10_MSK")),
+            0,
+            20,
+            1,
+            1,
+            List.of("MSK"),
+            List.of("IN_PROGRESS"));
+    when(eduProfileClient.getProjectExecutorsPage(request)).thenReturn(expected);
+
+    assertEquals(expected, facade.getProjectExecutorsPage(request));
+    verify(eduProfileClient).getProjectExecutorsPage(request);
+  }
+
+  @Test
+  void getProjectExecutorsPage_shouldPropagateEduClientFailure() {
+    ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
+    ProjectExecutorsPageRequest request =
+        new ProjectExecutorsPageRequest(PROJECT_NAME, 0, 20, List.of(), List.of(), "asc");
+    RuntimeException failure = new RuntimeException("profile service unavailable");
+    when(eduProfileClient.getProjectExecutorsPage(request)).thenThrow(failure);
+
+    assertEquals(
+        failure,
+        assertThrows(RuntimeException.class, () -> facade.getProjectExecutorsPage(request)));
+  }
+
+  @Test
+  void getProjectExecutorsPage_shouldPropagateFailureForNullRequest() {
+    ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
+    RuntimeException failure = new RuntimeException("profile service unavailable");
+    when(eduProfileClient.getProjectExecutorsPage(null)).thenThrow(failure);
+
+    assertEquals(
+        failure,
+        assertThrows(RuntimeException.class, () -> facade.getProjectExecutorsPage(null)));
   }
 
   @Test
@@ -99,15 +145,24 @@ class ProjectDirectoryFacadeTest {
             "fallbackProjectExecutors",
             new ProjectExecutorsRequest(PROJECT_NAME),
             new RuntimeException("down"));
-    List<String> namesWithBlankTelegramId =
+    final List<String> namesWithBlankTelegramId =
         ReflectionTestUtils.invokeMethod(
             facade, "fallbackProjectNames", " ", new RuntimeException("down"));
-    List<String> namesWithNullTelegramId =
+    final List<String> namesWithNullTelegramId =
         ReflectionTestUtils.invokeMethod(
             facade, "fallbackProjectNames", null, new RuntimeException("down"));
-    List<ProjectExecutorDto> executorsWithNullRequest =
+    final List<ProjectExecutorDto> executorsWithNullRequest =
         ReflectionTestUtils.invokeMethod(
             facade, "fallbackProjectExecutors", null, new RuntimeException("down"));
+    final ProjectExecutorsPageDto page =
+        ReflectionTestUtils.invokeMethod(
+            facade,
+            "fallbackProjectExecutorsPage",
+            new ProjectExecutorsPageRequest(PROJECT_NAME, 2, 10, List.of(), List.of(), "asc"),
+            new RuntimeException("down"));
+    final ProjectExecutorsPageDto pageWithNullRequest =
+        ReflectionTestUtils.invokeMethod(
+            facade, "fallbackProjectExecutorsPage", null, new RuntimeException("down"));
 
     assertTrue(names.isEmpty());
     assertTrue(allNames.isEmpty());
@@ -115,5 +170,10 @@ class ProjectDirectoryFacadeTest {
     assertTrue(namesWithBlankTelegramId.isEmpty());
     assertTrue(namesWithNullTelegramId.isEmpty());
     assertTrue(executorsWithNullRequest.isEmpty());
+    assertEquals(2, page.page());
+    assertEquals(10, page.size());
+    assertTrue(page.items().isEmpty());
+    assertEquals(0, pageWithNullRequest.page());
+    assertEquals(20, pageWithNullRequest.size());
   }
 }

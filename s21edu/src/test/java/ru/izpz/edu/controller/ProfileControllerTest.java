@@ -42,6 +42,8 @@ import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileRequest;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.ProjectExecutorDto;
+import ru.izpz.dto.ProjectExecutorsPageDto;
+import ru.izpz.dto.ProjectExecutorsPageRequest;
 import ru.izpz.dto.ProjectExecutorsRequest;
 import ru.izpz.dto.ProjectsDto;
 import ru.izpz.edu.S21EduApplication;
@@ -358,7 +360,8 @@ class ProfileControllerTest {
   @Test
   void getProjectExecutors_shouldReturnOk() throws Exception {
     ProjectExecutorsRequest request = new ProjectExecutorsRequest("C2_SimpleBashUtils");
-    ProjectExecutorDto executor = new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", null);
+    ProjectExecutorDto executor =
+        new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", null, null);
     when(projectDirectoryService.getProjectExecutors(request)).thenReturn(List.of(executor));
 
     mockMvc
@@ -372,6 +375,36 @@ class ProfileControllerTest {
         .andExpect(jsonPath("$[0].projectStatus").value("IN_PROGRESS"));
 
     verify(projectDirectoryService).getProjectExecutors(request);
+  }
+
+  @Test
+  void getProjectExecutorsPage_shouldReturnOk() throws Exception {
+    ProjectExecutorsPageRequest request =
+        new ProjectExecutorsPageRequest(
+            "C2_SimpleBashUtils", 1, 20, List.of("MSK"), List.of(), "asc");
+    ProjectExecutorsPageDto page =
+        new ProjectExecutorsPageDto(
+            List.of(new ProjectExecutorDto("mike", "MSK", "IN_PROGRESS", null, "22_10_MSK")),
+            1,
+            20,
+            21,
+            2,
+            List.of("MSK"),
+            List.of("IN_PROGRESS"));
+    when(projectDirectoryService.getProjectExecutorsPage(request)).thenReturn(page);
+
+    mockMvc
+        .perform(
+            post("/profile/project-executors/page")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].login").value("mike"))
+        .andExpect(jsonPath("$.page").value(1))
+        .andExpect(jsonPath("$.totalItems").value(21))
+        .andExpect(jsonPath("$.items[0].wave").value("22_10_MSK"));
+
+    verify(projectDirectoryService).getProjectExecutorsPage(request);
   }
 
   @Test

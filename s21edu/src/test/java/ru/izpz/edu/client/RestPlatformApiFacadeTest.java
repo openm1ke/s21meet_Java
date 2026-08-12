@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -31,6 +32,7 @@ import ru.izpz.dto.model.ParticipantProjectsV1DTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.exception.PlatformClientException;
 
+@SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
 class RestPlatformApiFacadeTest {
 
   private CampusApi campusApi;

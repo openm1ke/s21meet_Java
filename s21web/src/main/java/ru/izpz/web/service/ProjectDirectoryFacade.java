@@ -9,12 +9,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.CampusRequest;
 import ru.izpz.dto.ProjectExecutorDto;
+import ru.izpz.dto.ProjectExecutorsPageDto;
+import ru.izpz.dto.ProjectExecutorsPageRequest;
 import ru.izpz.dto.ProjectExecutorsRequest;
 import ru.izpz.web.client.EduProfileClient;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused")
 public class ProjectDirectoryFacade {
   private static final String PROFILE_WEB = "profileWeb";
 
@@ -74,7 +77,35 @@ public class ProjectDirectoryFacade {
     return eduProfileClient.getProjectExecutors(request);
   }
 
-  @SuppressWarnings("unused")
+  @Retry(name = PROFILE_WEB)
+  @CircuitBreaker(name = PROFILE_WEB, fallbackMethod = "fallbackProjectExecutorsPage")
+  public ProjectExecutorsPageDto getProjectExecutorsPage(ProjectExecutorsPageRequest request) {
+    long startedAt = System.nanoTime();
+    try {
+      ProjectExecutorsPageDto page = eduProfileClient.getProjectExecutorsPage(request);
+      log.info(
+          "Profile service returned project executor page: projectName={}, page={}, size={}, "
+              + "items={}, totalItems={}, elapsedMs={}",
+          request.projectName(),
+          request.page(),
+          request.size(),
+          page.items().size(),
+          page.totalItems(),
+          elapsedMillis(startedAt));
+      return page;
+    } catch (RuntimeException exception) {
+      log.warn(
+          "Profile service project executor page request failed: projectName={}, page={}, "
+              + "size={}, elapsedMs={}, error={}",
+          request == null ? null : request.projectName(),
+          request == null ? null : request.page(),
+          request == null ? null : request.size(),
+          elapsedMillis(startedAt),
+          exception.toString());
+      throw exception;
+    }
+  }
+
   private List<String> fallbackProjectNames(String telegramId, Throwable throwable) {
     log.error(
         "Returning empty scoped project names fallback: telegramIdSuffix={}, cause={}",
@@ -84,14 +115,12 @@ public class ProjectDirectoryFacade {
     return Collections.emptyList();
   }
 
-  @SuppressWarnings("unused")
   private List<String> fallbackAllProjectNames(Throwable throwable) {
     log.error(
         "Returning empty all project names fallback: cause={}", throwable.toString(), throwable);
     return Collections.emptyList();
   }
 
-  @SuppressWarnings("unused")
   private List<ProjectExecutorDto> fallbackProjectExecutors(
       ProjectExecutorsRequest request, Throwable throwable) {
     log.error(
@@ -100,6 +129,19 @@ public class ProjectDirectoryFacade {
         throwable.toString(),
         throwable);
     return Collections.emptyList();
+  }
+
+  private ProjectExecutorsPageDto fallbackProjectExecutorsPage(
+      ProjectExecutorsPageRequest request, Throwable throwable) {
+    log.error(
+        "Returning empty project executors page fallback: projectName={}, page={}, cause={}",
+        request == null ? null : request.projectName(),
+        request == null ? null : request.page(),
+        throwable.toString(),
+        throwable);
+    int page = request == null ? 0 : request.page();
+    int size = request == null ? 20 : request.size();
+    return new ProjectExecutorsPageDto(List.of(), page, size, 0, 0, List.of(), List.of());
   }
 
   private static long elapsedMillis(long startedAt) {

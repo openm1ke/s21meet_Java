@@ -162,6 +162,12 @@ services:
             exit 1
           fi
           printf '%s\n' \
+            "{" \
+            "  servers :443 {" \
+            "    protocols h1" \
+            "  }" \
+            "}" \
+            "" \
             "$${WEB_PUBLIC_DOMAIN} {" \
             "  tls $${WEB_TLS_EMAIL}" \
             "  encode gzip" \
@@ -170,6 +176,12 @@ services:
             >/etc/caddy/Caddyfile
         elif [ "$${WEB_TLS_MODE:-internal}" = "off" ]; then
           printf '%s\n' \
+            "{" \
+            "  servers :443 {" \
+            "    protocols h1" \
+            "  }" \
+            "}" \
+            "" \
             "http://$${WEB_PUBLIC_DOMAIN} {" \
             "  encode gzip" \
             "  reverse_proxy s21web:8085" \
@@ -177,6 +189,12 @@ services:
             >/etc/caddy/Caddyfile
         else
           printf '%s\n' \
+            "{" \
+            "  servers :443 {" \
+            "    protocols h1" \
+            "  }" \
+            "}" \
+            "" \
             "$${WEB_PUBLIC_DOMAIN} {" \
             "  tls internal" \
             "  encode gzip" \

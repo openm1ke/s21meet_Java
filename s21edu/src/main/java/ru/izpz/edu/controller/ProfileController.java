@@ -187,4 +187,15 @@ public class ProfileController {
     log.info("Получен запрос на вывод исполнителей проекта {}", request.projectName());
     return ResponseEntity.ok(projectDirectoryService.getProjectExecutors(request));
   }
+
+  @PostMapping("/project-executors/page")
+  ResponseEntity<ProjectExecutorsPageDto> getProjectExecutorsPage(
+      @Valid @RequestBody ProjectExecutorsPageRequest request) {
+    log.info(
+        "Получен запрос на страницу исполнителей проекта {}, page={}, size={}",
+        request.projectName(),
+        request.page(),
+        request.size());
+    return ResponseEntity.ok(projectDirectoryService.getProjectExecutorsPage(request));
+  }
 }

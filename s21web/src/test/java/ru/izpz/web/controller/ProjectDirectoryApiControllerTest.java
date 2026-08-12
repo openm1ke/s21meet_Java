@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -20,6 +21,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.izpz.dto.ProjectExecutorDto;
+import ru.izpz.dto.ProjectExecutorsPageDto;
+import ru.izpz.dto.ProjectExecutorsPageRequest;
 import ru.izpz.dto.ProjectExecutorsRequest;
 import ru.izpz.web.security.TelegramInitDataValidator;
 import ru.izpz.web.service.ProjectDirectoryFacade;
@@ -46,6 +49,7 @@ class ProjectDirectoryApiControllerTest {
     mockMvc
         .perform(get(PROJECT_NAMES_PATH).requestAttr("telegramId", TELEGRAM_ID))
         .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "max-age=60, private"))
         .andExpect(jsonPath("$[0]").value(PROJECT_NAME));
 
     verify(projectDirectoryFacade).getProjectNames(TELEGRAM_ID);
@@ -87,6 +91,7 @@ class ProjectDirectoryApiControllerTest {
     mockMvc
         .perform(get(PROJECT_NAMES_PATH).param("all", "true"))
         .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "max-age=300, private"))
         .andExpect(jsonPath("$[0]").value("A1_Maze_C"))
         .andExpect(jsonPath("$[1]").value("C2_SimpleBashUtils"));
 
@@ -98,7 +103,10 @@ class ProjectDirectoryApiControllerTest {
   void getProjectExecutors_shouldReturnOk() throws Exception {
     ProjectExecutorsRequest request = new ProjectExecutorsRequest(PROJECT_NAME);
     when(projectDirectoryFacade.getProjectExecutors(request))
-        .thenReturn(List.of(new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", null)));
+        .thenReturn(
+            List.of(
+                new ProjectExecutorDto(
+                    "mike", "Kazan", "IN_PROGRESS", null, "22_10_MSK")));
 
     mockMvc
         .perform(
@@ -108,7 +116,8 @@ class ProjectDirectoryApiControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].login").value("mike"))
         .andExpect(jsonPath("$[0].campusName").value("Kazan"))
-        .andExpect(jsonPath("$[0].projectStatus").value("IN_PROGRESS"));
+        .andExpect(jsonPath("$[0].projectStatus").value("IN_PROGRESS"))
+        .andExpect(jsonPath("$[0].wave").value("22_10_MSK"));
 
     verify(projectDirectoryFacade).getProjectExecutors(request);
   }
@@ -139,5 +148,50 @@ class ProjectDirectoryApiControllerTest {
         .andExpect(status().isBadRequest());
 
     verify(projectDirectoryFacade, never()).getProjectExecutors(any(ProjectExecutorsRequest.class));
+  }
+
+  @Test
+  void getProjectExecutorsPage_shouldReturnPageMetadata() throws Exception {
+    ProjectExecutorsPageRequest request =
+        new ProjectExecutorsPageRequest(PROJECT_NAME, 1, 20, List.of("MSK"), List.of(), "asc");
+    when(projectDirectoryFacade.getProjectExecutorsPage(request))
+        .thenReturn(
+            new ProjectExecutorsPageDto(
+                List.of(new ProjectExecutorDto("mike", "MSK", "IN_PROGRESS", null, "22_10_MSK")),
+                1,
+                20,
+                21,
+                2,
+                List.of("MSK"),
+                List.of("IN_PROGRESS")));
+
+    mockMvc
+        .perform(
+            post("/api/projects/executors/page")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].login").value("mike"))
+        .andExpect(jsonPath("$.page").value(1))
+        .andExpect(jsonPath("$.size").value(20))
+        .andExpect(jsonPath("$.totalItems").value(21))
+        .andExpect(jsonPath("$.totalPages").value(2));
+
+    verify(projectDirectoryFacade).getProjectExecutorsPage(request);
+  }
+
+  @Test
+  void getProjectExecutorsPage_shouldRejectUnsupportedPageSize() throws Exception {
+    ProjectExecutorsPageRequest request =
+        new ProjectExecutorsPageRequest(PROJECT_NAME, 0, 100, List.of(), List.of(), "asc");
+
+    mockMvc
+        .perform(
+            post("/api/projects/executors/page")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
+
+    verify(projectDirectoryFacade, never()).getProjectExecutorsPage(any());
   }
 }
