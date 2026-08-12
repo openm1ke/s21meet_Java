@@ -52,6 +52,18 @@ class ProjectDirectoryApiControllerTest {
   }
 
   @Test
+  void getProjectNames_shouldReturnOkForShortTelegramId() throws Exception {
+    when(projectDirectoryFacade.getProjectNames("1234")).thenReturn(List.of(PROJECT_NAME));
+
+    mockMvc
+        .perform(get(PROJECT_NAMES_PATH).requestAttr("telegramId", "1234"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0]").value(PROJECT_NAME));
+
+    verify(projectDirectoryFacade).getProjectNames("1234");
+  }
+
+  @Test
   void getProjectNames_shouldReturnUnauthorized_whenTelegramIdMissing() throws Exception {
     mockMvc.perform(get(PROJECT_NAMES_PATH)).andExpect(status().isUnauthorized());
 

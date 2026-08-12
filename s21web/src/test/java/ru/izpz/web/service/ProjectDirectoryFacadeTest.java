@@ -1,6 +1,7 @@
 package ru.izpz.web.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -38,6 +39,16 @@ class ProjectDirectoryFacadeTest {
   }
 
   @Test
+  void getProjectNames_shouldPropagateEduClientFailure() {
+    ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
+    RuntimeException failure = new RuntimeException("profile service unavailable");
+    when(eduProfileClient.getProjectNames(any(CampusRequest.class))).thenThrow(failure);
+
+    assertEquals(
+        failure, assertThrows(RuntimeException.class, () -> facade.getProjectNames("1234")));
+  }
+
+  @Test
   void getProjectExecutors_shouldDelegateWithRequest() {
     ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
     when(eduProfileClient.getProjectExecutors(any(ProjectExecutorsRequest.class)))
@@ -64,6 +75,15 @@ class ProjectDirectoryFacadeTest {
   }
 
   @Test
+  void getAllProjectNames_shouldPropagateEduClientFailure() {
+    ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
+    RuntimeException failure = new RuntimeException("profile service unavailable");
+    when(eduProfileClient.getAllProjectNames()).thenThrow(failure);
+
+    assertEquals(failure, assertThrows(RuntimeException.class, facade::getAllProjectNames));
+  }
+
+  @Test
   void fallbackMethods_shouldReturnEmptyLists() {
     ProjectDirectoryFacade facade = new ProjectDirectoryFacade(eduProfileClient);
 
@@ -79,9 +99,21 @@ class ProjectDirectoryFacadeTest {
             "fallbackProjectExecutors",
             new ProjectExecutorsRequest(PROJECT_NAME),
             new RuntimeException("down"));
+    List<String> namesWithBlankTelegramId =
+        ReflectionTestUtils.invokeMethod(
+            facade, "fallbackProjectNames", " ", new RuntimeException("down"));
+    List<String> namesWithNullTelegramId =
+        ReflectionTestUtils.invokeMethod(
+            facade, "fallbackProjectNames", null, new RuntimeException("down"));
+    List<ProjectExecutorDto> executorsWithNullRequest =
+        ReflectionTestUtils.invokeMethod(
+            facade, "fallbackProjectExecutors", null, new RuntimeException("down"));
 
     assertTrue(names.isEmpty());
     assertTrue(allNames.isEmpty());
     assertTrue(executors.isEmpty());
+    assertTrue(namesWithBlankTelegramId.isEmpty());
+    assertTrue(namesWithNullTelegramId.isEmpty());
+    assertTrue(executorsWithNullRequest.isEmpty());
   }
 }

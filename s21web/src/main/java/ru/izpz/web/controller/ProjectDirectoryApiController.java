@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +22,7 @@ import ru.izpz.web.service.ProjectDirectoryFacade;
 @Validated
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 @RequestMapping("/api/projects")
 public class ProjectDirectoryApiController {
 
@@ -29,15 +31,38 @@ public class ProjectDirectoryApiController {
   @GetMapping("/names")
   public List<String> getProjectNames(
       HttpServletRequest request, @RequestParam(name = "all", defaultValue = "false") boolean all) {
-    if (all) {
-      return projectDirectoryFacade.getAllProjectNames();
-    }
     Object attr = request.getAttribute(TelegramWebAppAuthFilter.TELEGRAM_ID_ATTR);
     String telegramId = attr == null ? null : attr.toString();
+    log.info(
+        "Web App project names request: all={}, telegramIdPresent={}, telegramIdSuffix={}",
+        all,
+        telegramId != null && !telegramId.isBlank(),
+        telegramIdSuffix(telegramId));
+
+    if (all) {
+      List<String> projectNames = projectDirectoryFacade.getAllProjectNames();
+      log.info("Web App project names response: all=true, count={}", projectNames.size());
+      return projectNames;
+    }
     if (telegramId == null || telegramId.isBlank()) {
+      log.warn("Web App project names rejected: Telegram ID was not resolved");
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Telegram user is not resolved");
     }
-    return projectDirectoryFacade.getProjectNames(telegramId);
+    List<String> projectNames = projectDirectoryFacade.getProjectNames(telegramId);
+    log.info(
+        "Web App project names response: all=false, telegramIdSuffix={}, count={}",
+        telegramIdSuffix(telegramId),
+        projectNames.size());
+    return projectNames;
+  }
+
+  private static String telegramIdSuffix(String telegramId) {
+    if (telegramId == null || telegramId.isBlank()) {
+      return "-";
+    }
+    return telegramId.length() <= 4
+        ? telegramId
+        : "..." + telegramId.substring(telegramId.length() - 4);
   }
 
   @PostMapping("/executors")
