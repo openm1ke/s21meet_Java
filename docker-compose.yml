@@ -164,12 +164,14 @@ services:
           printf '%s\n' \
             "$${WEB_PUBLIC_DOMAIN} {" \
             "  tls $${WEB_TLS_EMAIL}" \
+            "  encode gzip" \
             "  reverse_proxy s21web:8085" \
             "}" \
             >/etc/caddy/Caddyfile
         elif [ "$${WEB_TLS_MODE:-internal}" = "off" ]; then
           printf '%s\n' \
             "http://$${WEB_PUBLIC_DOMAIN} {" \
+            "  encode gzip" \
             "  reverse_proxy s21web:8085" \
             "}" \
             >/etc/caddy/Caddyfile
@@ -177,6 +179,7 @@ services:
           printf '%s\n' \
             "$${WEB_PUBLIC_DOMAIN} {" \
             "  tls internal" \
+            "  encode gzip" \
             "  reverse_proxy s21web:8085" \
             "}" \
             >/etc/caddy/Caddyfile
