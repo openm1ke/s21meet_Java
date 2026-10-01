@@ -28,7 +28,7 @@ run_if_available actionlint
 
 echo "Checking Dockerfiles..."
 if command -v hadolint >/dev/null 2>&1; then
-  find . -path './.git' -prune -o \( -name 'Dockerfile*' -o -name '*.Dockerfile' \) -type f -print0 | xargs -0 hadolint
+  find . -path './.git' -prune -o \( -name 'Dockerfile*' -o -name '*.Dockerfile' \) -type f -print0 | xargs -0 hadolint --failure-threshold error
 else
   echo "skip: hadolint is not installed" >&2
 fi
