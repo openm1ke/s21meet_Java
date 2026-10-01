@@ -148,7 +148,10 @@ public class ProfileService {
     ProfileValidation validation =
         profileValidationRepository
             .findByS21login(s21login)
-            .filter(existing -> existing.getExpiresAt() != null && existing.getExpiresAt().isAfter(OffsetDateTime.now()))
+            .filter(
+                existing ->
+                    existing.getExpiresAt() != null
+                        && existing.getExpiresAt().isAfter(OffsetDateTime.now()))
             .orElseGet(
                 () -> {
                   profileValidationRepository.deleteByS21login(s21login);

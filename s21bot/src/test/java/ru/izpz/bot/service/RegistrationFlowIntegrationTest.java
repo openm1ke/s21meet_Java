@@ -134,8 +134,8 @@ class RegistrationFlowIntegrationTest {
     when(profileClient.getProfileCode(any()))
         .thenReturn(new ProfileCodeResponse(login, code, OffsetDateTime.now()))
         .thenReturn(new ProfileCodeResponse(login, code, OffsetDateTime.now()));
-    when(profileClient.confirmRegistration(any())).thenReturn(
-        new ProfileDto(telegramId, login, ProfileStatus.CONFIRMED, null));
+    when(profileClient.confirmRegistration(any()))
+        .thenReturn(new ProfileDto(telegramId, login, ProfileStatus.CONFIRMED, null));
     when(rocketChatClient.sendMessage(any())).thenReturn(new RocketChatSendResponse(true, "ok"));
 
     messageProcessor.handleTextMessage(textMessage(chatId, "/start"));

@@ -18,7 +18,6 @@ import feign.Request;
 import feign.RequestTemplate;
 import feign.Response;
 import java.nio.charset.StandardCharsets;
-import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +35,6 @@ import ru.izpz.bot.keyboard.TelegramKeyboardFactory;
 import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.ParticipantDto;
 import ru.izpz.dto.ParticipantStatusEnum;
-import ru.izpz.dto.ProfileCodeResponse;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.RocketChatSendResponse;
@@ -213,8 +211,7 @@ class RegistrationFlowTest {
 
     registrationFlow.startRegistration(chatId, "abc");
 
-    verify(messageSender)
-        .sendMessage(chatId, "Логин уже участвует в другой регистрации", null);
+    verify(messageSender).sendMessage(chatId, "Логин уже участвует в другой регистрации", null);
     verify(profileService, never()).sendVerificationCode(ArgumentMatchers.anyString());
     verify(profileService, never())
         .updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());

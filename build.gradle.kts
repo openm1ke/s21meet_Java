@@ -13,7 +13,7 @@ plugins {
     id("checkstyle")
     id("pmd")
     id("com.github.spotbugs") version "6.5.12" apply false
-    id("com.diffplug.spotless") version "6.25.0" apply false
+    id("com.diffplug.spotless") version "8.10.3" apply false
     id("org.sonarqube") version "7.5.0.8588"
     id("org.springframework.boot") version "3.5.16" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
@@ -162,7 +162,7 @@ subprojects {
     }
 
     configure<CheckstyleExtension> {
-        toolVersion = "10.26.1"
+        toolVersion = "14.3.0"
         val checkstyleJar = configurations.checkstyle.get().files.first { it.name.startsWith("checkstyle-") }
         config = resources.text.fromArchiveEntry(checkstyleJar, "google_checks.xml")
         configProperties =

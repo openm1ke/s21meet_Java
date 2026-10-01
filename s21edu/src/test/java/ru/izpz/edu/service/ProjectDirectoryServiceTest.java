@@ -101,8 +101,7 @@ class ProjectDirectoryServiceTest {
     when(studentProjectRepository.findExecutorsByProjectName("A1\\_Maze\\_C"))
         .thenReturn(
             List.of(
-                new ProjectExecutorDto(
-                    "login2", "MSK", "WAITING_FOR_START", null, "22_10_MSK")));
+                new ProjectExecutorDto("login2", "MSK", "WAITING_FOR_START", null, "22_10_MSK")));
     when(studentCredentialsRepository.findSchoolIdsByLogins(List.of("login2")))
         .thenReturn(List.of());
 

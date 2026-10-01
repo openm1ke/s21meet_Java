@@ -23,6 +23,5 @@ public interface EduProfileClient {
   List<ProjectExecutorDto> getProjectExecutors(@RequestBody ProjectExecutorsRequest request);
 
   @PostMapping("/project-executors/page")
-  ProjectExecutorsPageDto getProjectExecutorsPage(
-      @RequestBody ProjectExecutorsPageRequest request);
+  ProjectExecutorsPageDto getProjectExecutorsPage(@RequestBody ProjectExecutorsPageRequest request);
 }

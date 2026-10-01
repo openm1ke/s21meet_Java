@@ -347,8 +347,7 @@ class ProfileServiceTest {
     when(profileRepository.save(testProfile))
         .thenThrow(new DataIntegrityViolationException("duplicate key"));
     assertThrows(
-        IllegalStateException.class,
-        () -> profileService.checkAndSetLogin("123456", "newuser"));
+        IllegalStateException.class, () -> profileService.checkAndSetLogin("123456", "newuser"));
     verify(participantSyncService, never()).syncByEduLogin("newuser");
     verify(participantCoalitionService, never()).refreshByLogin("newuser");
   }
@@ -471,8 +470,7 @@ class ProfileServiceTest {
     validation.setExpiresAt(OffsetDateTime.now().plusDays(1));
 
     when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
-    when(profileValidationRepository.findByS21login("newuser"))
-        .thenReturn(Optional.of(validation));
+    when(profileValidationRepository.findByS21login("newuser")).thenReturn(Optional.of(validation));
     when(profileRepository.existsByS21login("newuser")).thenReturn(false);
     when(profileRepository.save(testProfile)).thenReturn(testProfile);
 
@@ -497,12 +495,10 @@ class ProfileServiceTest {
     validation.setS21login("newuser");
     validation.setSecretCode("1234");
     validation.setExpiresAt(OffsetDateTime.now().plusDays(1));
-    when(profileValidationRepository.findByS21login("newuser"))
-        .thenReturn(Optional.of(validation));
+    when(profileValidationRepository.findByS21login("newuser")).thenReturn(Optional.of(validation));
 
     assertThrows(
-        IllegalStateException.class,
-        () -> profileService.confirmRegistration("123456", "9999"));
+        IllegalStateException.class, () -> profileService.confirmRegistration("123456", "9999"));
     verify(profileRepository, never()).save(any());
     verify(profileValidationRepository, never()).deleteByS21login("newuser");
   }
@@ -515,8 +511,7 @@ class ProfileServiceTest {
     when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
 
     assertThrows(
-        IllegalStateException.class,
-        () -> profileService.confirmRegistration("123456", "1234"));
+        IllegalStateException.class, () -> profileService.confirmRegistration("123456", "1234"));
     verify(profileValidationRepository, never()).findByS21login(anyString());
     verify(profileRepository, never()).save(any());
   }
@@ -529,8 +524,7 @@ class ProfileServiceTest {
     when(profileRepository.existsByPendingS21login("newuser")).thenReturn(true);
 
     assertThrows(
-        IllegalStateException.class,
-        () -> profileService.checkAndSetLogin("123456", "newuser"));
+        IllegalStateException.class, () -> profileService.checkAndSetLogin("123456", "newuser"));
     verify(profileRepository, never()).save(any());
     verify(profileValidationRepository, never()).deleteByS21login("newuser");
   }

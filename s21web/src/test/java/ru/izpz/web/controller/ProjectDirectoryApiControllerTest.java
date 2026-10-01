@@ -104,9 +104,7 @@ class ProjectDirectoryApiControllerTest {
     ProjectExecutorsRequest request = new ProjectExecutorsRequest(PROJECT_NAME);
     when(projectDirectoryFacade.getProjectExecutors(request))
         .thenReturn(
-            List.of(
-                new ProjectExecutorDto(
-                    "mike", "Kazan", "IN_PROGRESS", null, "22_10_MSK")));
+            List.of(new ProjectExecutorDto("mike", "Kazan", "IN_PROGRESS", null, "22_10_MSK")));
 
     mockMvc
         .perform(

@@ -104,8 +104,7 @@ class ProjectDirectoryFacadeTest {
     when(eduProfileClient.getProjectExecutorsPage(null)).thenThrow(failure);
 
     assertEquals(
-        failure,
-        assertThrows(RuntimeException.class, () -> facade.getProjectExecutorsPage(null)));
+        failure, assertThrows(RuntimeException.class, () -> facade.getProjectExecutorsPage(null)));
   }
 
   @Test

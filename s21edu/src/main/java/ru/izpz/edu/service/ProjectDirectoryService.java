@@ -65,7 +65,11 @@ public class ProjectDirectoryService {
                 campusName = normalizeCampusCode(campusByLogin.get(executor.login()));
               }
               return new ProjectExecutorDto(
-                  executor.login(), campusName, executor.projectStatus(), executor.campusPlace(), executor.wave());
+                  executor.login(),
+                  campusName,
+                  executor.projectStatus(),
+                  executor.campusPlace(),
+                  executor.wave());
             })
         .toList();
   }
@@ -74,8 +78,8 @@ public class ProjectDirectoryService {
     String normalizedName = request.projectName().strip();
     List<String> campuses = normalizeCampuses(request.campuses());
     List<String> statuses = normalizeValues(request.statuses());
-    Sort.Direction direction = "desc".equalsIgnoreCase(request.sortDirection())
-        ? Sort.Direction.DESC : Sort.Direction.ASC;
+    Sort.Direction direction =
+        "desc".equalsIgnoreCase(request.sortDirection()) ? Sort.Direction.DESC : Sort.Direction.ASC;
     List<String> campusQueryValues = campuses.isEmpty() ? List.of("__NO_CAMPUS__") : campuses;
     List<String> statusQueryValues = statuses.isEmpty() ? List.of("__NO_STATUS__") : statuses;
     PageRequest pageRequest =
@@ -89,15 +93,33 @@ public class ProjectDirectoryService {
             statuses.isEmpty(),
             pageRequest);
     List<ProjectExecutorDto> items = enrichCampuses(page.getContent());
-    List<String> availableCampuses = studentProjectRepository.findDistinctCampusesByProjectName(
-        escapeLikePattern(normalizedName)).stream().map(this::normalizeCampusCode).filter(Objects::nonNull)
-        .distinct().sorted().toList();
-    List<String> availableStatuses = studentProjectRepository.findDistinctStatusesByProjectName(
-        escapeLikePattern(normalizedName)).stream().filter(Objects::nonNull).map(String::strip)
-        .filter(s -> !s.isEmpty()).distinct().sorted().toList();
+    List<String> availableCampuses =
+        studentProjectRepository
+            .findDistinctCampusesByProjectName(escapeLikePattern(normalizedName))
+            .stream()
+            .map(this::normalizeCampusCode)
+            .filter(Objects::nonNull)
+            .distinct()
+            .sorted()
+            .toList();
+    List<String> availableStatuses =
+        studentProjectRepository
+            .findDistinctStatusesByProjectName(escapeLikePattern(normalizedName))
+            .stream()
+            .filter(Objects::nonNull)
+            .map(String::strip)
+            .filter(s -> !s.isEmpty())
+            .distinct()
+            .sorted()
+            .toList();
     return new ProjectExecutorsPageDto(
-        items, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages(),
-        availableCampuses, availableStatuses);
+        items,
+        page.getNumber(),
+        page.getSize(),
+        page.getTotalElements(),
+        page.getTotalPages(),
+        availableCampuses,
+        availableStatuses);
   }
 
   private List<ProjectExecutorDto> enrichCampuses(List<ProjectExecutorDto> executors) {
@@ -126,7 +148,11 @@ public class ProjectDirectoryService {
                 campusName = normalizeCampusCode(campusByLogin.get(executor.login()));
               }
               return new ProjectExecutorDto(
-                  executor.login(), campusName, executor.projectStatus(), executor.campusPlace(), executor.wave());
+                  executor.login(),
+                  campusName,
+                  executor.projectStatus(),
+                  executor.campusPlace(),
+                  executor.wave());
             })
         .toList();
   }
@@ -138,8 +164,12 @@ public class ProjectDirectoryService {
   private List<String> normalizeValues(List<String> values) {
     return values == null
         ? List.of()
-        : values.stream().filter(Objects::nonNull).map(String::strip).filter(s -> !s.isEmpty())
-            .distinct().toList();
+        : values.stream()
+            .filter(Objects::nonNull)
+            .map(String::strip)
+            .filter(s -> !s.isEmpty())
+            .distinct()
+            .toList();
   }
 
   private String normalizeCampusCode(String campusName) {
