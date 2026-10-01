@@ -62,10 +62,10 @@ Compose содержит Prometheus **3.15.0** и Grafana **13.2.3** с persiste
 | JaCoCo | 0.8.15 | 0.8.15 | Уже актуален; отчёты XML/HTML, исключения DTO/model/generated |
 | Sonar Gradle plugin | 7.5.0.8588 | Поддерживать 7.x | Анализ с ожиданием quality gate; 7.5 исправляет regression multi-project из 7.4 |
 | actionlint | Local 1.7.12 | 1.7.12 | Workflows + ShellCheck integration; уже актуален |
-| hadolint | Не установлен | 2.15.1 | Dockerfile lint; сейчас локальная проверка может пропускаться |
+| hadolint | 2.15.1 | Поддерживать 2.x | Dockerfile lint; DL3008/DL3066 остаются non-blocking warnings |
 | gitleaks | Local/CI 8.30.1 | Поддерживать 8.x | CLI выровнен; текущий fast scan сообщает 7 существующих находок |
 
-Spotless применён к subprojects, но PR workflow явно запускает Checkstyle/PMD/tests/Sonar, без отдельного `spotlessCheck`. SpotBugs имеет отдельный workflow. Следует проверить required checks в настройках GitHub: их наличие нельзя установить чтением YAML.
+Spotless применён к subprojects, а PR workflow теперь запускает отдельный `spotlessCheck` job перед Sonar. SpotBugs имеет отдельный workflow. Следует проверить required checks в настройках GitHub: их наличие нельзя установить чтением YAML.
 
 SpotBugs filter подавляет EI_EXPOSE_REP/EI_EXPOSE_REP2 глобально, хотя комментарий говорит о DTO. Checkstyle содержит широкие исключения. Пересмотр suppressions — отдельная задача после обновления, чтобы не смешивать появившиеся предупреждения со сменой versions.
 
@@ -95,7 +95,7 @@ Gradle wrapper **8.14.5**. Глобально есть Gradle 9.8.0, но Boot 3
 
 Каждый этап — самостоятельный небольшой PR с зафиксированными versions и своим результатом проверки.
 
-1. **Исходная точка и CI.** Snapshot-коммит создан; SC2129 исправлен, migrator Dockerfile теперь попадает в Hadolint-поиск, Gitleaks local/CI выровнен на 8.30.1. Hadolint ещё не установлен локально, а `spotlessCheck` пока не добавлен отдельным PR job.
+1. **Исходная точка и CI.** Snapshot-коммит создан; SC2129 исправлен, migrator Dockerfile теперь попадает в Hadolint-поиск, Hadolint установлен локально на 2.15.1, Gitleaks local/CI выровнен на 8.30.1, а `spotlessCheck` добавлен отдельным PR job.
 2. **Сборка и анализаторы с небольшими изменениями.** Выполнено: Gradle 8.14.5; Sonar 7.5.0.8588; PMD 7.28.0; SpotBugs plugin 6.5.12 и engine/annotations 4.10.4. Все соответствующие Gradle задачи прошли.
 3. **Patch обновления runtime/test libraries.** Выполнено: Jackson BOM 2.22.3, nullable 0.2.12, Okio 3.18.2, org.json 20260814; Lombok 1.18.48, Mockito 5.24.0, SLF4J 2.0.20, Logback 1.5.38; JUnit 5.14.4/1.14.4 и PostgreSQL JDBC 42.7.13. `./gradlew test` прошёл.
 4. **Форматирование и Checkstyle.** Выполнено: Spotless 8.10.3 с google-java-format 1.36.1 и Checkstyle 14.3.0 на JDK 21. `spotlessCheck` проходит; Checkstyle оставляет 26 предупреждений text block formatting в существующем коде.
