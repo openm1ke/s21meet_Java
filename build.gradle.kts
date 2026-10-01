@@ -12,9 +12,9 @@ plugins {
     id("jacoco-report-aggregation")
     id("checkstyle")
     id("pmd")
-    id("com.github.spotbugs") version "6.5.10" apply false
+    id("com.github.spotbugs") version "6.5.12" apply false
     id("com.diffplug.spotless") version "6.25.0" apply false
-    id("org.sonarqube") version "7.4.0.8496"
+    id("org.sonarqube") version "7.5.0.8588"
     id("org.springframework.boot") version "3.5.16" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
 }
@@ -66,6 +66,7 @@ subprojects {
     val springCloudVersion: String by project
     val springBootVersion: String by project
     val jacksonVersion: String by project
+    val spotbugsVersion: String by project
     val spotbugsAnnotationsVersion: String by project
     val slf4jVersion: String by project
     configure<DependencyManagementExtension> {
@@ -111,7 +112,7 @@ subprojects {
 
         annotationProcessor("org.projectlombok:lombok")
         add("mockitoAgent", "org.mockito:mockito-core:$mockitoVersion")
-        add("spotbugs", "com.github.spotbugs:spotbugs:4.10.3")
+        add("spotbugs", "com.github.spotbugs:spotbugs:$spotbugsVersion")
         // SpotBugs 4.10.x uses Strings, which is unavailable in the
         // commons-lang3 version managed by the Spring Boot BOM.
         add("spotbugs", "org.apache.commons:commons-lang3:3.20.0")
@@ -162,7 +163,7 @@ subprojects {
     }
 
     configure<PmdExtension> {
-        toolVersion = "7.26.0"
+        toolVersion = "7.28.0"
         ruleSetFiles = files(rootProject.file("config/pmd/pmd-main-ruleset.xml"))
         ruleSets = listOf()
         isConsoleOutput = true
@@ -170,7 +171,7 @@ subprojects {
     }
 
     configure<SpotBugsExtension> {
-        toolVersion.set("4.10.3")
+        toolVersion.set(spotbugsVersion)
         ignoreFailures = false
         effort = Effort.MAX
         reportLevel = Confidence.MEDIUM
