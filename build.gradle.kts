@@ -59,6 +59,11 @@ subprojects {
     apply(plugin = "com.diffplug.spotless")
     
     val mockitoVersion: String by project
+    val junitJupiterVersion: String by project
+    val junitPlatformVersion: String by project
+    val lombokVersion: String by project
+    val logbackVersion: String by project
+    val postgresqlVersion: String by project
     val mockitoAgent by configurations.creating {
         isTransitive = false
     }
@@ -73,6 +78,13 @@ subprojects {
         imports {
             mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion") {
                 bomProperty("jackson-bom.version", jacksonVersion)
+                bomProperty("junit-jupiter.version", junitJupiterVersion)
+                bomProperty("junit-platform.version", junitPlatformVersion)
+                bomProperty("lombok.version", lombokVersion)
+                bomProperty("logback.version", logbackVersion)
+                bomProperty("mockito.version", mockitoVersion)
+                bomProperty("postgresql.version", postgresqlVersion)
+                bomProperty("slf4j.version", slf4jVersion)
             }
             mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
             mavenBom("io.github.resilience4j:resilience4j-bom:${property("resilience4jVersion")}")
