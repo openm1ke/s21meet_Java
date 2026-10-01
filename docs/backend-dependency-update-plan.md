@@ -19,11 +19,11 @@ Gradle multi-module: пять Spring Boot приложений и общая б�
 
 ## Граф знаний
 
-Используется Graphify (`graphifyy` в PyPI), локально установлен **0.9.35**. MCP запускает `graphify-mcp graphify-out/graph.json`. Граф существует, `graphify query` работает; wiki отсутствует. Граф помогает ориентироваться, исходники необходимо проверять напрямую, особенно при текущих незакоммиченных изменениях.
+Используется Graphify (`graphifyy` в PyPI), локально установлен **0.9.73**. MCP запускает `graphify-mcp graphify-out/graph.json`. Граф существует, `graphify query` работает; wiki отсутствует. Граф помогает ориентироваться, исходники необходимо проверять напрямую, особенно при текущих незакоммиченных изменениях.
 
 Обычный цикл — AST update и локальная кластеризация через `scripts/graphify_local_update.sh`; скрипт очищает cloud LLM variables. Labels и semantic extraction запускаются отдельно через локальный Ollama: `qwen2.5-coder:7b` и производная `graphify-qwen2.5-coder:7b`. Установка Neo4j для текущего workflow не требуется.
 
-Цели: Graphify **0.9.73**, Ollama **0.35.0** вместо клиента **0.34.4**. В Graphify 0.9.73 есть исправление разрешения Java inherited methods и `super.method()`, полезное для этого проекта. Перед update сохранить локальную копию `graphify-out/` вне Git, проверить CLI/MCP и штатный update-wrapper. Ollama server во время проверки не работал; его серверная версия не установлена проверкой. Модель не менять вместе с CLI.
+Graphify обновлён до **0.9.73**; в этой версии есть исправление разрешения Java inherited methods и `super.method()`, полезное для этого проекта. После обновления выполнены CLI query, MCP help и штатный local update-wrapper: граф перестроен до 3163 nodes / 11727 edges / 152 communities. Перед следующими обновлениями сохранять локальную копию `graphify-out/` вне Git. Цель для Ollama остаётся **0.35.0** вместо клиента **0.34.4**: сервер во время проверки не работал, поэтому обновление Ollama ещё не выполнялось. Модель не менять вместе с CLI.
 
 Источники: [Graphify release](https://github.com/Graphify-Labs/graphify/releases/tag/v0.9.73), [Ollama release](https://github.com/ollama/ollama/releases/tag/v0.35.0).
 
