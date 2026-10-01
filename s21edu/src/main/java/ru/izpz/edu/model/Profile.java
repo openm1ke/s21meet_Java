@@ -1,6 +1,7 @@
 package ru.izpz.edu.model;
 
 import jakarta.persistence.*;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.*;
 import ru.izpz.dto.LastCommandState;
@@ -21,6 +22,12 @@ public class Profile {
 
   String telegramId;
   String s21login;
+
+  @Column(name = "pending_s21login")
+  String pendingS21login;
+
+  @Column(name = "pending_registration_expires_at")
+  OffsetDateTime pendingRegistrationExpiresAt;
 
   @Enumerated(EnumType.STRING)
   ProfileStatus status;

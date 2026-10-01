@@ -45,22 +45,20 @@ public class RegistrationFlow {
 
   public void startValidation(Long chatId, ProfileDto profile, String text) {
     try {
-      var code = profileService.getVerificationCode(profile.s21login());
-      if (code.getSecretCode().equals(text)) {
-        profileService.updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
-        telegramWebAppMenuService.ensureMenuButton(chatId);
-        messageSender.sendMessage(
-            chatId,
-            "Ваш аккаунт был успешно зарегистрирован",
-            telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
-      } else {
-        messageSender.sendMessage(
-            chatId, "Введенный код не совпадает!", telegramKeyboardFactory.removeReplyKeyboard());
-      }
+      profileService.confirmRegistration(chatId, text);
+      telegramWebAppMenuService.ensureMenuButton(chatId);
+      messageSender.sendMessage(
+          chatId,
+          "Ваш аккаунт был успешно зарегистрирован",
+          telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
     } catch (FeignException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, REASON_FEIGN_EXCEPTION);
       messageSender.sendMessage(chatId, "Ошибка валидации, попробуйте позже", null);
       messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
+    } catch (IllegalStateException e) {
+      metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, "invalid_code");
+      messageSender.sendMessage(
+          chatId, e.getMessage(), telegramKeyboardFactory.removeReplyKeyboard());
     } catch (Exception e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, "unexpected_exception");
       log.error("Unexpected validation error for chatId={}", chatId, e);
@@ -99,42 +97,43 @@ public class RegistrationFlow {
       return;
     }
 
-    ProfileDto profileDto;
     try {
-      profileDto = profileService.checkAndSetLogin(chatId, text);
+      profileService.checkAndSetLogin(chatId, text);
     } catch (FeignException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, REASON_FEIGN_EXCEPTION);
       messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
       messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
       return;
+    } catch (IllegalStateException e) {
+      metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "login_already_in_use");
+      messageSender.sendMessage(chatId, e.getMessage(), null);
+      return;
     }
     // если логин совпадает значит мы его сохранили
-    if (profileDto.s21login().equals(text)) {
-      RocketChatSendResponse rocketChatResponse;
-      try {
-        rocketChatResponse = profileService.sendVerificationCode(text);
-      } catch (RocketChatSendException e) {
-        metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "rocketchat_send_exception");
-        messageSender.sendMessage(
-            chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
-        messageSender.sendMessage(botProperties.admin(), e.getMessage(), null);
-        return;
-      } catch (FeignException e) {
-        metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, REASON_FEIGN_EXCEPTION);
-        messageSender.sendMessage(
-            chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
-        messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
-        return;
-      }
-
+    RocketChatSendResponse rocketChatResponse;
+    try {
+      rocketChatResponse = profileService.sendVerificationCode(text);
+    } catch (RocketChatSendException e) {
+      metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "rocketchat_send_exception");
       messageSender.sendMessage(
-          chatId, "В рокет чат был отправлен код для подтверждения для логина " + text, null);
+          chatId, "Ошибка отправки сообщения в рокетчат, попробуйте позже", null);
+      messageSender.sendMessage(botProperties.admin(), e.getMessage(), null);
+      return;
+    } catch (FeignException e) {
+      metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, REASON_FEIGN_EXCEPTION);
       messageSender.sendMessage(
-          botProperties.admin(),
-          "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(),
-          null);
-      profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
+          chatId, "Ошибка отправки сообщения в рокетчат, сообщите админу", null);
+      messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
+      return;
     }
+
+    messageSender.sendMessage(
+        chatId, "В рокет чат был отправлен код для подтверждения для логина " + text, null);
+    messageSender.sendMessage(
+        botProperties.admin(),
+        "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(),
+        null);
+    profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
 
     // тут мы получает в тексте логин на платформе
     // надо отправить его на бэкенд и получить дто с какими-то полями

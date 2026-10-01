@@ -1,12 +1,15 @@
 package ru.izpz.edu.service;
 
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.izpz.dto.CampusDto;
 import ru.izpz.dto.LastCommandRequest;
@@ -41,6 +44,7 @@ public class ProfileService {
   private static final String PROFILE_NOT_FOUND_MESSAGE = "Профиль не найден для telegramId = ";
   private static final String DEFAULT_CAMPUS_ID = "6bfe3c56-0211-4fe1-9e59-51616caac4dd";
   private static final String DEFAULT_CAMPUS_NAME = "Moscow";
+  private static final Duration REGISTRATION_TTL = Duration.ofDays(3);
 
   private final ProfileMapper profileMapper;
   private final ProfileVerificationMapper profileVerificationMapper;
@@ -98,6 +102,7 @@ public class ProfileService {
             () -> new EntityNotFoundException(PROFILE_NOT_FOUND_MESSAGE + request.getTelegramId()));
   }
 
+  @Transactional
   public ProfileDto checkAndSetLogin(String telegramId, String s21login) {
     Profile profile =
         profileRepository
@@ -112,7 +117,15 @@ public class ProfileService {
     if (profileRepository.existsByS21login(s21login)) {
       throw new IllegalStateException("Логин " + s21login + " уже привязан к другому профилю");
     }
-    profile.setS21login(s21login);
+    if (profileRepository.existsByPendingS21login(s21login)
+        && !s21login.equals(profile.getPendingS21login())) {
+      throw new IllegalStateException("Логин уже участвует в другой регистрации");
+    }
+    if (profile.getPendingS21login() != null && !s21login.equals(profile.getPendingS21login())) {
+      profileValidationRepository.deleteByS21login(profile.getPendingS21login());
+    }
+    profile.setPendingS21login(s21login);
+    profile.setPendingRegistrationExpiresAt(OffsetDateTime.now().plus(REGISTRATION_TTL));
     try {
       ProfileDto savedProfile = profileMapper.toDto(profileRepository.save(profile));
       warmUpParticipantData(s21login);
@@ -123,15 +136,11 @@ public class ProfileService {
           telegramId,
           s21login,
           e.getMessage());
-      ProfileDto profileDto =
-          profileRepository
-              .findByTelegramId(telegramId)
-              .map(profileMapper::toDto)
-              .orElseGet(() -> profileMapper.toDto(profile));
-      if (s21login.equals(profileDto.s21login())) {
-        warmUpParticipantData(s21login);
+      Profile currentProfile = profileRepository.findByTelegramId(telegramId).orElse(profile);
+      if (s21login.equals(currentProfile.getPendingS21login())) {
+        return profileMapper.toDto(currentProfile);
       }
-      return profileDto;
+      throw new IllegalStateException("Логин уже участвует в другой регистрации");
     }
   }
 
@@ -139,12 +148,14 @@ public class ProfileService {
     ProfileValidation validation =
         profileValidationRepository
             .findByS21login(s21login)
+            .filter(existing -> existing.getExpiresAt() != null && existing.getExpiresAt().isAfter(OffsetDateTime.now()))
             .orElseGet(
                 () -> {
+                  profileValidationRepository.deleteByS21login(s21login);
                   ProfileValidation profileValidation = new ProfileValidation();
                   profileValidation.setS21login(s21login);
                   profileValidation.setSecretCode(StringUtils.generateCode(4));
-                  profileValidation.setExpiresAt(OffsetDateTime.now());
+                  profileValidation.setExpiresAt(OffsetDateTime.now().plus(REGISTRATION_TTL));
                   try {
                     return profileValidationRepository.save(profileValidation);
                   } catch (DataIntegrityViolationException e) {
@@ -159,6 +170,50 @@ public class ProfileService {
                 });
 
     return profileVerificationMapper.toProfileCodeResponse(validation);
+  }
+
+  @Transactional
+  public ProfileDto confirmRegistration(String telegramId, String secretCode) {
+    Profile profile =
+        profileRepository
+            .findByTelegramId(telegramId)
+            .orElseThrow(() -> new EntityNotFoundException(PROFILE_NOT_FOUND_MESSAGE + telegramId));
+    OffsetDateTime now = OffsetDateTime.now();
+    String pendingLogin = profile.getPendingS21login();
+    if (pendingLogin == null
+        || profile.getPendingRegistrationExpiresAt() == null
+        || !profile.getPendingRegistrationExpiresAt().isAfter(now)) {
+      throw new IllegalStateException("Попытка регистрации истекла");
+    }
+    ProfileValidation validation =
+        profileValidationRepository
+            .findByS21login(pendingLogin)
+            .filter(value -> value.getExpiresAt() != null && value.getExpiresAt().isAfter(now))
+            .orElseThrow(() -> new IllegalStateException("Код подтверждения истек"));
+    if (!validation.getSecretCode().equals(secretCode)) {
+      throw new IllegalStateException("Введенный код не совпадает");
+    }
+    if (profileRepository.existsByS21login(pendingLogin)) {
+      throw new IllegalStateException("Логин уже привязан к другому профилю");
+    }
+    profile.setS21login(pendingLogin);
+    profile.setPendingS21login(null);
+    profile.setPendingRegistrationExpiresAt(null);
+    profile.setStatus(ProfileStatus.CONFIRMED);
+    ProfileDto result = profileMapper.toDto(profileRepository.save(profile));
+    profileValidationRepository.deleteByS21login(pendingLogin);
+    return result;
+  }
+
+  @Transactional
+  @Scheduled(
+      cron = "${profile.registration.cleanup-cron:0 0 3 * * *}",
+      zone = "${profile.registration.cleanup-zone:Europe/Moscow}")
+  public void cleanupExpiredRegistrations() {
+    OffsetDateTime now = OffsetDateTime.now();
+    int profiles = profileRepository.clearExpiredPendingRegistrations(now);
+    long codes = profileValidationRepository.deleteByExpiresAtBefore(now);
+    log.info("Expired registration attempts cleaned: profiles={}, codes={}", profiles, codes);
   }
 
   public ParticipantDto getParticipant(String eduLogin) {

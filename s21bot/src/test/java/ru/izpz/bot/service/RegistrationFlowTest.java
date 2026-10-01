@@ -83,39 +83,38 @@ class RegistrationFlowTest {
   @Test
   void startValidation_correctCode_setsConfirmedAndSendsMenuKeyboard() {
     ProfileDto profile = new ProfileDto(chatId.toString(), "login", ProfileStatus.VALIDATION, null);
-    ProfileCodeResponse code = new ProfileCodeResponse("login", "123", OffsetDateTime.now());
     ReplyKeyboardMarkup menuKb = mock(ReplyKeyboardMarkup.class);
 
-    when(profileService.getVerificationCode("login")).thenReturn(code);
+    when(profileService.confirmRegistration(chatId, "123"))
+        .thenReturn(new ProfileDto(chatId.toString(), "login", ProfileStatus.CONFIRMED, null));
     when(telegramKeyboardFactory.createReplyKeyboard(anyList(), eq(3))).thenReturn(menuKb);
 
     registrationFlow.startValidation(chatId, profile, "123");
 
-    verify(profileService).updateProfileStatus(chatId, ProfileStatus.CONFIRMED);
+    verify(profileService).confirmRegistration(chatId, "123");
     verify(messageSender).sendMessage(chatId, "Ваш аккаунт был успешно зарегистрирован", menuKb);
   }
 
   @Test
   void startValidation_wrongCode_sendsRemoveKeyboard() {
     ProfileDto profile = new ProfileDto(chatId.toString(), "login", ProfileStatus.VALIDATION, null);
-    ProfileCodeResponse code = new ProfileCodeResponse("login", "123", OffsetDateTime.now());
     ReplyKeyboard removeKb = mock(ReplyKeyboard.class);
 
-    when(profileService.getVerificationCode("login")).thenReturn(code);
+    when(profileService.confirmRegistration(chatId, "000"))
+        .thenThrow(new IllegalStateException("Введенный код не совпадает"));
     when(telegramKeyboardFactory.removeReplyKeyboard()).thenReturn(removeKb);
 
     registrationFlow.startValidation(chatId, profile, "000");
 
-    verify(profileService, never())
-        .updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-    verify(messageSender).sendMessage(chatId, "Введенный код не совпадает!", removeKb);
+    verify(profileService).confirmRegistration(chatId, "000");
+    verify(messageSender).sendMessage(chatId, "Введенный код не совпадает", removeKb);
   }
 
   @Test
   void startValidation_whenFeignException_recordsMetricAndNotifiesUserAndAdmin() {
     ProfileDto profile = new ProfileDto(chatId.toString(), "login", ProfileStatus.VALIDATION, null);
     FeignException ex = createFeignException(500, "boom");
-    when(profileService.getVerificationCode("login")).thenThrow(ex);
+    when(profileService.confirmRegistration(chatId, "123")).thenThrow(ex);
 
     registrationFlow.startValidation(chatId, profile, "123");
 
@@ -204,6 +203,24 @@ class RegistrationFlowTest {
   }
 
   @Test
+  void startRegistration_loginPendingForAnotherTelegram_sendsRejectAndStopsFlow() {
+    ParticipantDto participant = new ParticipantDto();
+    participant.setStatus(ParticipantStatusEnum.ACTIVE);
+    participant.setParallelName("Core program");
+    when(profileService.checkEduLogin("abc")).thenReturn(participant);
+    when(profileService.checkAndSetLogin(chatId, "abc"))
+        .thenThrow(new IllegalStateException("Логин уже участвует в другой регистрации"));
+
+    registrationFlow.startRegistration(chatId, "abc");
+
+    verify(messageSender)
+        .sendMessage(chatId, "Логин уже участвует в другой регистрации", null);
+    verify(profileService, never()).sendVerificationCode(ArgumentMatchers.anyString());
+    verify(profileService, never())
+        .updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
+  }
+
+  @Test
   void startRegistration_sendVerificationCodeSuccess_updatesStatusValidationAndNotifiesAdmin() {
     ParticipantDto participant = new ParticipantDto();
     participant.setStatus(ParticipantStatusEnum.ACTIVE);
@@ -212,6 +229,8 @@ class RegistrationFlowTest {
 
     ProfileDto updated = new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null);
     when(profileService.checkAndSetLogin(chatId, "abc")).thenReturn(updated);
+    when(profileService.sendVerificationCode("abc"))
+        .thenReturn(new RocketChatSendResponse(true, "ok"));
 
     RocketChatSendResponse rc = new RocketChatSendResponse(true, "ok");
     when(profileService.sendVerificationCode("abc")).thenReturn(rc);
@@ -232,16 +251,15 @@ class RegistrationFlowTest {
     participant.setParallelName("Core program");
     when(profileService.checkEduLogin("abc")).thenReturn(participant);
 
-    ProfileDto updated = new ProfileDto(chatId.toString(), "zzz", ProfileStatus.REGISTRATION, null);
+    ProfileDto updated = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
     when(profileService.checkAndSetLogin(chatId, "abc")).thenReturn(updated);
+    when(profileService.sendVerificationCode("abc"))
+        .thenReturn(new RocketChatSendResponse(true, "ok"));
 
     registrationFlow.startRegistration(chatId, "abc");
 
-    verify(profileService, never()).sendVerificationCode(ArgumentMatchers.anyString());
-    verify(profileService, never())
-        .updateProfileStatus(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-    verify(messageSender, never())
-        .sendMessage(eq(999L), ArgumentMatchers.anyString(), ArgumentMatchers.any());
+    verify(profileService).sendVerificationCode("abc");
+    verify(profileService).updateProfileStatus(chatId, ProfileStatus.VALIDATION);
   }
 
   @Test

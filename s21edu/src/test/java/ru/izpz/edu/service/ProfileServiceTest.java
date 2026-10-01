@@ -280,7 +280,9 @@ class ProfileServiceTest {
 
     // Then
     assertNotNull(result);
-    assertEquals("newuser", result.s21login());
+    assertNull(result.s21login());
+    assertEquals("newuser", testProfile.getPendingS21login());
+    assertNotNull(testProfile.getPendingRegistrationExpiresAt());
     verify(profileRepository).existsByS21login("newuser");
     verify(profileRepository).findByTelegramId("123456");
     verify(profileRepository).save(testProfile);
@@ -291,10 +293,10 @@ class ProfileServiceTest {
     testProfile.setS21login(null);
     Profile savedByAnotherTx = new Profile();
     savedByAnotherTx.setTelegramId("123456");
-    savedByAnotherTx.setS21login("newuser");
+    savedByAnotherTx.setPendingS21login("newuser");
     savedByAnotherTx.setStatus(ProfileStatus.CREATED);
 
-    ProfileDto expected = new ProfileDto("123456", "newuser", ProfileStatus.CREATED, null);
+    ProfileDto expected = new ProfileDto("123456", null, ProfileStatus.CREATED, null);
 
     when(profileRepository.findByTelegramId("123456"))
         .thenReturn(Optional.of(testProfile))
@@ -307,7 +309,7 @@ class ProfileServiceTest {
     ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
 
     assertNotNull(result);
-    assertEquals("newuser", result.s21login());
+    assertNull(result.s21login());
     verify(profileRepository).save(testProfile);
     verify(profileRepository, times(2)).findByTelegramId("123456");
   }
@@ -326,7 +328,7 @@ class ProfileServiceTest {
     ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
 
     assertNotNull(result);
-    assertEquals("newuser", result.s21login());
+    assertNull(result.s21login());
     verify(profileRepository).save(testProfile);
     verify(profileRepository, times(2)).findByTelegramId("123456");
   }
@@ -336,23 +338,17 @@ class ProfileServiceTest {
     testProfile.setS21login(null);
     Profile savedByAnotherTx = new Profile();
     savedByAnotherTx.setTelegramId("123456");
-    savedByAnotherTx.setS21login("another-login");
+    savedByAnotherTx.setPendingS21login("another-login");
     savedByAnotherTx.setStatus(ProfileStatus.CREATED);
-    ProfileDto differentLoginDto =
-        new ProfileDto("123456", "another-login", ProfileStatus.CREATED, null);
-
     when(profileRepository.findByTelegramId("123456"))
         .thenReturn(Optional.of(testProfile))
         .thenReturn(Optional.of(savedByAnotherTx));
     when(profileRepository.existsByS21login("newuser")).thenReturn(false);
     when(profileRepository.save(testProfile))
         .thenThrow(new DataIntegrityViolationException("duplicate key"));
-    when(profileMapper.toDto(savedByAnotherTx)).thenReturn(differentLoginDto);
-
-    ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
-
-    assertNotNull(result);
-    assertEquals("another-login", result.s21login());
+    assertThrows(
+        IllegalStateException.class,
+        () -> profileService.checkAndSetLogin("123456", "newuser"));
     verify(participantSyncService, never()).syncByEduLogin("newuser");
     verify(participantCoalitionService, never()).refreshByLogin("newuser");
   }
@@ -434,7 +430,7 @@ class ProfileServiceTest {
     ProfileDto result = profileService.checkAndSetLogin("123456", "newuser");
 
     assertNotNull(result);
-    assertEquals("newuser", result.s21login());
+    assertNull(result.s21login());
     verify(participantSyncService).syncByEduLogin("newuser");
     verify(participantCoalitionService).refreshByLogin("newuser");
   }
@@ -445,7 +441,7 @@ class ProfileServiceTest {
     ProfileValidation validation = new ProfileValidation();
     validation.setS21login("testuser");
     validation.setSecretCode("1234");
-    validation.setExpiresAt(OffsetDateTime.now());
+    validation.setExpiresAt(OffsetDateTime.now().plusDays(1));
 
     ProfileCodeResponse expectedResponse =
         new ProfileCodeResponse("testuser", "1234", validation.getExpiresAt());
@@ -462,6 +458,81 @@ class ProfileServiceTest {
     assertEquals("1234", result.getSecretCode());
     verify(profileValidationRepository).findByS21login("testuser");
     verify(profileValidationRepository, never()).save(any());
+  }
+
+  @Test
+  void confirmRegistration_shouldMovePendingLoginToConfirmedProfile() {
+    testProfile.setS21login(null);
+    testProfile.setPendingS21login("newuser");
+    testProfile.setPendingRegistrationExpiresAt(OffsetDateTime.now().plusDays(1));
+    ProfileValidation validation = new ProfileValidation();
+    validation.setS21login("newuser");
+    validation.setSecretCode("1234");
+    validation.setExpiresAt(OffsetDateTime.now().plusDays(1));
+
+    when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+    when(profileValidationRepository.findByS21login("newuser"))
+        .thenReturn(Optional.of(validation));
+    when(profileRepository.existsByS21login("newuser")).thenReturn(false);
+    when(profileRepository.save(testProfile)).thenReturn(testProfile);
+
+    final ProfileDto result = profileService.confirmRegistration("123456", "1234");
+
+    assertEquals(ProfileStatus.CONFIRMED, testProfile.getStatus());
+    assertEquals("newuser", testProfile.getS21login());
+    assertNull(testProfile.getPendingS21login());
+    assertNull(testProfile.getPendingRegistrationExpiresAt());
+    assertEquals("newuser", result.s21login());
+    verify(profileValidationRepository).deleteByS21login("newuser");
+  }
+
+  @Test
+  void confirmRegistration_shouldRejectCodeForAnotherTelegramProfile() {
+    testProfile.setS21login(null);
+    testProfile.setPendingS21login("newuser");
+    testProfile.setPendingRegistrationExpiresAt(OffsetDateTime.now().plusDays(1));
+    when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+
+    ProfileValidation validation = new ProfileValidation();
+    validation.setS21login("newuser");
+    validation.setSecretCode("1234");
+    validation.setExpiresAt(OffsetDateTime.now().plusDays(1));
+    when(profileValidationRepository.findByS21login("newuser"))
+        .thenReturn(Optional.of(validation));
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> profileService.confirmRegistration("123456", "9999"));
+    verify(profileRepository, never()).save(any());
+    verify(profileValidationRepository, never()).deleteByS21login("newuser");
+  }
+
+  @Test
+  void confirmRegistration_shouldRejectExpiredPendingAttempt() {
+    testProfile.setS21login(null);
+    testProfile.setPendingS21login("newuser");
+    testProfile.setPendingRegistrationExpiresAt(OffsetDateTime.now().minusMinutes(1));
+    when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> profileService.confirmRegistration("123456", "1234"));
+    verify(profileValidationRepository, never()).findByS21login(anyString());
+    verify(profileRepository, never()).save(any());
+  }
+
+  @Test
+  void checkAndSetLogin_shouldRejectLoginPendingForAnotherTelegramProfile() {
+    testProfile.setS21login(null);
+    when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+    when(profileRepository.existsByS21login("newuser")).thenReturn(false);
+    when(profileRepository.existsByPendingS21login("newuser")).thenReturn(true);
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> profileService.checkAndSetLogin("123456", "newuser"));
+    verify(profileRepository, never()).save(any());
+    verify(profileValidationRepository, never()).deleteByS21login("newuser");
   }
 
   @Test

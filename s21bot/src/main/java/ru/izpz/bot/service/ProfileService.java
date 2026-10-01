@@ -91,6 +91,13 @@ public class ProfileService {
     }
   }
 
+  @Retry(name = PROFILE_EDU)
+  @CircuitBreaker(name = PROFILE_EDU)
+  public ProfileDto confirmRegistration(Long chatId, String secretCode) {
+    return profileClient.confirmRegistration(
+        new ProfileRegistrationConfirmationRequest(chatId.toString(), secretCode));
+  }
+
   public RocketChatSendResponse sendVerificationCode(String s21login) {
     try {
       ProfileCodeResponse code = getVerificationCode(s21login);
