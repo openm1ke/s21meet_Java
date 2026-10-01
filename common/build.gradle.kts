@@ -1,6 +1,6 @@
 plugins {
     id("java-library")
-    id("org.openapi.generator") version "7.24.0"
+    id("org.openapi.generator") version "7.25.0"
 }
 
 val squareupOkhttpVersion: String by project
