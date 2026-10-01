@@ -63,6 +63,7 @@ subprojects {
     val junitPlatformVersion: String by project
     val lombokVersion: String by project
     val logbackVersion: String by project
+    val liquibaseVersion: String by project
     val postgresqlVersion: String by project
     val mockitoAgent by configurations.creating {
         isTransitive = false
@@ -80,6 +81,7 @@ subprojects {
                 bomProperty("jackson-bom.version", jacksonVersion)
                 bomProperty("junit-jupiter.version", junitJupiterVersion)
                 bomProperty("junit-platform.version", junitPlatformVersion)
+                bomProperty("liquibase.version", liquibaseVersion)
                 bomProperty("lombok.version", lombokVersion)
                 bomProperty("logback.version", logbackVersion)
                 bomProperty("mockito.version", mockitoVersion)
