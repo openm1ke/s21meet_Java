@@ -149,8 +149,26 @@ class RegistrationFlowTest {
 
     registrationFlow.startRegistration(chatId, "abc");
 
-    verify(messageSender).sendMessage(chatId, "Введенный логин не активен", null);
+    verify(messageSender).sendMessage(chatId, "Введенный логин недоступен для регистрации", null);
     verify(profileService, never()).checkAndSetLogin(anyLong(), anyString());
+  }
+
+  @Test
+  void startRegistration_frozenParticipant_allowsRegistration() {
+    ParticipantDto participant = new ParticipantDto();
+    participant.setStatus(ParticipantStatusEnum.FROZEN);
+    participant.setParallelName("Core program");
+    when(profileService.checkEduLogin("abc")).thenReturn(participant);
+    when(profileService.checkAndSetLogin(chatId, "abc"))
+        .thenReturn(new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null));
+    when(profileService.sendVerificationCode("abc"))
+        .thenReturn(new RocketChatSendResponse(true, "ok"));
+
+    registrationFlow.startRegistration(chatId, "abc");
+
+    verify(profileService).checkAndSetLogin(chatId, "abc");
+    verify(profileService).sendVerificationCode("abc");
+    verify(profileService).updateProfileStatus(chatId, ProfileStatus.VALIDATION);
   }
 
   @Test

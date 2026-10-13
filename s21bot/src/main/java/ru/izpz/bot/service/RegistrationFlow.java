@@ -83,9 +83,9 @@ public class RegistrationFlow {
       return;
     }
 
-    // проверяем что профиль активный
-    if (participant.getStatus() != ParticipantStatusEnum.ACTIVE) {
-      messageSender.sendMessage(chatId, "Введенный логин не активен", null);
+    // Для бота доступны активные и замороженные профили.
+    if (!isRegistrationAllowed(participant.getStatus())) {
+      messageSender.sendMessage(chatId, "Введенный логин недоступен для регистрации", null);
       return;
     }
 
@@ -144,15 +144,20 @@ public class RegistrationFlow {
     //   - если он не зарегистрирован то смотрим на его статус
     //          - статус заблокирован - не можем зарегать такой профиль (можно поменять статус на
     // блокированный)
-    //          - статус заморожен - тоже выставляем блок
+    //          - статус заморожен - разрешаем регистрацию в боте
     //          - статус не на основе пишем сообщение что не можем зарегать пока не будет на основе
     // (тут другой статус)
-    // если все хорошо и профиль активный и на основе то привязываем его к этому телеграм айди и
+    // если все хорошо и профиль активный или замороженный и на основе то привязываем его к этому
+    // телеграм айди и
     // пытаемся начать валидацию
 
   }
 
   private boolean isValidLogin(String login) {
     return login != null && login.matches("^[a-zA-Z]{3,30}$");
+  }
+
+  private boolean isRegistrationAllowed(ParticipantStatusEnum status) {
+    return status == ParticipantStatusEnum.ACTIVE || status == ParticipantStatusEnum.FROZEN;
   }
 }

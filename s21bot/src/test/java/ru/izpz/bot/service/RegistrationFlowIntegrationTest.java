@@ -254,8 +254,39 @@ class RegistrationFlowIntegrationTest {
     messageProcessor.handleTextMessage(textMessage(chatId, login));
 
     verify(messageSender, atLeastOnce())
-        .sendMessage(eq(chatId), eq("Введенный логин не активен"), any());
+        .sendMessage(eq(chatId), eq("Введенный логин недоступен для регистрации"), any());
     verify(profileClient, never()).checkAndSetLogin(any(ProfileRequest.class));
+  }
+
+  @Test
+  void registration_whenParticipantFrozen_shouldReachValidation() {
+    Long chatId = 50L;
+    String telegramId = chatId.toString();
+    String login = "perseste";
+    final String code = "1234";
+
+    when(profileClient.getOrCreateProfile(telegramId))
+        .thenReturn(new ProfileDto(telegramId, null, ProfileStatus.REGISTRATION, null));
+    ParticipantDto frozen = new ParticipantDto();
+    frozen.setLogin(login);
+    frozen.setStatus(ParticipantStatusEnum.FROZEN);
+    frozen.setParallelName("Core program");
+    when(profileClient.checkEduLogin(login)).thenReturn(frozen);
+    when(profileClient.checkAndSetLogin(any(ProfileRequest.class)))
+        .thenReturn(new ProfileDto(telegramId, login, ProfileStatus.REGISTRATION, null));
+    when(profileClient.getProfileCode(any()))
+        .thenReturn(new ProfileCodeResponse(login, code, OffsetDateTime.now()));
+    when(rocketChatClient.sendMessage(any())).thenReturn(new RocketChatSendResponse(true, "ok"));
+
+    messageProcessor.handleTextMessage(textMessage(chatId, login));
+
+    verify(profileClient).checkAndSetLogin(any(ProfileRequest.class));
+    verify(profileClient).updateProfileStatus(any(ProfileRequest.class));
+    verify(messageSender, atLeastOnce())
+        .sendMessage(
+            eq(chatId),
+            eq("В рокет чат был отправлен код для подтверждения для логина " + login),
+            any());
   }
 
   @Test
