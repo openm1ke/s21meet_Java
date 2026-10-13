@@ -39,6 +39,7 @@ import ru.izpz.dto.ParticipantRequest;
 import ru.izpz.dto.ProfileCodeRequest;
 import ru.izpz.dto.ProfileCodeResponse;
 import ru.izpz.dto.ProfileDto;
+import ru.izpz.dto.ProfileRegistrationConfirmationRequest;
 import ru.izpz.dto.ProfileRequest;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.ProjectExecutorDto;
@@ -160,6 +161,25 @@ class ProfileControllerTest {
         .andExpect(jsonPath("$.secretCode").value("1234"));
 
     verify(profileService).getVerificationCode("login");
+  }
+
+  @Test
+  void confirmRegistration_shouldReturnConfirmedProfile() throws Exception {
+    ProfileRegistrationConfirmationRequest request =
+        new ProfileRegistrationConfirmationRequest("123456", "1234");
+    ProfileDto dto = new ProfileDto("123456", "login", ProfileStatus.CONFIRMED, null);
+    when(profileService.confirmRegistration("123456", "1234")).thenReturn(dto);
+
+    mockMvc
+        .perform(
+            post("/profile/confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.s21login").value("login"))
+        .andExpect(jsonPath("$.status").value("CONFIRMED"));
+
+    verify(profileService).confirmRegistration("123456", "1234");
   }
 
   @Test

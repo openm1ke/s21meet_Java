@@ -1,4 +1,4 @@
-FROM liquibase/liquibase:4.31
+FROM liquibase/liquibase:4.33.0
 
 WORKDIR /liquibase
 

@@ -80,6 +80,13 @@ public class ProfileController {
     return ResponseEntity.ok(verificationCode);
   }
 
+  @PostMapping("/confirm")
+  ResponseEntity<ProfileDto> confirmRegistration(
+      @Valid @RequestBody ProfileRegistrationConfirmationRequest request) {
+    return ResponseEntity.ok(
+        profileService.confirmRegistration(request.telegramId(), request.secretCode()));
+  }
+
   @PostMapping("/campus")
   ResponseEntity<CampusResponse> getCampus(@Valid @RequestBody CampusRequest request) {
     log.info("Получен запрос на вывод карты кампуса для {}", request.getTelegramId());

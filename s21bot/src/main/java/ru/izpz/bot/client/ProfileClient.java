@@ -26,6 +26,9 @@ public interface ProfileClient {
   @PostMapping("/code")
   ProfileCodeResponse getProfileCode(@RequestBody ProfileCodeRequest request);
 
+  @PostMapping("/confirm")
+  ProfileDto confirmRegistration(@RequestBody ProfileRegistrationConfirmationRequest request);
+
   @PostMapping("/campus")
   CampusResponse getCampusMap(@RequestBody CampusRequest request);
 

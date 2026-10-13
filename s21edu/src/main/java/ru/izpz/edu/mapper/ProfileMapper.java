@@ -50,6 +50,8 @@ public interface ProfileMapper {
   }
 
   @Mapping(target = "id", ignore = true)
+  @Mapping(target = "pendingS21login", ignore = true)
+  @Mapping(target = "pendingRegistrationExpiresAt", ignore = true)
   Profile toEntity(ProfileDto dto);
 
   @Mapping(target = "updatedAt", ignore = true)

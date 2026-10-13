@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 019-safe-profile-registration
+      author: openmike
+      changes:
+        - addColumn:
+            tableName: profile
+            columns:
+              - column:
+                  name: pending_s21login
+                  type: VARCHAR(255)
+              - column:
+                  name: pending_registration_expires_at
+                  type: TIMESTAMP WITH TIME ZONE
+        - sql:
+            sql: >-
+              UPDATE profile
+              SET pending_s21login = s21login,
+                  pending_registration_expires_at = CURRENT_TIMESTAMP + INTERVAL '3 days',
+                  s21login = NULL
+              WHERE status = 'VALIDATION' AND s21login IS NOT NULL;
+        - addUniqueConstraint:
+            tableName: profile
+            columnNames: pending_s21login
+            constraintName: uk_profile_pending_s21login

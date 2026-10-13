@@ -113,7 +113,7 @@ class RegistrationFlowIntegrationTest {
 
     ProfileDto created = new ProfileDto(telegramId, null, ProfileStatus.CREATED, null);
     ProfileDto registration = new ProfileDto(telegramId, null, ProfileStatus.REGISTRATION, null);
-    ProfileDto validation = new ProfileDto(telegramId, login, ProfileStatus.VALIDATION, null);
+    ProfileDto validation = new ProfileDto(telegramId, null, ProfileStatus.VALIDATION, null);
 
     when(profileClient.getOrCreateProfile(telegramId))
         .thenReturn(created, registration, validation);
@@ -134,6 +134,8 @@ class RegistrationFlowIntegrationTest {
     when(profileClient.getProfileCode(any()))
         .thenReturn(new ProfileCodeResponse(login, code, OffsetDateTime.now()))
         .thenReturn(new ProfileCodeResponse(login, code, OffsetDateTime.now()));
+    when(profileClient.confirmRegistration(any()))
+        .thenReturn(new ProfileDto(telegramId, login, ProfileStatus.CONFIRMED, null));
     when(rocketChatClient.sendMessage(any())).thenReturn(new RocketChatSendResponse(true, "ok"));
 
     messageProcessor.handleTextMessage(textMessage(chatId, "/start"));
@@ -147,9 +149,7 @@ class RegistrationFlowIntegrationTest {
     messageProcessor.handleTextMessage(textMessage(chatId, code));
 
     List<ProfileStatus> statuses = capturedStatuses();
-    assertEquals(
-        List.of(ProfileStatus.REGISTRATION, ProfileStatus.VALIDATION, ProfileStatus.CONFIRMED),
-        statuses);
+    assertEquals(List.of(ProfileStatus.REGISTRATION, ProfileStatus.VALIDATION), statuses);
 
     verify(messageSender, atLeastOnce())
         .sendMessage(
@@ -254,8 +254,39 @@ class RegistrationFlowIntegrationTest {
     messageProcessor.handleTextMessage(textMessage(chatId, login));
 
     verify(messageSender, atLeastOnce())
-        .sendMessage(eq(chatId), eq("Введенный логин не активен"), any());
+        .sendMessage(eq(chatId), eq("Введенный логин недоступен для регистрации"), any());
     verify(profileClient, never()).checkAndSetLogin(any(ProfileRequest.class));
+  }
+
+  @Test
+  void registration_whenParticipantFrozen_shouldReachValidation() {
+    Long chatId = 50L;
+    String telegramId = chatId.toString();
+    String login = "perseste";
+    final String code = "1234";
+
+    when(profileClient.getOrCreateProfile(telegramId))
+        .thenReturn(new ProfileDto(telegramId, null, ProfileStatus.REGISTRATION, null));
+    ParticipantDto frozen = new ParticipantDto();
+    frozen.setLogin(login);
+    frozen.setStatus(ParticipantStatusEnum.FROZEN);
+    frozen.setParallelName("Core program");
+    when(profileClient.checkEduLogin(login)).thenReturn(frozen);
+    when(profileClient.checkAndSetLogin(any(ProfileRequest.class)))
+        .thenReturn(new ProfileDto(telegramId, login, ProfileStatus.REGISTRATION, null));
+    when(profileClient.getProfileCode(any()))
+        .thenReturn(new ProfileCodeResponse(login, code, OffsetDateTime.now()));
+    when(rocketChatClient.sendMessage(any())).thenReturn(new RocketChatSendResponse(true, "ok"));
+
+    messageProcessor.handleTextMessage(textMessage(chatId, login));
+
+    verify(profileClient).checkAndSetLogin(any(ProfileRequest.class));
+    verify(profileClient).updateProfileStatus(any(ProfileRequest.class));
+    verify(messageSender, atLeastOnce())
+        .sendMessage(
+            eq(chatId),
+            eq("В рокет чат был отправлен код для подтверждения для логина " + login),
+            any());
   }
 
   @Test
@@ -289,14 +320,14 @@ class RegistrationFlowIntegrationTest {
     String login = "perseste";
 
     when(profileClient.getOrCreateProfile(telegramId))
-        .thenReturn(new ProfileDto(telegramId, login, ProfileStatus.VALIDATION, null));
-    when(profileClient.getProfileCode(any()))
-        .thenReturn(new ProfileCodeResponse(login, "1111", OffsetDateTime.now()));
+        .thenReturn(new ProfileDto(telegramId, null, ProfileStatus.VALIDATION, null));
+    when(profileClient.confirmRegistration(any()))
+        .thenThrow(new IllegalStateException("Введенный код не совпадает"));
 
     messageProcessor.handleTextMessage(textMessage(chatId, "2222"));
 
     verify(messageSender, atLeastOnce())
-        .sendMessage(eq(chatId), eq("Введенный код не совпадает!"), any());
+        .sendMessage(eq(chatId), eq("Введенный код не совпадает"), any());
     verify(profileClient, never()).updateProfileStatus(any(ProfileRequest.class));
   }
 
@@ -307,8 +338,8 @@ class RegistrationFlowIntegrationTest {
     String login = "perseste";
 
     when(profileClient.getOrCreateProfile(telegramId))
-        .thenReturn(new ProfileDto(telegramId, login, ProfileStatus.VALIDATION, null));
-    when(profileClient.getProfileCode(any())).thenThrow(createFeignException(502, "edu down"));
+        .thenReturn(new ProfileDto(telegramId, null, ProfileStatus.VALIDATION, null));
+    when(profileClient.confirmRegistration(any())).thenThrow(createFeignException(502, "edu down"));
 
     messageProcessor.handleTextMessage(textMessage(chatId, "1234"));
 

@@ -95,9 +95,11 @@ jobs:
             IMAGE_TAG="$VERSION_TAG"
           fi
 
-          echo "image_repo=${IMAGE_REPO}" >> "$GITHUB_OUTPUT"
-          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "version_tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
+          {
+            echo "image_repo=${IMAGE_REPO}"
+            echo "image_tag=${IMAGE_TAG}"
+            echo "version_tag=${VERSION_TAG}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish build summary
         shell: bash
