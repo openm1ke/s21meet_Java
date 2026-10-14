@@ -23,6 +23,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
@@ -287,6 +288,35 @@ class RegistrationFlowIntegrationTest {
             eq(chatId),
             eq("В рокет чат был отправлен код для подтверждения для логина " + login),
             any());
+  }
+
+  @Test
+  void registration_whenLoginStartsWithUppercase_shouldUseLowercaseForApiAndProfile() {
+    Long chatId = 51L;
+    String telegramId = chatId.toString();
+    final String inputLogin = "PerSeste";
+    final String normalizedLogin = "perseste";
+
+    when(profileClient.getOrCreateProfile(telegramId))
+        .thenReturn(new ProfileDto(telegramId, null, ProfileStatus.REGISTRATION, null));
+    ParticipantDto participant = new ParticipantDto();
+    participant.setLogin(normalizedLogin);
+    participant.setStatus(ParticipantStatusEnum.ACTIVE);
+    participant.setParallelName("Core program");
+    when(profileClient.checkEduLogin(normalizedLogin)).thenReturn(participant);
+    when(profileClient.checkAndSetLogin(any(ProfileRequest.class)))
+        .thenReturn(new ProfileDto(telegramId, normalizedLogin, ProfileStatus.REGISTRATION, null));
+    when(profileClient.getProfileCode(any()))
+        .thenReturn(new ProfileCodeResponse(normalizedLogin, "1234", OffsetDateTime.now()));
+    when(rocketChatClient.sendMessage(any())).thenReturn(new RocketChatSendResponse(true, "ok"));
+
+    messageProcessor.handleTextMessage(textMessage(chatId, inputLogin));
+
+    verify(profileClient).checkEduLogin(normalizedLogin);
+    ArgumentCaptor<ProfileRequest> profileRequest = ArgumentCaptor.forClass(ProfileRequest.class);
+    verify(profileClient).checkAndSetLogin(profileRequest.capture());
+    assertEquals(normalizedLogin, profileRequest.getValue().getS21login());
+    verify(profileClient).getProfileCode(any());
   }
 
   @Test

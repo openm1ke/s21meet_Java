@@ -172,6 +172,27 @@ class RegistrationFlowTest {
   }
 
   @Test
+  void startRegistration_normalizesLoginToLowerCaseBeforeLookupAndPersistence() {
+    ParticipantDto participant = new ParticipantDto();
+    participant.setStatus(ParticipantStatusEnum.ACTIVE);
+    participant.setParallelName("Core program");
+    when(profileService.checkEduLogin("abc")).thenReturn(participant);
+    when(profileService.checkAndSetLogin(chatId, "abc"))
+        .thenReturn(new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null));
+    when(profileService.sendVerificationCode("abc"))
+        .thenReturn(new RocketChatSendResponse(true, "ok"));
+
+    registrationFlow.startRegistration(chatId, "AbC");
+
+    verify(profileService).checkEduLogin("abc");
+    verify(profileService).checkAndSetLogin(chatId, "abc");
+    verify(profileService).sendVerificationCode("abc");
+    verify(messageSender)
+        .sendMessage(
+            chatId, "В рокет чат был отправлен код для подтверждения для логина abc", null);
+  }
+
+  @Test
   void startRegistration_parallelNameNull_sendsError() {
     ParticipantDto participant = new ParticipantDto();
     participant.setStatus(ParticipantStatusEnum.ACTIVE);
