@@ -130,11 +130,13 @@ public class RegistrationFlow {
       return;
     }
 
-    messageSender.sendMessage(
-        chatId, "В рокет чат был отправлен код для подтверждения для логина " + login, null);
+    messageSender.sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
     messageSender.sendMessage(
         botProperties.admin(),
-        "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(),
+        "В рокет чат было отправлено сообщение для логина "
+            + login
+            + ": "
+            + rocketChatResponse.getMessage(),
         null);
     profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
 

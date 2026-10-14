@@ -153,9 +153,11 @@ class RegistrationFlowIntegrationTest {
     assertEquals(List.of(ProfileStatus.REGISTRATION, ProfileStatus.VALIDATION), statuses);
 
     verify(messageSender, atLeastOnce())
+        .sendMessage(eq(chatId), eq("В рокет чат был отправлен код для подтверждения"), any());
+    verify(messageSender, atLeastOnce())
         .sendMessage(
-            eq(chatId),
-            eq("В рокет чат был отправлен код для подтверждения для логина " + login),
+            eq(1L),
+            eq("В рокет чат было отправлено сообщение для логина " + login + ": ok"),
             any());
     verify(messageSender, atLeastOnce())
         .sendMessage(eq(chatId), eq("Ваш аккаунт был успешно зарегистрирован"), any());
@@ -213,10 +215,7 @@ class RegistrationFlowIntegrationTest {
         .sendMessage(
             eq(chatId), eq("Ошибка отправки сообщения в рокетчат, сообщите админу"), any());
     verify(messageSender, atLeastOnce())
-        .sendMessage(
-            eq(chatId),
-            eq("В рокет чат был отправлен код для подтверждения для логина " + login),
-            any());
+        .sendMessage(eq(chatId), eq("В рокет чат был отправлен код для подтверждения"), any());
   }
 
   @Test
@@ -284,10 +283,7 @@ class RegistrationFlowIntegrationTest {
     verify(profileClient).checkAndSetLogin(any(ProfileRequest.class));
     verify(profileClient).updateProfileStatus(any(ProfileRequest.class));
     verify(messageSender, atLeastOnce())
-        .sendMessage(
-            eq(chatId),
-            eq("В рокет чат был отправлен код для подтверждения для логина " + login),
-            any());
+        .sendMessage(eq(chatId), eq("В рокет чат был отправлен код для подтверждения"), any());
   }
 
   @Test
@@ -403,10 +399,7 @@ class RegistrationFlowIntegrationTest {
     messageProcessor.handleTextMessage(textMessage(chatId, login));
 
     verify(messageSender, atLeastOnce())
-        .sendMessage(
-            eq(chatId),
-            eq("В рокет чат был отправлен код для подтверждения для логина " + login),
-            any());
+        .sendMessage(eq(chatId), eq("В рокет чат был отправлен код для подтверждения"), any());
     verify(messageSender, atLeastOnce())
         .sendMessage(eq(chatId), eq("Ошибка обработки профиля, попробуйте позже"), any());
   }

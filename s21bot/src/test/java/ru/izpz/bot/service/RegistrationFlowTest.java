@@ -188,8 +188,7 @@ class RegistrationFlowTest {
     verify(profileService).checkAndSetLogin(chatId, "abc");
     verify(profileService).sendVerificationCode("abc");
     verify(messageSender)
-        .sendMessage(
-            chatId, "В рокет чат был отправлен код для подтверждения для логина abc", null);
+        .sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
   }
 
   @Test
@@ -274,9 +273,9 @@ class RegistrationFlowTest {
     registrationFlow.startRegistration(chatId, "abc");
 
     verify(messageSender)
-        .sendMessage(
-            chatId, "В рокет чат был отправлен код для подтверждения для логина abc", null);
-    verify(messageSender).sendMessage(999L, "В рокет чат было отправлено сообщение ok", null);
+        .sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
+    verify(messageSender)
+        .sendMessage(999L, "В рокет чат было отправлено сообщение для логина abc: ok", null);
     verify(profileService).updateProfileStatus(chatId, ProfileStatus.VALIDATION);
   }
 

@@ -222,7 +222,8 @@ class ProfileServiceTest {
                 req ->
                     S21LOGIN.equals(req.getUsername())
                         && req.getMessage() != null
-                        && req.getMessage().contains(SECRET_CODE)));
+                        && req.getMessage()
+                            .equals("Привет! Вот твой код подтверждения: " + SECRET_CODE)));
   }
 
   @Test
