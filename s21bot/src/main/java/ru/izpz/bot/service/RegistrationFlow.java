@@ -1,6 +1,7 @@
 package ru.izpz.bot.service;
 
 import feign.FeignException;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -72,9 +73,11 @@ public class RegistrationFlow {
       return;
     }
 
+    String login = text.toLowerCase(Locale.ROOT);
+
     ParticipantDto participant;
     try {
-      participant = profileService.checkEduLogin(text);
+      participant = profileService.checkEduLogin(login);
     } catch (EduLoginCheckException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "edu_login_check_exception");
       ServiceErrorDto error = e.getError();
@@ -98,7 +101,7 @@ public class RegistrationFlow {
     }
 
     try {
-      profileService.checkAndSetLogin(chatId, text);
+      profileService.checkAndSetLogin(chatId, login);
     } catch (FeignException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, REASON_FEIGN_EXCEPTION);
       messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
@@ -112,7 +115,7 @@ public class RegistrationFlow {
     // если логин совпадает значит мы его сохранили
     RocketChatSendResponse rocketChatResponse;
     try {
-      rocketChatResponse = profileService.sendVerificationCode(text);
+      rocketChatResponse = profileService.sendVerificationCode(login);
     } catch (RocketChatSendException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "rocketchat_send_exception");
       messageSender.sendMessage(
@@ -127,11 +130,13 @@ public class RegistrationFlow {
       return;
     }
 
-    messageSender.sendMessage(
-        chatId, "В рокет чат был отправлен код для подтверждения для логина " + text, null);
+    messageSender.sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
     messageSender.sendMessage(
         botProperties.admin(),
-        "В рокет чат было отправлено сообщение " + rocketChatResponse.getMessage(),
+        "В рокет чат было отправлено сообщение для логина "
+            + login
+            + ": "
+            + rocketChatResponse.getMessage(),
         null);
     profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
 

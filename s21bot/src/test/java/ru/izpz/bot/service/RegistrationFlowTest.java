@@ -172,6 +172,26 @@ class RegistrationFlowTest {
   }
 
   @Test
+  void startRegistration_normalizesLoginToLowerCaseBeforeLookupAndPersistence() {
+    ParticipantDto participant = new ParticipantDto();
+    participant.setStatus(ParticipantStatusEnum.ACTIVE);
+    participant.setParallelName("Core program");
+    when(profileService.checkEduLogin("abc")).thenReturn(participant);
+    when(profileService.checkAndSetLogin(chatId, "abc"))
+        .thenReturn(new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null));
+    when(profileService.sendVerificationCode("abc"))
+        .thenReturn(new RocketChatSendResponse(true, "ok"));
+
+    registrationFlow.startRegistration(chatId, "AbC");
+
+    verify(profileService).checkEduLogin("abc");
+    verify(profileService).checkAndSetLogin(chatId, "abc");
+    verify(profileService).sendVerificationCode("abc");
+    verify(messageSender)
+        .sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
+  }
+
+  @Test
   void startRegistration_parallelNameNull_sendsError() {
     ParticipantDto participant = new ParticipantDto();
     participant.setStatus(ParticipantStatusEnum.ACTIVE);
@@ -253,9 +273,9 @@ class RegistrationFlowTest {
     registrationFlow.startRegistration(chatId, "abc");
 
     verify(messageSender)
-        .sendMessage(
-            chatId, "В рокет чат был отправлен код для подтверждения для логина abc", null);
-    verify(messageSender).sendMessage(999L, "В рокет чат было отправлено сообщение ok", null);
+        .sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
+    verify(messageSender)
+        .sendMessage(999L, "В рокет чат было отправлено сообщение для логина abc: ok", null);
     verify(profileService).updateProfileStatus(chatId, ProfileStatus.VALIDATION);
   }
 
