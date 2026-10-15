@@ -163,6 +163,40 @@ class ConfirmedFlowTest {
   }
 
   @Test
+  void startConfirmed_slashLogin_showsProfileByLogin() {
+    ChatMember member = member("member");
+    when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+    ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+    confirmedFlow.startConfirmed(chatId, profile, "/login QuArKrOn");
+
+    verify(callbackHandler).showProfile(chatId, "quarkron");
+  }
+
+  @Test
+  void startConfirmed_startDeepLink_showsProfileByLogin() {
+    ChatMember member = member("member");
+    when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+    ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+    confirmedFlow.startConfirmed(chatId, profile, "/start login_QuArKrOn");
+
+    verify(callbackHandler).showProfile(chatId, "quarkron");
+  }
+
+  @Test
+  void startConfirmed_slashLoginWithoutArgument_sendsUsage() {
+    ChatMember member = member("member");
+    when(messageSender.execute(any())).thenReturn(Optional.of(member));
+
+    ProfileDto profile = new ProfileDto(chatId.toString(), "abc", ProfileStatus.CONFIRMED, null);
+    confirmedFlow.startConfirmed(chatId, profile, "/login");
+
+    verify(messageSender).sendMessage(chatId, "Использование: /login <логин>", null);
+    verifyNoInteractions(callbackHandler);
+  }
+
+  @Test
   void startConfirmed_menuFriends_callsCallbackHandlerShowFriends() {
     ChatMember member = member("member");
     when(messageSender.execute(any())).thenReturn(Optional.of(member));

@@ -35,6 +35,17 @@ public class MessageSender {
     telegramExecutorService.execute(msg);
   }
 
+  public void sendHtmlMessage(Long chatId, String text, ReplyKeyboard replyKeyboard) {
+    SendMessage msg =
+        SendMessage.builder()
+            .chatId(chatId.toString())
+            .text(text)
+            .parseMode("HTML")
+            .replyMarkup(replyKeyboard)
+            .build();
+    telegramExecutorService.execute(msg);
+  }
+
   public void sendMessageWithoutWebPreview(Long chatId, String text, ReplyKeyboard replyKeyboard) {
     SendMessage msg =
         SendMessage.builder()

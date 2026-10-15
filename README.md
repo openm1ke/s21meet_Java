@@ -177,6 +177,7 @@ chmod +x gradlew dev.sh
 #### `s21bot.env`
 
 - `BOT_TOKEN` — токен Telegram-бота.
+- `BOT_USERNAME` — username Telegram-бота без символа `@`; используется для ссылок на карточки профиля из уведомлений администратора.
 - `BOT_ADMIN` — Telegram id администратора.
 - `BOT_GROUP` — id/username целевой группы.
 - `BOT_GROUP_INVITE_LINK` — инвайт-ссылка в группу.

@@ -88,6 +88,7 @@
 ### `s21bot` (`env/local/s21bot.env.example`)
 
 - `BOT_TOKEN=`
+- `BOT_USERNAME=` — username Telegram-бота без `@` для deep link-ссылок на профиль.
 - `BOT_ADMIN=`
 - `BOT_GROUP=`
 - `BOT_GROUP_INVITE_LINK=`

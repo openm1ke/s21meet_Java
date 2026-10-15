@@ -1,5 +1,6 @@
 bot:
   token: test-token
+  username: test_bot
   admin: 1
   group: 1
   group-invite-link: https://example.org/invite
