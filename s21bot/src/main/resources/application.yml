@@ -20,6 +20,7 @@ spring:
 
 bot:
   token: ${BOT_TOKEN}
+  username: ${BOT_USERNAME:}
   admin: ${BOT_ADMIN}
   group: ${BOT_GROUP}
   group-invite-link: ${BOT_GROUP_INVITE_LINK}

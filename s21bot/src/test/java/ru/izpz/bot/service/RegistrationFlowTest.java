@@ -64,6 +64,7 @@ class RegistrationFlowTest {
   @BeforeEach
   void setUp() {
     lenient().when(botProperties.admin()).thenReturn(999L);
+    lenient().when(botProperties.username()).thenReturn("test_bot");
   }
 
   @Test
@@ -275,7 +276,11 @@ class RegistrationFlowTest {
     verify(messageSender)
         .sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
     verify(messageSender)
-        .sendMessage(999L, "В рокет чат было отправлено сообщение для логина abc: ok", null);
+        .sendHtmlMessage(
+            999L,
+            "В рокет чат было отправлено сообщение для логина "
+                + "<a href=\"https://t.me/test_bot?start=login_abc\">abc</a>: ok",
+            null);
     verify(profileService).updateProfileStatus(chatId, ProfileStatus.VALIDATION);
   }
 

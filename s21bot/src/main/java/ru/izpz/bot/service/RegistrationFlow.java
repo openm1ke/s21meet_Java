@@ -5,6 +5,7 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.RocketChatSendException;
@@ -131,12 +132,9 @@ public class RegistrationFlow {
     }
 
     messageSender.sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
-    messageSender.sendMessage(
+    messageSender.sendHtmlMessage(
         botProperties.admin(),
-        "В рокет чат было отправлено сообщение для логина "
-            + login
-            + ": "
-            + rocketChatResponse.getMessage(),
+        formatAdminVerificationMessage(login, rocketChatResponse.getMessage()),
         null);
     profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
 
@@ -156,6 +154,26 @@ public class RegistrationFlow {
     // телеграм айди и
     // пытаемся начать валидацию
 
+  }
+
+  private String formatAdminVerificationMessage(String login, String message) {
+    String escapedMessage = HtmlUtils.htmlEscape(String.valueOf(message));
+    String botUsername = botProperties.username();
+    if (botUsername == null || botUsername.isBlank()) {
+      return "В рокет чат было отправлено сообщение для логина " + login + ": " + escapedMessage;
+    }
+
+    String normalizedUsername = botUsername.trim();
+    if (normalizedUsername.startsWith("@")) {
+      normalizedUsername = normalizedUsername.substring(1);
+    }
+    String deepLink = "https://t.me/" + normalizedUsername + "?start=login_" + login;
+    return "В рокет чат было отправлено сообщение для логина <a href=\""
+        + deepLink
+        + "\">"
+        + login
+        + "</a>: "
+        + escapedMessage;
   }
 
   private boolean isValidLogin(String login) {

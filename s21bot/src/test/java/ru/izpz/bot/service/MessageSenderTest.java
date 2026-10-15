@@ -67,6 +67,18 @@ class MessageSenderTest {
   }
 
   @Test
+  void sendHtmlMessage_setsHtmlParseMode() {
+    when(telegramExecutorService.execute(any())).thenReturn(Optional.empty());
+
+    messageSender.sendHtmlMessage(1L, "<a href=\"https://example.org\">login</a>", null);
+
+    ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
+    verify(telegramExecutorService).execute(captor.capture());
+    assertEquals("HTML", captor.getValue().getParseMode());
+    assertEquals("<a href=\"https://example.org\">login</a>", captor.getValue().getText());
+  }
+
+  @Test
   void sendMessageWithoutWebPreview_setsDisableWebPreviewFlag() {
     Message msg = mock(Message.class);
     when(telegramExecutorService.execute(any())).thenReturn(Optional.of(msg));

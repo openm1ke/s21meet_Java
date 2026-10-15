@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,8 @@ import ru.izpz.dto.*;
 @RequiredArgsConstructor
 public class ConfirmedFlow {
   private static final int MAX_FRIEND_NAME_LENGTH = 100;
+  private static final int SINGLE_ARGUMENT_COUNT = 1;
+  private static final String LOGIN_DEEP_LINK_PREFIX = "login_";
   private static final String DEVELOPER_PROJECT_EMOJI =
       "\uD83D\uDC68\uD83C\uDFFB\u200D\uD83D\uDCBB";
 
@@ -47,9 +50,10 @@ public class ConfirmedFlow {
 
     telegramWebAppMenuService.ensureMenuButton(chatId);
 
-    if (SlashCommandEnum.contains(text)) {
-      SlashCommandEnum.fromText(text)
-          .ifPresent(command -> handleSlashCommand(chatId, profile, command));
+    Optional<SlashCommandEnum.ParsedCommand> slashCommand = SlashCommandEnum.parse(text);
+    if (slashCommand.isPresent()) {
+      handleSlashCommand(chatId, profile, slashCommand.get());
+      return;
     }
 
     // если текст это команда меню
@@ -75,12 +79,27 @@ public class ConfirmedFlow {
             });
   }
 
-  private void handleSlashCommand(Long chatId, ProfileDto profile, SlashCommandEnum command) {
+  private void handleSlashCommand(
+      Long chatId, ProfileDto profile, SlashCommandEnum.ParsedCommand parsedCommand) {
+    SlashCommandEnum command = parsedCommand.command();
+    List<String> args = parsedCommand.args();
     switch (command) {
       case START -> {
-        ReplyKeyboard keyboard =
-            telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
-        messageSender.sendMessage(chatId, "Выберите команду", keyboard);
+        if (args.size() == SINGLE_ARGUMENT_COUNT
+            && args.get(0).startsWith(LOGIN_DEEP_LINK_PREFIX)) {
+          showProfileByLogin(chatId, args.get(0).substring(LOGIN_DEEP_LINK_PREFIX.length()));
+        } else if (args.isEmpty()) {
+          showMenu(chatId);
+        } else {
+          messageSender.sendMessage(chatId, "Неизвестный параметр команды /start", null);
+        }
+      }
+      case LOGIN -> {
+        if (args.size() != SINGLE_ARGUMENT_COUNT) {
+          messageSender.sendMessage(chatId, "Использование: /login <логин>", null);
+        } else {
+          showProfileByLogin(chatId, args.get(0));
+        }
       }
       case ME ->
           messageSender.sendMessage(chatId, "Твой telegram id: " + profile.telegramId(), null);
@@ -92,6 +111,16 @@ public class ConfirmedFlow {
         // no-op
       }
     }
+  }
+
+  private void showMenu(Long chatId) {
+    ReplyKeyboard keyboard =
+        telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3);
+    messageSender.sendMessage(chatId, "Выберите команду", keyboard);
+  }
+
+  private void showProfileByLogin(Long chatId, String login) {
+    callbackHandler.showProfile(chatId, login.toLowerCase(Locale.ROOT));
   }
 
   private void handleMenuCommand(Long chatId, ProfileDto profile, MenuCommandEnum command) {

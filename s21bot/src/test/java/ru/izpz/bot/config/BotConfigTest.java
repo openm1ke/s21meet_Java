@@ -143,7 +143,7 @@ class BotConfigTest {
   }
 
   private static BotProperties properties(BotProperties.ProxyProperties proxy) {
-    return new BotProperties(TOKEN, 1L, 1L, INVITE, WEBAPP, proxy);
+    return new BotProperties(TOKEN, "test_bot", 1L, 1L, INVITE, WEBAPP, proxy);
   }
 
   private okhttp3.OkHttpClient extractInternalClient(OkHttpTelegramClient telegramClient) {

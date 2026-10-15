@@ -63,6 +63,7 @@ class RegistrationFlowIntegrationTest {
     BotProperties botProperties =
         new BotProperties(
             "token",
+            "test_bot",
             1L,
             2L,
             "https://t.me/some-group",
@@ -155,9 +156,15 @@ class RegistrationFlowIntegrationTest {
     verify(messageSender, atLeastOnce())
         .sendMessage(eq(chatId), eq("В рокет чат был отправлен код для подтверждения"), any());
     verify(messageSender, atLeastOnce())
-        .sendMessage(
+        .sendHtmlMessage(
             eq(1L),
-            eq("В рокет чат было отправлено сообщение для логина " + login + ": ok"),
+            eq(
+                "В рокет чат было отправлено сообщение для логина "
+                    + "<a href=\"https://t.me/test_bot?start=login_"
+                    + login
+                    + "\">"
+                    + login
+                    + "</a>: ok"),
             any());
     verify(messageSender, atLeastOnce())
         .sendMessage(eq(chatId), eq("Ваш аккаунт был успешно зарегистрирован"), any());
