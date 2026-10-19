@@ -156,15 +156,14 @@ class RegistrationFlowIntegrationTest {
     verify(messageSender, atLeastOnce())
         .sendMessage(eq(chatId), eq("В рокет чат был отправлен код для подтверждения"), any());
     verify(messageSender, atLeastOnce())
-        .sendHtmlMessage(
+        .sendHtmlMessageWithoutWebPreview(
             eq(1L),
             eq(
-                "В рокет чат было отправлено сообщение для логина "
-                    + "<a href=\"https://t.me/test_bot?start=login_"
+                "🔎 <a href=\"https://t.me/test_bot?start=login_"
                     + login
-                    + "\">"
+                    + "\">Открыть профиль "
                     + login
-                    + "</a>: ok"),
+                    + "</a>\nВ Rocket.Chat отправлено сообщение: ok"),
             any());
     verify(messageSender, atLeastOnce())
         .sendMessage(eq(chatId), eq("Ваш аккаунт был успешно зарегистрирован"), any());

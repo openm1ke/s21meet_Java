@@ -132,7 +132,7 @@ public class RegistrationFlow {
     }
 
     messageSender.sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
-    messageSender.sendHtmlMessage(
+    messageSender.sendHtmlMessageWithoutWebPreview(
         botProperties.admin(),
         formatAdminVerificationMessage(login, rocketChatResponse.getMessage()),
         null);
@@ -157,10 +157,14 @@ public class RegistrationFlow {
   }
 
   private String formatAdminVerificationMessage(String login, String message) {
+    String escapedLogin = HtmlUtils.htmlEscape(login);
     String escapedMessage = HtmlUtils.htmlEscape(String.valueOf(message));
     String botUsername = botProperties.username();
     if (botUsername == null || botUsername.isBlank()) {
-      return "В рокет чат было отправлено сообщение для логина " + login + ": " + escapedMessage;
+      return "В Rocket.Chat отправлено сообщение для логина "
+          + escapedLogin
+          + ": "
+          + escapedMessage;
     }
 
     String normalizedUsername = botUsername.trim();
@@ -168,11 +172,11 @@ public class RegistrationFlow {
       normalizedUsername = normalizedUsername.substring(1);
     }
     String deepLink = "https://t.me/" + normalizedUsername + "?start=login_" + login;
-    return "В рокет чат было отправлено сообщение для логина <a href=\""
+    return "🔎 <a href=\""
         + deepLink
-        + "\">"
-        + login
-        + "</a>: "
+        + "\">Открыть профиль "
+        + escapedLogin
+        + "</a>\nВ Rocket.Chat отправлено сообщение: "
         + escapedMessage;
   }
 

@@ -1,8 +1,10 @@
 package ru.izpz.bot.service;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -122,6 +124,74 @@ class MessageProcessorTest {
 
     verify(registrationFlow).startOnboarding(1L);
     verifyNoInteractions(confirmedFlow);
+  }
+
+  @Test
+  void handleTextMessage_loginDeepLink_deletesIncomingMessageBeforeProcessing() {
+    Message msg = mock(Message.class);
+    when(msg.getChatId()).thenReturn(1L);
+    when(msg.getMessageId()).thenReturn(42);
+    when(msg.getText()).thenReturn("/start login_quarkron");
+    when(messageSender.deleteMessage(1L, 42)).thenReturn(true);
+
+    ProfileDto profile = new ProfileDto("1", "abc", ProfileStatus.CONFIRMED, null);
+    when(profileService.getProfile(1L)).thenReturn(profile);
+
+    messageProcessor.handleTextMessage(msg);
+
+    verify(messageSender).deleteMessage(1L, 42);
+    verify(confirmedFlow).startConfirmed(1L, profile, "/start login_quarkron");
+  }
+
+  @Test
+  void handleTextMessage_loginDeepLinkDeletionFailure_continuesProcessing() {
+    Message msg = mock(Message.class);
+    when(msg.getChatId()).thenReturn(1L);
+    when(msg.getMessageId()).thenReturn(42);
+    when(msg.getText()).thenReturn("/start login_quarkron");
+    when(messageSender.deleteMessage(1L, 42)).thenReturn(false);
+
+    ProfileDto profile = new ProfileDto("1", "abc", ProfileStatus.CONFIRMED, null);
+    when(profileService.getProfile(1L)).thenReturn(profile);
+
+    messageProcessor.handleTextMessage(msg);
+
+    verify(messageSender).deleteMessage(1L, 42);
+    verify(confirmedFlow).startConfirmed(1L, profile, "/start login_quarkron");
+    verifyNoInteractions(registrationFlow);
+  }
+
+  @Test
+  void handleTextMessage_loginDeepLinkDeletionException_continuesProcessing() {
+    Message msg = mock(Message.class);
+    when(msg.getChatId()).thenReturn(1L);
+    when(msg.getMessageId()).thenReturn(42);
+    when(msg.getText()).thenReturn("/start login_quarkron");
+    doThrow(new RuntimeException("message already deleted"))
+        .when(messageSender)
+        .deleteMessage(1L, 42);
+
+    ProfileDto profile = new ProfileDto("1", "abc", ProfileStatus.CONFIRMED, null);
+    when(profileService.getProfile(1L)).thenReturn(profile);
+
+    messageProcessor.handleTextMessage(msg);
+
+    verify(confirmedFlow).startConfirmed(1L, profile, "/start login_quarkron");
+  }
+
+  @Test
+  void handleTextMessage_regularStart_doesNotDeleteIncomingMessage() {
+    Message msg = mock(Message.class);
+    when(msg.getChatId()).thenReturn(1L);
+    when(msg.getText()).thenReturn("/start");
+
+    ProfileDto profile = new ProfileDto("1", null, ProfileStatus.CREATED, null);
+    when(profileService.getProfile(1L)).thenReturn(profile);
+
+    messageProcessor.handleTextMessage(msg);
+
+    verify(messageSender, never()).deleteMessage(any(), any());
+    verify(registrationFlow).startOnboarding(1L);
   }
 
   @Test
