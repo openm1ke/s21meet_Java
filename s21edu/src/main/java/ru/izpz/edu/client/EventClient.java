@@ -35,6 +35,8 @@ public class EventClient {
         throw new PlatformClientException("API вернул пустой ответ для событий", null);
       }
       return response.getEvents();
+    } catch (PlatformClientException ex) {
+      throw ex;
     } catch (RuntimeException e) {
       log.error("Неожиданная ошибка при получении событий", e);
       throw new PlatformClientException("Unexpected error while fetching events", e);

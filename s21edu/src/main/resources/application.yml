@@ -106,8 +106,9 @@ resilience4j:
         enableExponentialBackoff: ${EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF:true}
         exponentialBackoffMultiplier: ${EXTERNAL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER:2}
         retryExceptions:
-          - ru.izpz.edu.exception.PlatformClientException
-          - ru.izpz.edu.client.GraphQlRemoteException
+          - ru.izpz.edu.exception.PlatformRateLimitException
+          - ru.izpz.edu.exception.PlatformTransientException
+          - ru.izpz.edu.exception.PlatformTransportException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
       campusWorkplace:
         maxAttempts: ${CAMPUS_WORKPLACE_RETRY_MAX_ATTEMPTS:2}
@@ -115,7 +116,6 @@ resilience4j:
         enableExponentialBackoff: ${CAMPUS_WORKPLACE_RETRY_EXPONENTIAL_BACKOFF:true}
         exponentialBackoffMultiplier: ${CAMPUS_WORKPLACE_RETRY_EXPONENTIAL_MULTIPLIER:2}
         retryExceptions:
-          - ru.izpz.edu.exception.PlatformClientException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
       projectsRest:
         maxAttempts: ${PROJECTS_REST_RETRY_MAX_ATTEMPTS:2}
@@ -123,19 +123,30 @@ resilience4j:
         enableExponentialBackoff: ${PROJECTS_REST_RETRY_EXPONENTIAL_BACKOFF:true}
         exponentialBackoffMultiplier: ${PROJECTS_REST_RETRY_EXPONENTIAL_MULTIPLIER:2}
         retryExceptions:
-          - ru.izpz.edu.exception.PlatformClientException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
       graphqlCredentials:
         maxAttempts: ${GRAPHQL_CREDENTIALS_RETRY_MAX_ATTEMPTS:2}
         waitDuration: ${GRAPHQL_CREDENTIALS_RETRY_WAIT_DURATION:250ms}
+        retryExceptions:
+          - ru.izpz.edu.client.GraphQlRateLimitException
+          - ru.izpz.edu.client.GraphQlTransientException
+          - ru.izpz.edu.client.GraphQlTransportException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
       graphqlProjects:
         maxAttempts: ${GRAPHQL_PROJECTS_RETRY_MAX_ATTEMPTS:2}
         waitDuration: ${GRAPHQL_PROJECTS_RETRY_WAIT_DURATION:300ms}
+        retryExceptions:
+          - ru.izpz.edu.client.GraphQlRateLimitException
+          - ru.izpz.edu.client.GraphQlTransientException
+          - ru.izpz.edu.client.GraphQlTransportException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
       graphqlCoalition:
         maxAttempts: ${GRAPHQL_COALITION_RETRY_MAX_ATTEMPTS:2}
         waitDuration: ${GRAPHQL_COALITION_RETRY_WAIT_DURATION:300ms}
         retryExceptions:
-          - ru.izpz.edu.client.GraphQlRemoteException
+          - ru.izpz.edu.client.GraphQlRateLimitException
+          - ru.izpz.edu.client.GraphQlTransientException
+          - ru.izpz.edu.client.GraphQlTransportException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
       graphqlGlobal:
         maxAttempts: ${GRAPHQL_GLOBAL_RETRY_MAX_ATTEMPTS:2}
@@ -143,7 +154,9 @@ resilience4j:
         enableExponentialBackoff: ${GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_BACKOFF:true}
         exponentialBackoffMultiplier: ${GRAPHQL_GLOBAL_RETRY_EXPONENTIAL_MULTIPLIER:2}
         retryExceptions:
-          - ru.izpz.edu.client.GraphQlRemoteException
+          - ru.izpz.edu.client.GraphQlRateLimitException
+          - ru.izpz.edu.client.GraphQlTransientException
+          - ru.izpz.edu.client.GraphQlTransportException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
       participantProfile:
         maxAttempts: ${PARTICIPANT_PROFILE_RETRY_MAX_ATTEMPTS:3}
@@ -153,6 +166,7 @@ resilience4j:
         retryExceptions:
           - ru.izpz.edu.exception.PlatformRateLimitException
           - ru.izpz.edu.exception.PlatformTransientException
+          - ru.izpz.edu.exception.PlatformTransportException
           - io.github.resilience4j.ratelimiter.RequestNotPermitted
 
 logging:

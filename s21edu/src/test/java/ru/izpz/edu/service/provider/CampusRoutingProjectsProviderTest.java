@@ -2,6 +2,7 @@ package ru.izpz.edu.service.provider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
 import ru.izpz.edu.dto.StudentProjectData;
+import ru.izpz.edu.exception.PlatformRateLimitException;
+import ru.izpz.edu.exception.PlatformUnauthorizedException;
 import ru.izpz.edu.model.StudentCredentials;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,6 +78,36 @@ class CampusRoutingProjectsProviderTest {
 
     assertEquals(CampusRoutingProjectsProvider.RefreshResult.SKIPPED_NO_PROVIDER, result);
     verify(restApiProjectsProvider, never()).refreshStudentProjectsByLogin("login");
+  }
+
+  @Test
+  void refreshStudentProjects_shouldNotRetryPermanentPlatformErrors() {
+    StudentCredentials credentials = new StudentCredentials();
+    credentials.setLogin("login");
+    when(restProvider.getIfAvailable()).thenReturn(restApiProjectsProvider);
+    doThrow(new PlatformUnauthorizedException("forbidden", 403, java.util.Map.of(), "html"))
+        .when(restApiProjectsProvider)
+        .refreshStudentProjectsByLogin("login");
+
+    CampusRoutingProjectsProvider.RefreshResult result =
+        routingProvider.refreshStudentProjects(credentials);
+
+    assertEquals(CampusRoutingProjectsProvider.RefreshResult.FAILED, result);
+  }
+
+  @Test
+  void refreshStudentProjects_shouldMarkTransientPlatformErrorsRetryable() {
+    StudentCredentials credentials = new StudentCredentials();
+    credentials.setLogin("login");
+    when(restProvider.getIfAvailable()).thenReturn(restApiProjectsProvider);
+    doThrow(new PlatformRateLimitException("rate limit", 429, java.util.Map.of(), "{}"))
+        .when(restApiProjectsProvider)
+        .refreshStudentProjectsByLogin("login");
+
+    CampusRoutingProjectsProvider.RefreshResult result =
+        routingProvider.refreshStudentProjects(credentials);
+
+    assertEquals(CampusRoutingProjectsProvider.RefreshResult.RETRYABLE_FAILURE, result);
   }
 
   @Test

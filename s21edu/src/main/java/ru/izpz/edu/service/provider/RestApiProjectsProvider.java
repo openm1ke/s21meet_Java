@@ -1,6 +1,5 @@
 package ru.izpz.edu.service.provider;
 
-import java.io.Serial;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -16,7 +15,6 @@ import ru.izpz.dto.model.ParticipantProjectsV1DTO;
 import ru.izpz.dto.model.TeamMemberV1DTO;
 import ru.izpz.edu.config.ProjectsProviderConfig;
 import ru.izpz.edu.dto.StudentProjectData;
-import ru.izpz.edu.exception.PlatformClientException;
 import ru.izpz.edu.model.StudentCredentials;
 import ru.izpz.edu.model.StudentProject;
 import ru.izpz.edu.repository.StudentCredentialsRepository;
@@ -56,9 +54,6 @@ public class RestApiProjectsProvider implements ProjectsProvider {
     }
 
     FetchResult fetched = fetchAllStatuses(login);
-    if (!fetched.success()) {
-      throw new ProjectsRefreshException("Не удалось получить проекты участника");
-    }
 
     List<StudentProjectData> result = new ArrayList<>();
     Set<Long> seenIds = new HashSet<>();
@@ -91,20 +86,12 @@ public class RestApiProjectsProvider implements ProjectsProvider {
 
   private FetchResult fetchAllStatuses(String login) {
     long pageSize = Math.max(1, projectsProperties.getRest().getPageSize());
-    try {
-      ParticipantProjectsV1DTO response =
-          restProjectsApiFacade.getParticipantProjectsByLogin(login, pageSize, null);
-      if (response == null) {
-        return FetchResult.success(List.of());
-      }
-      return FetchResult.success(response.getProjects());
-    } catch (PlatformClientException e) {
-      log.warn("Не удалось получить проекты для {}: {}", login, e.getMessage());
-      return FetchResult.failure();
-    } catch (RuntimeException e) {
-      log.warn("Непредвиденная ошибка получения проектов для {}: {}", login, e.getMessage());
-      return FetchResult.failure();
+    ParticipantProjectsV1DTO response =
+        restProjectsApiFacade.getParticipantProjectsByLogin(login, pageSize, null);
+    if (response == null) {
+      return FetchResult.success(List.of());
     }
+    return FetchResult.success(response.getProjects());
   }
 
   private void appendDistinct(
@@ -176,21 +163,9 @@ public class RestApiProjectsProvider implements ProjectsProvider {
         project.getLocalCourseId());
   }
 
-  private record FetchResult(boolean success, List<ParticipantProjectV1DTO> projects) {
+  private record FetchResult(List<ParticipantProjectV1DTO> projects) {
     private static FetchResult success(List<ParticipantProjectV1DTO> projects) {
-      return new FetchResult(true, projects);
-    }
-
-    private static FetchResult failure() {
-      return new FetchResult(false, List.of());
-    }
-  }
-
-  private static class ProjectsRefreshException extends RuntimeException {
-    @Serial private static final long serialVersionUID = 1L;
-
-    private ProjectsRefreshException(String message) {
-      super(message);
+      return new FetchResult(projects == null ? List.of() : projects);
     }
   }
 }

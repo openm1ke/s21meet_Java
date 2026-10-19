@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -167,11 +168,12 @@ class StudentProjectsSchedulerTest {
         .thenReturn(CampusRoutingProjectsProvider.RefreshResult.SKIPPED_NO_PROVIDER);
     when(campusRoutingProjectsProvider.refreshStudentProjects(failed))
         .thenThrow(new RuntimeException("boom"));
+    ReflectionTestUtils.setField(scheduler, "retryAttempts", 3);
 
     scheduler.refreshActiveProjects();
 
     verify(campusRoutingProjectsProvider).refreshStudentProjects(skipped);
-    verify(campusRoutingProjectsProvider).refreshStudentProjects(failed);
+    verify(campusRoutingProjectsProvider, times(1)).refreshStudentProjects(failed);
   }
 
   @Test
