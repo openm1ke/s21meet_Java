@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -42,6 +43,19 @@ public class MessageSender {
             .text(text)
             .parseMode("HTML")
             .replyMarkup(replyKeyboard)
+            .build();
+    telegramExecutorService.execute(msg);
+  }
+
+  public void sendHtmlMessageWithoutWebPreview(
+      Long chatId, String text, ReplyKeyboard replyKeyboard) {
+    SendMessage msg =
+        SendMessage.builder()
+            .chatId(chatId.toString())
+            .text(text)
+            .parseMode("HTML")
+            .replyMarkup(replyKeyboard)
+            .disableWebPagePreview(true)
             .build();
     telegramExecutorService.execute(msg);
   }
@@ -115,6 +129,26 @@ public class MessageSender {
             .build();
 
     telegramExecutorService.execute(sendMessage);
+  }
+
+  public boolean deleteMessage(Long chatId, Integer messageId) {
+    if (chatId == null || messageId == null) {
+      log.debug("Нельзя удалить Telegram сообщение без chatId и messageId");
+      return false;
+    }
+
+    try {
+      DeleteMessage deleteMessage =
+          DeleteMessage.builder().chatId(chatId.toString()).messageId(messageId).build();
+      boolean deleted = telegramExecutorService.execute(deleteMessage).orElse(false);
+      if (!deleted) {
+        log.debug("Telegram сообщение не удалено: chatId={}, messageId={}", chatId, messageId);
+      }
+      return deleted;
+    } catch (RuntimeException e) {
+      log.warn("Ошибка удаления Telegram сообщения: chatId={}, messageId={}", chatId, messageId, e);
+      return false;
+    }
   }
 
   public void answerCallbackQuery(String callbackId, String toastText, boolean showAlert) {

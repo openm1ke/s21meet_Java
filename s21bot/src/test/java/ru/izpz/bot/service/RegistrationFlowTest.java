@@ -276,10 +276,10 @@ class RegistrationFlowTest {
     verify(messageSender)
         .sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
     verify(messageSender)
-        .sendHtmlMessage(
+        .sendHtmlMessageWithoutWebPreview(
             999L,
-            "В рокет чат было отправлено сообщение для логина "
-                + "<a href=\"https://t.me/test_bot?start=login_abc\">abc</a>: ok",
+            "🔎 <a href=\"https://t.me/test_bot?start=login_abc\">Открыть профиль abc</a>\n"
+                + "В Rocket.Chat отправлено сообщение: ok",
             null);
     verify(profileService).updateProfileStatus(chatId, ProfileStatus.VALIDATION);
   }

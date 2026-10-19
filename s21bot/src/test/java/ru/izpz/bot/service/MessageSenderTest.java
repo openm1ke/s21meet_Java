@@ -1,9 +1,11 @@
 package ru.izpz.bot.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
@@ -76,6 +79,19 @@ class MessageSenderTest {
     verify(telegramExecutorService).execute(captor.capture());
     assertEquals("HTML", captor.getValue().getParseMode());
     assertEquals("<a href=\"https://example.org\">login</a>", captor.getValue().getText());
+  }
+
+  @Test
+  void sendHtmlMessageWithoutWebPreview_setsHtmlParseModeAndDisablesPreview() {
+    when(telegramExecutorService.execute(any())).thenReturn(Optional.empty());
+
+    messageSender.sendHtmlMessageWithoutWebPreview(
+        1L, "🔎 <a href=\"https://example.org\">Открыть профиль abc</a>", null);
+
+    ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
+    verify(telegramExecutorService).execute(captor.capture());
+    assertEquals("HTML", captor.getValue().getParseMode());
+    assertEquals(Boolean.TRUE, captor.getValue().getDisableWebPagePreview());
   }
 
   @Test
@@ -146,6 +162,41 @@ class MessageSenderTest {
     messageSender.removeReplyKeyboard(1L, "m");
 
     verify(telegramExecutorService).execute(any(SendMessage.class));
+  }
+
+  @Test
+  void deleteMessage_returnsTrueWhenTelegramConfirmsDeletion() {
+    when(telegramExecutorService.execute(any(DeleteMessage.class))).thenReturn(Optional.of(true));
+
+    assertTrue(messageSender.deleteMessage(1L, 2));
+
+    verify(telegramExecutorService).execute(any(DeleteMessage.class));
+  }
+
+  @Test
+  void deleteMessage_returnsFalseWhenTelegramCannotDeleteMessage() {
+    when(telegramExecutorService.execute(any(DeleteMessage.class))).thenReturn(Optional.empty());
+
+    assertFalse(messageSender.deleteMessage(1L, 2));
+
+    verify(telegramExecutorService).execute(any(DeleteMessage.class));
+  }
+
+  @Test
+  void deleteMessage_returnsFalseWhenTelegramThrows() {
+    when(telegramExecutorService.execute(any(DeleteMessage.class)))
+        .thenThrow(new RuntimeException("message already deleted"));
+
+    assertFalse(messageSender.deleteMessage(1L, 2));
+
+    verify(telegramExecutorService).execute(any(DeleteMessage.class));
+  }
+
+  @Test
+  void deleteMessage_withMissingIdentifiers_doesNotCallTelegram() {
+    assertFalse(messageSender.deleteMessage(1L, null));
+
+    verify(telegramExecutorService, never()).execute(any());
   }
 
   @Test
