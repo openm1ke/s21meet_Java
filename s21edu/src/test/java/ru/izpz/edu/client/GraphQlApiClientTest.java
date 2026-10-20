@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -210,6 +211,54 @@ class GraphQlApiClientTest {
     assertFalse(exception.getMessage().contains("slow down"));
   }
 
+  @ParameterizedTest
+  @CsvSource({"UNAUTHENTICATED,401", "FORBIDDEN,403"})
+  void execute_shouldClassifyGraphQlAuthorizationErrorCodes(String code, int expectedStatus)
+      throws Exception {
+    String responseBody = graphQlErrorResponse(code);
+    stubGraphQlErrorResponse(responseBody);
+
+    GraphQlUnauthorizedException exception =
+        assertThrows(GraphQlUnauthorizedException.class, this::executeDefaultOperation);
+
+    assertEquals(expectedStatus, exception.getCode());
+  }
+
+  @Test
+  void execute_shouldClassifyGraphQlNotFoundErrorCode() throws Exception {
+    String responseBody = graphQlErrorResponse("NOT_FOUND");
+    stubGraphQlErrorResponse(responseBody);
+
+    GraphQlNotFoundException exception =
+        assertThrows(GraphQlNotFoundException.class, this::executeDefaultOperation);
+
+    assertEquals(HttpStatus.NOT_FOUND.value(), exception.getCode());
+  }
+
+  @Test
+  void execute_shouldClassifyGraphQlTransientErrorCode() throws Exception {
+    String responseBody = graphQlErrorResponse("SERVICE_UNAVAILABLE");
+    stubGraphQlErrorResponse(responseBody);
+
+    GraphQlTransientException exception =
+        assertThrows(GraphQlTransientException.class, this::executeDefaultOperation);
+
+    assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), exception.getCode());
+  }
+
+  @Test
+  void graphQlRemoteException_shouldExposeMetadataAndLimitResponseBody() {
+    Map<String, java.util.List<String>> headers = Map.of("X-Test", java.util.List.of("ok"));
+    String responseBody = "x".repeat(16_385);
+
+    GraphQlRemoteException exception =
+        new GraphQlRemoteException("safe message", 502, headers, responseBody);
+
+    assertEquals(headers, exception.getResponseHeaders());
+    assertEquals(16_384, exception.getResponseBody().length());
+    assertFalse(exception.getMessage().contains(responseBody));
+  }
+
   @Test
   void execute_shouldKeepGraphQlValidationErrorNonRetryable() throws Exception {
     when(tokenService.getToken()).thenReturn("tok");
@@ -310,6 +359,20 @@ class GraphQlApiClientTest {
 
   private String executeDefaultOperation() {
     return client.execute("op", Map.of(), "query", String.class);
+  }
+
+  private void stubGraphQlErrorResponse(String responseBody) throws Exception {
+    when(tokenService.getToken()).thenReturn("tok");
+    when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+        .thenReturn(ResponseEntity.ok(responseBody));
+    when(objectMapper.readTree(anyString())).thenReturn(jsonNode(responseBody));
+  }
+
+  private static String graphQlErrorResponse(String code) {
+    return "{\"errors\":[{\"message\":\"remote failure\","
+        + "\"extensions\":{\"code\":\""
+        + code
+        + "\"}}]}";
   }
 
   private static JsonNode jsonNode(String json) throws JsonProcessingException {

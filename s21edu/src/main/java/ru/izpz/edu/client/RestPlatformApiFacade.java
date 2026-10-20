@@ -201,10 +201,7 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
     HttpHeaders headers = ex.getResponseHeaders();
     Map<String, List<String>> mappedHeaders = headers == null ? Collections.emptyMap() : headers;
     int code = ex.getStatusCode().value();
-    String message =
-        ex.getStatusText() == null || ex.getStatusText().isBlank()
-            ? REQUEST_FAILED_MESSAGE
-            : ex.getStatusText();
+    String message = ex.getStatusText().isBlank() ? REQUEST_FAILED_MESSAGE : ex.getStatusText();
     String body = limitResponseBody(ex.getResponseBodyAsString());
     if (code == HTTP_UNAUTHORIZED || code == HTTP_FORBIDDEN) {
       return new PlatformUnauthorizedException(message, code, mappedHeaders, body);

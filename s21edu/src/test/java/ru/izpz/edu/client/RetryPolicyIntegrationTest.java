@@ -146,36 +146,35 @@ class RetryPolicyIntegrationTest {
 
     @Retry(name = "externalGlobal")
     public void externalCall(RuntimeException exception) {
-      invocationCount.incrementAndGet();
-      throw exception;
+      invokeAndThrow(exception);
     }
 
     @Retry(name = "participantProfile")
     public void participantProfileCall(RuntimeException exception) {
-      invocationCount.incrementAndGet();
-      throw exception;
+      invokeAndThrow(exception);
     }
 
     @Retry(name = "graphqlGlobal")
     public void graphqlCall(RuntimeException exception) {
-      invocationCount.incrementAndGet();
-      throw exception;
+      invokeAndThrow(exception);
     }
 
     @Retry(name = "graphqlCredentials")
     public void graphqlCredentialsCall(RuntimeException exception) {
-      invocationCount.incrementAndGet();
-      throw exception;
+      invokeAndThrow(exception);
     }
 
     @Retry(name = "graphqlProjects")
     public void graphqlProjectsCall(RuntimeException exception) {
-      invocationCount.incrementAndGet();
-      throw exception;
+      invokeAndThrow(exception);
     }
 
     @Retry(name = "graphqlCoalition")
     public void graphqlCoalitionCall(RuntimeException exception) {
+      invokeAndThrow(exception);
+    }
+
+    private void invokeAndThrow(RuntimeException exception) {
       invocationCount.incrementAndGet();
       throw exception;
     }

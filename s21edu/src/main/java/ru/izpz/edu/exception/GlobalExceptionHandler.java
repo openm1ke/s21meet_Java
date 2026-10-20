@@ -24,6 +24,8 @@ public class GlobalExceptionHandler {
   private static final String STATUS_FIELD = "status";
   private static final String MESSAGE_FIELD = "message";
   private static final String EXTERNAL_SERVICE_MESSAGE = "Ошибка внешнего сервиса";
+  private static final String EXTERNAL_SERVICE_UNAVAILABLE_MESSAGE =
+      "Внешний сервис временно недоступен";
 
   /**
    * Обрабатывает исключения клиента платформы.
@@ -39,10 +41,10 @@ public class GlobalExceptionHandler {
     }
     if (ex instanceof PlatformTransportException) {
       return safeResponse(
-          HttpStatus.SERVICE_UNAVAILABLE.value(), "Внешний сервис временно недоступен");
+          HttpStatus.SERVICE_UNAVAILABLE.value(), EXTERNAL_SERVICE_UNAVAILABLE_MESSAGE);
     }
     if (ex instanceof PlatformTransientException) {
-      return safeResponse(HttpStatus.BAD_GATEWAY.value(), "Внешний сервис временно недоступен");
+      return safeResponse(HttpStatus.BAD_GATEWAY.value(), EXTERNAL_SERVICE_UNAVAILABLE_MESSAGE);
     }
 
     if (ex instanceof PlatformUnauthorizedException) {
@@ -130,7 +132,7 @@ public class GlobalExceptionHandler {
   public ResponseEntity<Object> handleCircuitOpen(CallNotPermittedException ex) {
     log.warn("Circuit breaker open: {}", ex.getMessage());
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-        .body(Map.of(STATUS_FIELD, 503, MESSAGE_FIELD, "Внешний сервис временно недоступен"));
+        .body(Map.of(STATUS_FIELD, 503, MESSAGE_FIELD, EXTERNAL_SERVICE_UNAVAILABLE_MESSAGE));
   }
 
   /**

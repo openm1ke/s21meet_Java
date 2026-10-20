@@ -70,11 +70,12 @@ class EventClientTest {
     PlatformUnauthorizedException expected =
         new PlatformUnauthorizedException("forbidden", 403, java.util.Map.of(), "html");
     when(platformApi.getEvents(any(), any(), any(), any(), any())).thenThrow(expected);
+    OffsetDateTime from = OffsetDateTime.now();
+    OffsetDateTime to = from.plusHours(1);
 
     PlatformClientException actual =
         assertThrows(
-            PlatformClientException.class,
-            () -> eventClient.getEvents(OffsetDateTime.now(), OffsetDateTime.now(), null, 50L, 0L));
+            PlatformClientException.class, () -> eventClient.getEvents(from, to, null, 50L, 0L));
 
     assertSame(expected, actual);
   }
