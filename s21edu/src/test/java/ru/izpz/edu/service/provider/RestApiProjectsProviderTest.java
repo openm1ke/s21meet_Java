@@ -2,6 +2,7 @@ package ru.izpz.edu.service.provider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -25,6 +26,7 @@ import ru.izpz.dto.model.ParticipantProjectsV1DTO;
 import ru.izpz.edu.config.ProjectsProviderConfig;
 import ru.izpz.edu.dto.StudentProjectData;
 import ru.izpz.edu.exception.PlatformClientException;
+import ru.izpz.edu.exception.PlatformUnauthorizedException;
 import ru.izpz.edu.model.StudentProject;
 import ru.izpz.edu.repository.StudentCredentialsRepository;
 import ru.izpz.edu.repository.StudentProjectRepository;
@@ -174,6 +176,21 @@ class RestApiProjectsProviderTest {
             org.mockito.ArgumentMatchers.anyString(),
             org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.anyList());
+  }
+
+  @Test
+  void refreshStudentProjectsByLogin_shouldPreservePermanentPlatformError() {
+    PlatformUnauthorizedException error =
+        new PlatformUnauthorizedException("forbidden", 403, java.util.Map.of(), "html");
+    when(restProjectsApiFacade.getParticipantProjectsByLogin("login", 1000L, null))
+        .thenThrow(error);
+
+    PlatformUnauthorizedException actual =
+        assertThrows(
+            PlatformUnauthorizedException.class,
+            () -> provider.refreshStudentProjectsByLogin("login"));
+
+    assertEquals(error, actual);
   }
 
   @Test

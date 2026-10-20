@@ -88,6 +88,81 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  void handlePlatformException_shouldReturnSafeMessageForHtmlForbiddenResponse() {
+    PlatformClientException ex =
+        new PlatformUnauthorizedException(
+            "Forbidden", 403, Map.of(), "<html>secret upstream response</html>");
+
+    ResponseEntity<Object> response = handler.handlePlatformException(ex);
+
+    assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    assertInstanceOf(Map.class, response.getBody());
+    Map<?, ?> body = (Map<?, ?>) response.getBody();
+    assertEquals(403, body.get("status"));
+    assertEquals("Внешняя платформа запретила доступ", body.get("message"));
+    assertEquals(false, body.toString().contains("secret upstream response"));
+  }
+
+  @Test
+  void handlePlatformException_shouldReturnSafeMessageForNotFoundResponse() {
+    PlatformClientException ex =
+        new PlatformNotFoundException("Not found", 404, Map.of(), "not-json");
+
+    ResponseEntity<Object> response = handler.handlePlatformException(ex);
+
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    assertInstanceOf(Map.class, response.getBody());
+    Map<?, ?> body = (Map<?, ?>) response.getBody();
+    assertEquals(404, body.get("status"));
+    assertEquals("Ресурс внешней платформы не найден", body.get("message"));
+  }
+
+  @Test
+  void handlePlatformException_shouldMapTransportErrorTo503() {
+    PlatformClientException ex =
+        new PlatformTransportException("transport error", new RuntimeException("timeout"));
+
+    ResponseEntity<Object> response = handler.handlePlatformException(ex);
+
+    assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+    assertInstanceOf(Map.class, response.getBody());
+    Map<?, ?> body = (Map<?, ?>) response.getBody();
+    assertEquals(503, body.get("status"));
+  }
+
+  @Test
+  void handlePlatformException_shouldUseSafeResponseForNullBodyAndInvalidStatus() {
+    PlatformClientException ex = new PlatformClientException("transport", 0, null, null);
+
+    ResponseEntity<Object> response = handler.handlePlatformException(ex);
+
+    assertEquals(HttpStatus.BAD_GATEWAY, response.getStatusCode());
+    assertInstanceOf(Map.class, response.getBody());
+    Map<?, ?> body = (Map<?, ?>) response.getBody();
+    assertEquals(502, body.get("status"));
+  }
+
+  @Test
+  void handlePlatformException_shouldRejectJsonWithMismatchedStatus() throws Exception {
+    ServiceErrorDto dto =
+        new ServiceErrorDto()
+            .setStatus(500)
+            .setCode("INTERNAL_SERVER_ERROR")
+            .setMessage("internal")
+            .setExceptionUUID("uuid");
+    PlatformClientException ex =
+        new PlatformClientException(
+            "bad request", 400, Map.of(), objectMapper.writeValueAsString(dto));
+
+    ResponseEntity<Object> response = handler.handlePlatformException(ex);
+
+    assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    assertInstanceOf(Map.class, response.getBody());
+    Map<?, ?> body = (Map<?, ?>) response.getBody();
+    assertEquals("Ошибка внешнего сервиса", body.get("message"));
+  }
+
+  @Test
   void handleAllExceptions_shouldReturn500() {
     ResponseEntity<String> response = handler.handleAllExceptions(new RuntimeException("boom"));
     assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());

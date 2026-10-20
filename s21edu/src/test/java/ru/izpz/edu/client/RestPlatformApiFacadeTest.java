@@ -1,9 +1,11 @@
 package ru.izpz.edu.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import ru.izpz.dto.api.CampusApi;
@@ -31,9 +34,15 @@ import ru.izpz.dto.model.ParticipantLoginsV1DTO;
 import ru.izpz.dto.model.ParticipantProjectsV1DTO;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.exception.PlatformClientException;
+import ru.izpz.edu.exception.PlatformNotFoundException;
+import ru.izpz.edu.exception.PlatformRateLimitException;
+import ru.izpz.edu.exception.PlatformTransientException;
+import ru.izpz.edu.exception.PlatformTransportException;
+import ru.izpz.edu.exception.PlatformUnauthorizedException;
 
 @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
 class RestPlatformApiFacadeTest {
+  private static final int HTTP_RATE_LIMIT = 429;
 
   private CampusApi campusApi;
   private ClusterApi clusterApi;
@@ -287,5 +296,113 @@ class RestPlatformApiFacadeTest {
             PlatformClientException.class,
             () -> facade.getParticipantProjectsByLogin("u2", 1L, 0L, "REGISTERED"));
     assertEquals(401, apiException.getCode());
+  }
+
+  @Test
+  void getClustersByCampus_shouldMapPermanentHttpStatusesWithoutChangingType() throws Exception {
+    UUID campusId = UUID.randomUUID();
+    int[] statuses = {400, 409};
+
+    for (int status : statuses) {
+      doThrow(responseException(status)).when(campusApi).getClustersByCampus(campusId);
+
+      PlatformClientException apiException =
+          assertThrows(PlatformClientException.class, () -> facade.getClustersByCampus(campusId));
+
+      assertEquals(PlatformClientException.class, apiException.getClass());
+      assertEquals(status, apiException.getCode());
+    }
+  }
+
+  @Test
+  void getClustersByCampus_shouldMapUnauthorizedAndNotFoundStatuses() throws Exception {
+    UUID campusId = UUID.randomUUID();
+
+    doThrow(responseException(403)).when(campusApi).getClustersByCampus(campusId);
+    PlatformClientException forbidden =
+        assertThrows(PlatformClientException.class, () -> facade.getClustersByCampus(campusId));
+    assertInstanceOf(PlatformUnauthorizedException.class, forbidden);
+    assertEquals(403, forbidden.getCode());
+
+    doThrow(responseException(404)).when(campusApi).getClustersByCampus(campusId);
+    PlatformClientException notFound =
+        assertThrows(PlatformClientException.class, () -> facade.getClustersByCampus(campusId));
+    assertInstanceOf(PlatformNotFoundException.class, notFound);
+    assertEquals(404, notFound.getCode());
+  }
+
+  @Test
+  void getClustersByCampus_shouldMapRetryableHttpStatuses() throws Exception {
+    UUID campusId = UUID.randomUUID();
+    int[] statuses = {408, 429, 500, 502, 503, 504};
+
+    for (int status : statuses) {
+      doThrow(responseException(status)).when(campusApi).getClustersByCampus(campusId);
+
+      PlatformClientException apiException =
+          assertThrows(PlatformClientException.class, () -> facade.getClustersByCampus(campusId));
+
+      if (status == HTTP_RATE_LIMIT) {
+        assertInstanceOf(PlatformRateLimitException.class, apiException);
+      } else {
+        assertInstanceOf(PlatformTransientException.class, apiException);
+      }
+      assertEquals(status, apiException.getCode());
+    }
+  }
+
+  @Test
+  void getClustersByCampus_shouldPreserveRetryAfterHeader() throws Exception {
+    UUID campusId = UUID.randomUUID();
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Retry-After", "5");
+    RestClientResponseException response = responseException(429, headers);
+    doThrow(response).when(campusApi).getClustersByCampus(campusId);
+
+    PlatformClientException apiException =
+        assertThrows(PlatformClientException.class, () -> facade.getClustersByCampus(campusId));
+
+    assertInstanceOf(PlatformRateLimitException.class, apiException);
+    assertEquals(List.of("5"), apiException.getResponseHeaders().get("Retry-After"));
+  }
+
+  @Test
+  void getClustersByCampus_shouldMapTransportErrorToRetryableTransportException() {
+    UUID campusId = UUID.randomUUID();
+    ResourceAccessException transport = new ResourceAccessException("read timed out");
+    when(campusApi.getClustersByCampus(campusId)).thenThrow(transport);
+
+    PlatformClientException apiException =
+        assertThrows(PlatformClientException.class, () -> facade.getClustersByCampus(campusId));
+
+    assertInstanceOf(PlatformTransportException.class, apiException);
+    assertSame(transport, apiException.getCause());
+    assertEquals(0, apiException.getCode());
+  }
+
+  @Test
+  void getClustersByCampus_shouldNotRetryUnknownServerStatusType() throws Exception {
+    UUID campusId = UUID.randomUUID();
+    doThrow(responseException(501)).when(campusApi).getClustersByCampus(campusId);
+
+    PlatformClientException apiException =
+        assertThrows(PlatformClientException.class, () -> facade.getClustersByCampus(campusId));
+
+    assertEquals(PlatformClientException.class, apiException.getClass());
+    assertEquals(501, apiException.getCode());
+  }
+
+  private RestClientResponseException responseException(int status) {
+    return responseException(status, new HttpHeaders());
+  }
+
+  private RestClientResponseException responseException(int status, HttpHeaders headers) {
+    return new RestClientResponseException(
+        "HTTP " + status,
+        status,
+        "status",
+        headers,
+        "response-body".getBytes(StandardCharsets.UTF_8),
+        StandardCharsets.UTF_8);
   }
 }

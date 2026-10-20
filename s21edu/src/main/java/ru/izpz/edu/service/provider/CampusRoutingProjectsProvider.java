@@ -7,6 +7,10 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ru.izpz.edu.dto.StudentProjectData;
+import ru.izpz.edu.exception.PlatformClientException;
+import ru.izpz.edu.exception.PlatformRateLimitException;
+import ru.izpz.edu.exception.PlatformTransientException;
+import ru.izpz.edu.exception.PlatformTransportException;
 import ru.izpz.edu.model.StudentCredentials;
 
 @Slf4j
@@ -35,8 +39,32 @@ public class CampusRoutingProjectsProvider {
     if (provider == null) {
       return RefreshResult.SKIPPED_NO_PROVIDER;
     }
-    provider.refreshStudentProjectsByLogin(login);
-    return RefreshResult.SUCCESS;
+    try {
+      provider.refreshStudentProjectsByLogin(login);
+      return RefreshResult.SUCCESS;
+    } catch (PlatformRateLimitException
+        | PlatformTransientException
+        | PlatformTransportException e) {
+      log.warn(
+          "Временная ошибка обновления проектов для {}: type={}, status={}",
+          login,
+          e.getClass().getSimpleName(),
+          e.getCode());
+      return RefreshResult.RETRYABLE_FAILURE;
+    } catch (PlatformClientException e) {
+      log.warn(
+          "Постоянная ошибка обновления проектов для {}: type={}, status={}",
+          login,
+          e.getClass().getSimpleName(),
+          e.getCode());
+      return RefreshResult.FAILED;
+    } catch (RuntimeException e) {
+      log.warn(
+          "Непредвиденная ошибка обновления проектов для {}: type={}",
+          login,
+          e.getClass().getSimpleName());
+      return RefreshResult.FAILED;
+    }
   }
 
   public String providerTypeForSchoolId() {
@@ -63,6 +91,8 @@ public class CampusRoutingProjectsProvider {
 
   public enum RefreshResult {
     SUCCESS,
-    SKIPPED_NO_PROVIDER
+    SKIPPED_NO_PROVIDER,
+    RETRYABLE_FAILURE,
+    FAILED
   }
 }
