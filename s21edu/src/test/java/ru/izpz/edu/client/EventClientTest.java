@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.dto.model.EventV1DTO;
 import ru.izpz.dto.model.EventsV1DTO;
 import ru.izpz.edu.exception.PlatformClientException;
+import ru.izpz.edu.exception.PlatformUnauthorizedException;
 
 @ExtendWith(MockitoExtension.class)
 class EventClientTest {
@@ -62,5 +63,20 @@ class EventClientTest {
         assertThrows(
             PlatformClientException.class, () -> eventClient.getEvents(from, to, null, 50L, 0L));
     assertNotNull(ex.getCause());
+  }
+
+  @Test
+  void getEvents_shouldPreservePlatformException() {
+    PlatformUnauthorizedException expected =
+        new PlatformUnauthorizedException("forbidden", 403, java.util.Map.of(), "html");
+    when(platformApi.getEvents(any(), any(), any(), any(), any())).thenThrow(expected);
+    OffsetDateTime from = OffsetDateTime.now();
+    OffsetDateTime to = from.plusHours(1);
+
+    PlatformClientException actual =
+        assertThrows(
+            PlatformClientException.class, () -> eventClient.getEvents(from, to, null, 50L, 0L));
+
+    assertSame(expected, actual);
   }
 }

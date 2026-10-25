@@ -30,6 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ru.izpz.bot.client.ProfileClient;
 import ru.izpz.bot.client.RocketChatClient;
 import ru.izpz.bot.exception.EduLoginCheckException;
+import ru.izpz.bot.exception.RegistrationExpiredException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.dto.CampusRequest;
 import ru.izpz.dto.CampusResponse;
@@ -50,6 +51,7 @@ import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileRequest;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.ProjectsDto;
+import ru.izpz.dto.RegistrationErrorDto;
 import ru.izpz.dto.RocketChatSendRequest;
 import ru.izpz.dto.RocketChatSendResponse;
 import ru.izpz.dto.ServiceErrorDto;
@@ -94,6 +96,27 @@ class ProfileServiceTest {
 
     assertThrows(FeignException.class, () -> profileService.getProfile(CHAT_ID));
     verify(profileClient).getOrCreateProfile(CHAT_ID.toString());
+  }
+
+  @Test
+  void confirmRegistration_expiredErrorIsNotRetriedAndKeepsDetails() {
+    String body =
+        "{\"status\":400,\"exceptionUUID\":\"expired-id\","
+            + "\"code\":\"REGISTRATION_EXPIRED\","
+            + "\"message\":\"Срок регистрации истек\","
+            + "\"s21login\":\"dawnendor\","
+            + "\"expiresAt\":\"2026-10-28T12:00:00+03:00\"}";
+    FeignException exception = createFeignException(400, body);
+    when(profileClient.confirmRegistration(any())).thenThrow(exception);
+
+    RegistrationExpiredException result =
+        assertThrows(
+            RegistrationExpiredException.class,
+            () -> profileService.confirmRegistration(CHAT_ID, SECRET_CODE));
+
+    assertEquals(RegistrationErrorDto.REGISTRATION_EXPIRED_CODE, result.getError().getCode());
+    assertEquals("dawnendor", result.getError().getS21login());
+    verify(profileClient).confirmRegistration(any());
   }
 
   @Test
@@ -211,10 +234,11 @@ class ProfileServiceTest {
     when(rocketChatClient.sendMessage(any(RocketChatSendRequest.class)))
         .thenReturn(rocketChatResponse);
 
-    RocketChatSendResponse result = profileService.sendVerificationCode(S21LOGIN);
+    VerificationCodeDelivery result = profileService.sendVerificationCode(S21LOGIN);
 
     assertNotNull(result);
-    assertEquals(rocketChatResponse, result);
+    assertEquals(rocketChatResponse, result.response());
+    assertEquals(codeResponse.getExpiresAt(), result.expiresAt());
 
     verify(rocketChatClient)
         .sendMessage(

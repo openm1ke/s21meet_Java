@@ -46,6 +46,8 @@ resilience4j:
         failureRateThreshold: ${PROFILE_EDU_CB_FAILURE_RATE_THRESHOLD:50}
         waitDurationInOpenState: ${PROFILE_EDU_CB_WAIT_OPEN:30s}
         permittedNumberOfCallsInHalfOpenState: ${PROFILE_EDU_CB_HALF_OPEN_CALLS:3}
+        ignoreExceptions:
+          - ru.izpz.bot.exception.RegistrationExpiredException
   ratelimiter:
     instances:
       telegram:
@@ -65,6 +67,8 @@ resilience4j:
         waitDuration: ${PROFILE_EDU_RETRY_WAIT_DURATION:500ms}
         enableExponentialBackoff: ${PROFILE_EDU_RETRY_EXPONENTIAL_BACKOFF:true}
         exponentialBackoffMultiplier: ${PROFILE_EDU_RETRY_EXPONENTIAL_MULTIPLIER:2}
+        ignoreExceptions:
+          - ru.izpz.bot.exception.RegistrationExpiredException
         retryExceptions:
           - feign.FeignException
 

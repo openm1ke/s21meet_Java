@@ -370,7 +370,7 @@ public class StudentProjectsScheduler {
             result: success=%d, skipped_no_provider=%d, failed=%d, timeout=%d, completion=%s%%
             timing: elapsed_ms=%d, avg_ms_per_login=%s
             ==================================================================
-            """,
+        """,
         context.pageNumber(),
         context.batchNo(),
         context.totalBatches(),
@@ -495,13 +495,14 @@ public class StudentProjectsScheduler {
   }
 
   private boolean isRetryableResult(RefreshResult result) {
-    return result == RefreshResult.FAILED || result == RefreshResult.TIMEOUT;
+    return result == RefreshResult.RETRYABLE_FAILURE || result == RefreshResult.TIMEOUT;
   }
 
   private BatchCounters toCounters(RefreshResult result) {
     return switch (result) {
       case SUCCESS -> new BatchCounters(1, 0, 0, 0);
       case SKIPPED_NO_PROVIDER -> new BatchCounters(0, 1, 0, 0);
+      case RETRYABLE_FAILURE -> new BatchCounters(0, 0, 1, 0);
       case FAILED -> new BatchCounters(0, 0, 1, 0);
       case TIMEOUT -> new BatchCounters(0, 0, 0, 1);
     };
@@ -582,6 +583,8 @@ public class StudentProjectsScheduler {
       return switch (campusRoutingProjectsProvider.refreshStudentProjects(credentials)) {
         case SUCCESS -> RefreshResult.SUCCESS;
         case SKIPPED_NO_PROVIDER -> RefreshResult.SKIPPED_NO_PROVIDER;
+        case RETRYABLE_FAILURE -> RefreshResult.RETRYABLE_FAILURE;
+        case FAILED -> RefreshResult.FAILED;
       };
     } catch (RuntimeException e) {
       log.warn("Ошибка refresh projects для {}: {}", login, e.getMessage());
@@ -592,6 +595,7 @@ public class StudentProjectsScheduler {
   private enum RefreshResult {
     SUCCESS,
     SKIPPED_NO_PROVIDER,
+    RETRYABLE_FAILURE,
     FAILED,
     TIMEOUT
   }

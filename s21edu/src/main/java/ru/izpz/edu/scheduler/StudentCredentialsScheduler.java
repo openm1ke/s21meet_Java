@@ -258,7 +258,7 @@ public class StudentCredentialsScheduler {
             result: added=%d, updated=%d, no_data=%d, failed=%d
             timing: elapsed_ms=%d
             =====================================================================
-            """
+        """
         .formatted(
             phaseTag,
             batchNumber,
@@ -287,7 +287,7 @@ public class StudentCredentialsScheduler {
             result: added=%d, updated=%d, no_data=%d, failed=%d
             timing: elapsed_s=%d
             =========================================================================
-            """
+        """
         .formatted(
             totalCredentialsBefore,
             totalCredentialsAfter,

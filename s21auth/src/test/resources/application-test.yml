@@ -11,7 +11,7 @@ spring:
 
 security:
   crypto:
-    key-base64: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="  # 32 bytes base64 encoded
+    key-base64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="  # deterministic 32-byte test key
 
 token:
   scheduler:

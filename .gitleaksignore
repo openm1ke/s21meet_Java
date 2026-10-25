@@ -1,2 +1,10 @@
 0e2d7a5a9b84bb9893aabc266056a3612993774d:.github/workflows/sonar-common.yml:curl-auth-user:108
 0e2d7a5a9b84bb9893aabc266056a3612993774d:.github/workflows/sonar-common.yml:curl-auth-user:126
+# Legacy findings retained in repository history; secrets must remain revoked/rotated.
+85596176b534078ce9aa7ee08c7f6a02d2d68065:s21auth/src/test/resources/application-test.yml:generic-api-key:14
+9e7bc66ee90f6d1beeb62b0b8d05bcf3d9e16a46:s21auth/src/test/resources/application-test.yml:generic-api-key:14
+1c38a562ef7f130c9e813e48d4bd57d6b7384196:s21auth/src/test/java/ru/izpz/auth/client/TokenClientTest.java:generic-api-key:29
+d9c868511ed5692f6e79c05c5f9ceab2edbfe073:s21auth/src/test/java/ru/izpz/auth/client/TokenClientTest.java:generic-api-key:29
+e8d1ab352c79fea970bdff4db087bc111494e4d4:build.gradle.kts:sonar-api-token:78
+b3a041660b290a5f445e8404fcd4ac84552e4967:gradle.properties:sonar-api-token:12
+4b648131011ca64ffacb354d4679e6538cd5e31b:gradle.properties:sonar-api-token:12

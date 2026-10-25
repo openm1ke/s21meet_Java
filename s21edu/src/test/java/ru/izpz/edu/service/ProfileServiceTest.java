@@ -39,9 +39,11 @@ import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileRequest;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.ProjectsDto;
+import ru.izpz.dto.RegistrationErrorDto;
 import ru.izpz.dto.model.ParticipantV1DTO;
 import ru.izpz.edu.exception.EntityNotFoundException;
 import ru.izpz.edu.exception.PlatformClientException;
+import ru.izpz.edu.exception.RegistrationValidationException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
 import ru.izpz.edu.model.Cluster;
@@ -510,10 +512,43 @@ class ProfileServiceTest {
     testProfile.setPendingRegistrationExpiresAt(OffsetDateTime.now().minusMinutes(1));
     when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
 
-    assertThrows(
-        IllegalStateException.class, () -> profileService.confirmRegistration("123456", "1234"));
+    RegistrationValidationException exception =
+        assertThrows(
+            RegistrationValidationException.class,
+            () -> profileService.confirmRegistration("123456", "1234"));
+
+    assertEquals(RegistrationErrorDto.REGISTRATION_EXPIRED_CODE, exception.getCode());
+    assertEquals("newuser", exception.getS21login());
+    assertEquals(ProfileStatus.CREATED, testProfile.getStatus());
+    assertNull(testProfile.getPendingS21login());
     verify(profileValidationRepository, never()).findByS21login(anyString());
-    verify(profileRepository, never()).save(any());
+    verify(profileRepository).save(testProfile);
+    verify(profileValidationRepository).deleteByS21login("newuser");
+  }
+
+  @Test
+  void confirmRegistration_shouldRejectExpiredVerificationCodeAndResetAttempt() {
+    testProfile.setS21login(null);
+    testProfile.setPendingS21login("newuser");
+    testProfile.setPendingRegistrationExpiresAt(OffsetDateTime.now().plusDays(1));
+    ProfileValidation validation = new ProfileValidation();
+    validation.setS21login("newuser");
+    validation.setSecretCode("1234");
+    validation.setExpiresAt(OffsetDateTime.now().minusMinutes(1));
+
+    when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
+    when(profileValidationRepository.findByS21login("newuser")).thenReturn(Optional.of(validation));
+
+    RegistrationValidationException exception =
+        assertThrows(
+            RegistrationValidationException.class,
+            () -> profileService.confirmRegistration("123456", "1234"));
+
+    assertEquals(RegistrationErrorDto.VERIFICATION_CODE_EXPIRED_CODE, exception.getCode());
+    assertEquals("newuser", exception.getS21login());
+    assertEquals(ProfileStatus.CREATED, testProfile.getStatus());
+    verify(profileRepository).save(testProfile);
+    verify(profileValidationRepository).deleteByS21login("newuser");
   }
 
   @Test

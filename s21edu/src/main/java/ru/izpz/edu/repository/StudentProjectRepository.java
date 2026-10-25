@@ -26,7 +26,7 @@ public interface StudentProjectRepository extends JpaRepository<StudentProject, 
             from StudentProject sp
             where sp.snapshot = false and sp.name is not null and sp.name <> ''
             order by sp.name
-            """)
+      """)
   List<String> findDistinctActualProjectNames();
 
   @Query(
@@ -44,7 +44,7 @@ public interface StudentProjectRepository extends JpaRepository<StudentProject, 
             where sp.snapshot = false
               and lower(sp.name) like lower(concat('%', :projectName, '%'))
               escape '\\'
-            """)
+      """)
   List<ProjectExecutorDto> findExecutorsByProjectName(@Param("projectName") String projectName);
 
   @Query(
@@ -65,7 +65,7 @@ public interface StudentProjectRepository extends JpaRepository<StudentProject, 
               escape '\\'
               and (:campusesEmpty = true or upper(coalesce(c.campusName, '')) in :campuses)
               and (:statusesEmpty = true or sp.goalStatus in :statuses)
-            """,
+          """,
       countQuery =
           """
             select count(sp)
@@ -77,7 +77,7 @@ public interface StudentProjectRepository extends JpaRepository<StudentProject, 
               escape '\\'
               and (:campusesEmpty = true or upper(coalesce(c.campusName, '')) in :campuses)
               and (:statusesEmpty = true or sp.goalStatus in :statuses)
-            """)
+          """)
   Page<ProjectExecutorDto> findExecutorsByProjectNamePaged(
       @Param("projectName") String projectName,
       @Param("campuses") List<String> campuses,
@@ -95,7 +95,7 @@ public interface StudentProjectRepository extends JpaRepository<StudentProject, 
             where sp.snapshot = false
               and lower(sp.name) like lower(concat('%', :projectName, '%')) escape '\\'
               and c.campusName is not null
-            """)
+      """)
   List<String> findDistinctCampusesByProjectName(@Param("projectName") String projectName);
 
   @Query(
@@ -105,6 +105,6 @@ public interface StudentProjectRepository extends JpaRepository<StudentProject, 
             where sp.snapshot = false
               and lower(sp.name) like lower(concat('%', :projectName, '%')) escape '\\'
               and sp.goalStatus is not null
-            """)
+      """)
   List<String> findDistinctStatusesByProjectName(@Param("projectName") String projectName);
 }

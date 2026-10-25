@@ -23,6 +23,6 @@ public interface FriendsRepository extends JpaRepository<Friends, UUID> {
        select f from Friends f
        where f.telegramId = :telegramId and f.isFriend = true
        order by f.isFavorite desc, f.date desc
-    """)
+      """)
   Slice<Friends> findAllOrdered(@Param("telegramId") String telegramId, Pageable pageable);
 }

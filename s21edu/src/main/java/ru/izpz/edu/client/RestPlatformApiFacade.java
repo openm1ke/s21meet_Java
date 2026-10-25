@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import ru.izpz.dto.api.CampusApi;
@@ -27,6 +28,7 @@ import ru.izpz.edu.exception.PlatformClientException;
 import ru.izpz.edu.exception.PlatformNotFoundException;
 import ru.izpz.edu.exception.PlatformRateLimitException;
 import ru.izpz.edu.exception.PlatformTransientException;
+import ru.izpz.edu.exception.PlatformTransportException;
 import ru.izpz.edu.exception.PlatformUnauthorizedException;
 
 /** Реализация фасада доступа к REST API платформы через сгенерированные OpenAPI-клиенты. */
@@ -34,11 +36,16 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
   private static final String EXTERNAL_GLOBAL = "externalGlobal";
   private static final String PARTICIPANT_PROFILE = "participantProfile";
   private static final String REQUEST_FAILED_MESSAGE = "Platform request failed";
+  private static final int MAX_RESPONSE_BODY_LENGTH = 16_384;
   private static final int HTTP_UNAUTHORIZED = 401;
   private static final int HTTP_FORBIDDEN = 403;
   private static final int HTTP_NOT_FOUND = 404;
+  private static final int HTTP_REQUEST_TIMEOUT = 408;
   private static final int HTTP_RATE_LIMIT = 429;
-  private static final int HTTP_SERVER_ERROR = 500;
+  private static final int HTTP_INTERNAL_SERVER_ERROR = 500;
+  private static final int HTTP_BAD_GATEWAY = 502;
+  private static final int HTTP_SERVICE_UNAVAILABLE = 503;
+  private static final int HTTP_GATEWAY_TIMEOUT = 504;
 
   private final CampusApi campusApi;
   private final ClusterApi clusterApi;
@@ -67,6 +74,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
       return campusApi.getClustersByCampus(campusId);
     } catch (RestClientResponseException ex) {
       throw toPlatformException(ex);
+    } catch (ResourceAccessException ex) {
+      throw new PlatformTransportException(REQUEST_FAILED_MESSAGE, ex);
     } catch (RestClientException ex) {
       throw new PlatformClientException(REQUEST_FAILED_MESSAGE, ex);
     }
@@ -81,6 +90,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
       return clusterApi.getParticipantsByCoalitionId1(clusterId, limit, offset, occupied);
     } catch (RestClientResponseException ex) {
       throw toPlatformException(ex);
+    } catch (ResourceAccessException ex) {
+      throw new PlatformTransportException(REQUEST_FAILED_MESSAGE, ex);
     } catch (RestClientException ex) {
       throw new PlatformClientException(REQUEST_FAILED_MESSAGE, ex);
     }
@@ -94,6 +105,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
       return campusApi.getParticipantsByCampusId(campusId, limit, offset);
     } catch (RestClientResponseException ex) {
       throw toPlatformException(ex);
+    } catch (ResourceAccessException ex) {
+      throw new PlatformTransportException(REQUEST_FAILED_MESSAGE, ex);
     } catch (RestClientException ex) {
       throw new PlatformClientException(REQUEST_FAILED_MESSAGE, ex);
     }
@@ -108,6 +121,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
       return eventApi.getEvents(from, to, type, limit, offset);
     } catch (RestClientResponseException ex) {
       throw toPlatformException(ex);
+    } catch (ResourceAccessException ex) {
+      throw new PlatformTransportException(REQUEST_FAILED_MESSAGE, ex);
     } catch (RestClientException ex) {
       throw new PlatformClientException(REQUEST_FAILED_MESSAGE, ex);
     }
@@ -122,6 +137,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
       return participantApi.getParticipantProjectsByLogin(login, limit, offset, status);
     } catch (RestClientResponseException ex) {
       throw toPlatformException(ex);
+    } catch (ResourceAccessException ex) {
+      throw new PlatformTransportException(REQUEST_FAILED_MESSAGE, ex);
     } catch (RestClientException ex) {
       throw new PlatformClientException(REQUEST_FAILED_MESSAGE, ex);
     }
@@ -135,6 +152,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
       return participantApi.getCoalitionByLogin(login);
     } catch (RestClientResponseException ex) {
       throw toPlatformException(ex);
+    } catch (ResourceAccessException ex) {
+      throw new PlatformTransportException(REQUEST_FAILED_MESSAGE, ex);
     } catch (RestClientException ex) {
       throw new PlatformClientException(REQUEST_FAILED_MESSAGE, ex);
     }
@@ -149,6 +168,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
       return coalitionApi.getParticipantsByCoalitionId(coalitionId, limit, offset);
     } catch (RestClientResponseException ex) {
       throw toPlatformException(ex);
+    } catch (ResourceAccessException ex) {
+      throw new PlatformTransportException(REQUEST_FAILED_MESSAGE, ex);
     } catch (RestClientException ex) {
       throw new PlatformClientException(REQUEST_FAILED_MESSAGE, ex);
     }
@@ -163,6 +184,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
       return participantApi.getParticipantByLogin(login);
     } catch (RestClientResponseException ex) {
       throw toPlatformException(ex);
+    } catch (ResourceAccessException ex) {
+      throw new PlatformTransportException(REQUEST_FAILED_MESSAGE, ex);
     } catch (RestClientException ex) {
       throw new PlatformClientException(REQUEST_FAILED_MESSAGE, ex);
     }
@@ -178,8 +201,8 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
     HttpHeaders headers = ex.getResponseHeaders();
     Map<String, List<String>> mappedHeaders = headers == null ? Collections.emptyMap() : headers;
     int code = ex.getStatusCode().value();
-    String message = ex.getStatusText();
-    String body = ex.getResponseBodyAsString();
+    String message = ex.getStatusText().isBlank() ? REQUEST_FAILED_MESSAGE : ex.getStatusText();
+    String body = limitResponseBody(ex.getResponseBodyAsString());
     if (code == HTTP_UNAUTHORIZED || code == HTTP_FORBIDDEN) {
       return new PlatformUnauthorizedException(message, code, mappedHeaders, body);
     }
@@ -189,9 +212,23 @@ public class RestPlatformApiFacade implements PlatformApiFacade {
     if (code == HTTP_RATE_LIMIT) {
       return new PlatformRateLimitException(message, code, mappedHeaders, body);
     }
-    if (code >= HTTP_SERVER_ERROR) {
+    if (isRetryableServerStatus(code) || code == HTTP_REQUEST_TIMEOUT) {
       return new PlatformTransientException(message, code, mappedHeaders, body);
     }
     return new PlatformClientException(message, code, mappedHeaders, body);
+  }
+
+  private boolean isRetryableServerStatus(int code) {
+    return code == HTTP_INTERNAL_SERVER_ERROR
+        || code == HTTP_BAD_GATEWAY
+        || code == HTTP_SERVICE_UNAVAILABLE
+        || code == HTTP_GATEWAY_TIMEOUT;
+  }
+
+  private String limitResponseBody(String body) {
+    if (body == null || body.length() <= MAX_RESPONSE_BODY_LENGTH) {
+      return body;
+    }
+    return body.substring(0, MAX_RESPONSE_BODY_LENGTH);
   }
 }

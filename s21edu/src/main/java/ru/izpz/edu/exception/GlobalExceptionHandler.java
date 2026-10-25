@@ -4,13 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import ru.izpz.dto.RegistrationErrorDto;
 import ru.izpz.dto.ServiceErrorDto;
 
 /** Глобальный обработчик исключений REST-слоя. */
@@ -22,6 +25,9 @@ public class GlobalExceptionHandler {
   private final ObjectMapper objectMapper;
   private static final String STATUS_FIELD = "status";
   private static final String MESSAGE_FIELD = "message";
+  private static final String EXTERNAL_SERVICE_MESSAGE = "Ошибка внешнего сервиса";
+  private static final String EXTERNAL_SERVICE_UNAVAILABLE_MESSAGE =
+      "Внешний сервис временно недоступен";
 
   /**
    * Обрабатывает исключения клиента платформы.
@@ -32,29 +38,103 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(PlatformClientException.class)
   public ResponseEntity<Object> handlePlatformException(PlatformClientException ex) {
     if (ex instanceof PlatformRateLimitException) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Map.of(STATUS_FIELD, 429, MESSAGE_FIELD, "Внешний сервис временно перегружен"));
+      return safeResponse(
+          HttpStatus.TOO_MANY_REQUESTS.value(), "Внешний сервис временно перегружен");
+    }
+    if (ex instanceof PlatformTransportException) {
+      return safeResponse(
+          HttpStatus.SERVICE_UNAVAILABLE.value(), EXTERNAL_SERVICE_UNAVAILABLE_MESSAGE);
     }
     if (ex instanceof PlatformTransientException) {
-      return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-          .body(Map.of(STATUS_FIELD, 502, MESSAGE_FIELD, "Внешний сервис временно недоступен"));
+      return safeResponse(HttpStatus.BAD_GATEWAY.value(), EXTERNAL_SERVICE_UNAVAILABLE_MESSAGE);
     }
+
+    if (ex instanceof PlatformUnauthorizedException) {
+      int status = normalizeStatus(ex.getCode(), HttpStatus.BAD_GATEWAY.value());
+      String message =
+          status == HttpStatus.FORBIDDEN.value()
+              ? "Внешняя платформа запретила доступ"
+              : "Внешняя платформа отклонила авторизацию";
+      return safeResponse(status, message);
+    }
+
+    if (ex instanceof PlatformNotFoundException) {
+      return safeResponse(HttpStatus.NOT_FOUND.value(), "Ресурс внешней платформы не найден");
+    }
+
+    int fallbackStatus = normalizeStatus(ex.getCode(), HttpStatus.BAD_GATEWAY.value());
+    String responseBody = ex.getResponseBody();
+    if (responseBody == null || responseBody.isBlank()) {
+      log.warn(
+          "Пустой ответ внешнего API: status={}, error_type={}, content_type={}",
+          fallbackStatus,
+          ex.getClass().getSimpleName(),
+          contentType(ex));
+      return safeResponse(fallbackStatus, EXTERNAL_SERVICE_MESSAGE);
+    }
+
     try {
-      ServiceErrorDto error = objectMapper.readValue(ex.getResponseBody(), ServiceErrorDto.class);
-      log.warn("Ошибка от внешнего API [{}]: {}", error.getCode(), error.getMessage());
-      return ResponseEntity.status(error.getStatus()).body(error);
+      ServiceErrorDto error = objectMapper.readValue(responseBody, ServiceErrorDto.class);
+      if (!isValidError(error, fallbackStatus)) {
+        throw new IllegalArgumentException("Invalid external error response");
+      }
+      log.warn(
+          "Ошибка внешнего API: status={}, code={}, exception_uuid={}",
+          error.getStatus(),
+          error.getCode(),
+          error.getExceptionUUID());
+      return ResponseEntity.status(fallbackStatus).body(error);
     } catch (Exception parseEx) {
-      log.warn("Не удалось распарсить тело ошибки API: {}", ex.getResponseBody(), parseEx);
-      return ResponseEntity.status(ex.getCode())
-          .body(Map.of(STATUS_FIELD, ex.getCode(), MESSAGE_FIELD, "Ошибка внешнего сервиса"));
+      log.warn(
+          "Не удалось распарсить ответ внешнего API: status={}, error_type={}, "
+              + "content_type={}, body_length={}, parse_error_type={}",
+          fallbackStatus,
+          ex.getClass().getSimpleName(),
+          contentType(ex),
+          responseBody.length(),
+          parseEx.getClass().getSimpleName());
+      return safeResponse(fallbackStatus, EXTERNAL_SERVICE_MESSAGE);
     }
+  }
+
+  private ResponseEntity<Object> safeResponse(int status, String message) {
+    return ResponseEntity.status(status).body(Map.of(STATUS_FIELD, status, MESSAGE_FIELD, message));
+  }
+
+  private int normalizeStatus(int status, int fallback) {
+    return status >= 400 && status <= 599 ? status : fallback;
+  }
+
+  private boolean isValidError(ServiceErrorDto error, int expectedStatus) {
+    return error != null
+        && error.getStatus() != null
+        && error.getStatus() == expectedStatus
+        && hasText(error.getExceptionUUID())
+        && hasText(error.getCode())
+        && hasText(error.getMessage());
+  }
+
+  private boolean hasText(String value) {
+    return value != null && !value.isBlank();
+  }
+
+  private String contentType(PlatformClientException ex) {
+    return ex.getResponseHeaders().entrySet().stream()
+        .filter(entry -> HttpHeaders.CONTENT_TYPE.equalsIgnoreCase(entry.getKey()))
+        .flatMap(
+            entry ->
+                entry.getValue() == null
+                    ? java.util.stream.Stream.empty()
+                    : entry.getValue().stream())
+        .findFirst()
+        .orElse("unknown");
   }
 
   @ExceptionHandler(CallNotPermittedException.class)
   public ResponseEntity<Object> handleCircuitOpen(CallNotPermittedException ex) {
     log.warn("Circuit breaker open: {}", ex.getMessage());
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-        .body(Map.of(STATUS_FIELD, 503, MESSAGE_FIELD, "Внешний сервис временно недоступен"));
+        .body(Map.of(STATUS_FIELD, 503, MESSAGE_FIELD, EXTERNAL_SERVICE_UNAVAILABLE_MESSAGE));
   }
 
   /**
@@ -106,6 +186,25 @@ public class GlobalExceptionHandler {
   public ResponseEntity<String> handleIllegalStateException(IllegalStateException e) {
     log.warn("IllegalStateException: {}", e.getMessage());
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+  }
+
+  @ExceptionHandler(RegistrationValidationException.class)
+  public ResponseEntity<RegistrationErrorDto> handleRegistrationValidationException(
+      RegistrationValidationException e) {
+    log.warn(
+        "Registration validation failed: code={}, login={}, expiresAt={}",
+        e.getCode(),
+        e.getS21login(),
+        e.getExpiresAt());
+    RegistrationErrorDto body =
+        new RegistrationErrorDto(
+            HttpStatus.BAD_REQUEST.value(),
+            UUID.randomUUID().toString(),
+            e.getCode(),
+            e.getMessage(),
+            e.getS21login(),
+            e.getExpiresAt());
+    return ResponseEntity.badRequest().body(body);
   }
 
   /**
