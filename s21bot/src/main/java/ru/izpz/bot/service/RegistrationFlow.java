@@ -1,6 +1,9 @@
 package ru.izpz.bot.service;
 
 import feign.FeignException;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import ru.izpz.bot.exception.EduLoginCheckException;
+import ru.izpz.bot.exception.RegistrationExpiredException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.bot.keyboard.MenuCommandEnum;
 import ru.izpz.bot.keyboard.TelegramButtons;
@@ -17,8 +21,9 @@ import ru.izpz.dto.ParticipantDto;
 import ru.izpz.dto.ParticipantStatusEnum;
 import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
-import ru.izpz.dto.RocketChatSendResponse;
+import ru.izpz.dto.RegistrationErrorDto;
 import ru.izpz.dto.ServiceErrorDto;
+import ru.izpz.utils.FeignErrorParser;
 
 @Slf4j
 @Service
@@ -28,6 +33,9 @@ public class RegistrationFlow {
   private static final String STAGE_REGISTRATION_FLOW = "registration_flow";
   private static final String STAGE_REGISTRATION_VALIDATION = "registration_validation";
   private static final String REASON_FEIGN_EXCEPTION = "feign_exception";
+  private static final ZoneId ADMIN_TIME_ZONE = ZoneId.of("Europe/Moscow");
+  private static final DateTimeFormatter ADMIN_DATE_FORMAT =
+      DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm 'MSK'");
 
   private final BotProperties botProperties;
 
@@ -53,8 +61,16 @@ public class RegistrationFlow {
           chatId,
           "Ваш аккаунт был успешно зарегистрирован",
           telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
+    } catch (RegistrationExpiredException e) {
+      metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, "registration_expired");
+      handleExpiredRegistration(chatId, profile, e.getError());
     } catch (FeignException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, REASON_FEIGN_EXCEPTION);
+      RegistrationErrorDto error = FeignErrorParser.parseRegistrationError(e);
+      if (FeignErrorParser.isRegistrationExpired(error, e)) {
+        handleExpiredRegistration(chatId, profile, error);
+        return;
+      }
       messageSender.sendMessage(chatId, "Ошибка валидации, попробуйте позже", null);
       messageSender.sendMessage(botProperties.admin(), e.contentUTF8(), null);
     } catch (IllegalStateException e) {
@@ -114,9 +130,9 @@ public class RegistrationFlow {
       return;
     }
     // если логин совпадает значит мы его сохранили
-    RocketChatSendResponse rocketChatResponse;
+    VerificationCodeDelivery delivery;
     try {
-      rocketChatResponse = profileService.sendVerificationCode(login);
+      delivery = profileService.sendVerificationCode(login);
     } catch (RocketChatSendException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, "rocketchat_send_exception");
       messageSender.sendMessage(
@@ -134,7 +150,8 @@ public class RegistrationFlow {
     messageSender.sendMessage(chatId, "В рокет чат был отправлен код для подтверждения", null);
     messageSender.sendHtmlMessageWithoutWebPreview(
         botProperties.admin(),
-        formatAdminVerificationMessage(login, rocketChatResponse.getMessage()),
+        formatAdminVerificationMessage(
+            login, delivery.response().getMessage(), delivery.expiresAt()),
         null);
     profileService.updateProfileStatus(chatId, ProfileStatus.VALIDATION);
 
@@ -156,15 +173,47 @@ public class RegistrationFlow {
 
   }
 
-  private String formatAdminVerificationMessage(String login, String message) {
-    String escapedLogin = HtmlUtils.htmlEscape(login);
+  private void handleExpiredRegistration(
+      Long chatId, ProfileDto profile, RegistrationErrorDto error) {
+    String login = firstNonBlank(error.getS21login(), profile.s21login());
+    String userMessage = "Срок регистрации истек. Нажмите «Регистрация», чтобы получить новый код";
+    messageSender.sendMessage(chatId, userMessage, telegramKeyboardFactory.removeReplyKeyboard());
+    messageSender.sendHtmlMessageWithoutWebPreview(
+        botProperties.admin(), formatAdminExpirationMessage(login, error), null);
+  }
+
+  private String formatAdminVerificationMessage(
+      String login, String message, OffsetDateTime expiresAt) {
     String escapedMessage = HtmlUtils.htmlEscape(String.valueOf(message));
+    return profileReference(login)
+        + "\n✅ Код отправлен в Rocket.Chat"
+        + "\n⏳ Действует до: <b>"
+        + formatExpiration(expiresAt)
+        + "</b>"
+        + "\nСообщение: "
+        + escapedMessage;
+  }
+
+  private String formatAdminExpirationMessage(String login, RegistrationErrorDto error) {
+    String reason =
+        RegistrationErrorDto.VERIFICATION_CODE_EXPIRED_CODE.equals(error.getCode())
+            ? "истёк код подтверждения"
+            : "истёк срок регистрации";
+    return "⏰ <b>Регистрация истекла</b>\n"
+        + profileReference(login)
+        + "\nПричина: "
+        + reason
+        + "\nСрок действия до: <b>"
+        + formatExpiration(error.getExpiresAt())
+        + "</b>"
+        + "\nДействие: попросите пользователя пройти регистрацию заново.";
+  }
+
+  private String profileReference(String login) {
+    String escapedLogin = HtmlUtils.htmlEscape(firstNonBlank(login, "неизвестен"));
     String botUsername = botProperties.username();
-    if (botUsername == null || botUsername.isBlank()) {
-      return "В Rocket.Chat отправлено сообщение для логина "
-          + escapedLogin
-          + ": "
-          + escapedMessage;
+    if (botUsername == null || botUsername.isBlank() || "неизвестен".equals(escapedLogin)) {
+      return "Логин: <code>" + escapedLogin + "</code>";
     }
 
     String normalizedUsername = botUsername.trim();
@@ -176,8 +225,20 @@ public class RegistrationFlow {
         + deepLink
         + "\">Открыть профиль "
         + escapedLogin
-        + "</a>\nВ Rocket.Chat отправлено сообщение: "
-        + escapedMessage;
+        + "</a>\nЛогин: <code>"
+        + escapedLogin
+        + "</code>";
+  }
+
+  private String formatExpiration(OffsetDateTime expiresAt) {
+    if (expiresAt == null) {
+      return "неизвестно";
+    }
+    return ADMIN_DATE_FORMAT.format(expiresAt.atZoneSameInstant(ADMIN_TIME_ZONE));
+  }
+
+  private String firstNonBlank(String first, String fallback) {
+    return first != null && !first.isBlank() ? first : fallback;
   }
 
   private boolean isValidLogin(String login) {

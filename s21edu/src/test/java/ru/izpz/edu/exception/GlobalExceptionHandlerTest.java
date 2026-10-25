@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import ru.izpz.dto.RegistrationErrorDto;
 import ru.izpz.dto.ServiceErrorDto;
 
 class GlobalExceptionHandlerTest {
@@ -28,6 +30,26 @@ class GlobalExceptionHandlerTest {
         handler.handleProfileNotFound(new EntityNotFoundException("not found"));
     assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     assertEquals("not found", response.getBody());
+  }
+
+  @Test
+  void handleRegistrationValidationException_shouldReturnStructuredExpirationDetails() {
+    OffsetDateTime expiresAt = OffsetDateTime.parse("2026-10-28T12:00:00+03:00");
+    RegistrationValidationException exception =
+        new RegistrationValidationException(
+            RegistrationErrorDto.REGISTRATION_EXPIRED_CODE,
+            "Срок регистрации истек. Начните регистрацию заново",
+            "dawnendor",
+            expiresAt);
+
+    ResponseEntity<RegistrationErrorDto> response =
+        handler.handleRegistrationValidationException(exception);
+
+    assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    RegistrationErrorDto body = response.getBody();
+    assertEquals(RegistrationErrorDto.REGISTRATION_EXPIRED_CODE, body.getCode());
+    assertEquals("dawnendor", body.getS21login());
+    assertEquals(expiresAt, body.getExpiresAt());
   }
 
   @Test

@@ -133,9 +133,10 @@ class RegistrationFlowIntegrationTest {
     when(profileClient.checkEduLogin(login)).thenReturn(participant);
     when(profileClient.checkAndSetLogin(any(ProfileRequest.class)))
         .thenReturn(new ProfileDto(telegramId, login, ProfileStatus.REGISTRATION, null));
+    OffsetDateTime expiresAt = OffsetDateTime.parse("2026-10-28T12:00:00+03:00");
     when(profileClient.getProfileCode(any()))
-        .thenReturn(new ProfileCodeResponse(login, code, OffsetDateTime.now()))
-        .thenReturn(new ProfileCodeResponse(login, code, OffsetDateTime.now()));
+        .thenReturn(new ProfileCodeResponse(login, code, expiresAt))
+        .thenReturn(new ProfileCodeResponse(login, code, expiresAt));
     when(profileClient.confirmRegistration(any()))
         .thenReturn(new ProfileDto(telegramId, login, ProfileStatus.CONFIRMED, null));
     when(rocketChatClient.sendMessage(any())).thenReturn(new RocketChatSendResponse(true, "ok"));
@@ -163,7 +164,10 @@ class RegistrationFlowIntegrationTest {
                     + login
                     + "\">Открыть профиль "
                     + login
-                    + "</a>\nВ Rocket.Chat отправлено сообщение: ok"),
+                    + "</a>\nЛогин: <code>"
+                    + login
+                    + "</code>\n✅ Код отправлен в Rocket.Chat\n"
+                    + "⏳ Действует до: <b>28.10.2026 12:00 MSK</b>\nСообщение: ok"),
             any());
     verify(messageSender, atLeastOnce())
         .sendMessage(eq(chatId), eq("Ваш аккаунт был успешно зарегистрирован"), any());
@@ -361,6 +365,47 @@ class RegistrationFlowIntegrationTest {
     verify(messageSender, atLeastOnce())
         .sendMessage(eq(chatId), eq("Введенный код не совпадает"), any());
     verify(profileClient, never()).updateProfileStatus(any(ProfileRequest.class));
+  }
+
+  @Test
+  void validation_whenRegistrationExpires_shouldNotifyUserAndAdminOnce() {
+    Long chatId = 50L;
+    String telegramId = chatId.toString();
+    String body =
+        "{\"status\":400,\"exceptionUUID\":\"expired-id\","
+            + "\"code\":\"REGISTRATION_EXPIRED\","
+            + "\"message\":\"Срок регистрации истек. Начните регистрацию заново\","
+            + "\"s21login\":\"perseste\","
+            + "\"expiresAt\":\"2026-10-28T12:00:00+03:00\"}";
+
+    when(profileClient.getOrCreateProfile(telegramId))
+        .thenReturn(
+            new ProfileDto(telegramId, null, ProfileStatus.VALIDATION, null),
+            new ProfileDto(telegramId, null, ProfileStatus.CREATED, null));
+    when(profileClient.confirmRegistration(any())).thenThrow(createFeignException(400, body));
+
+    messageProcessor.handleTextMessage(textMessage(chatId, "1234"));
+    messageProcessor.handleTextMessage(textMessage(chatId, "1234"));
+
+    verify(messageSender)
+        .sendMessage(
+            eq(chatId),
+            eq("Срок регистрации истек. Нажмите «Регистрация», чтобы получить новый код"),
+            any());
+    verify(messageSender)
+        .sendHtmlMessageWithoutWebPreview(
+            eq(1L),
+            eq(
+                "⏰ <b>Регистрация истекла</b>\n"
+                    + "🔎 <a href=\"https://t.me/test_bot?start=login_perseste\">Открыть профиль perseste</a>\n"
+                    + "Логин: <code>perseste</code>\n"
+                    + "Причина: истёк срок регистрации\n"
+                    + "Срок действия до: <b>28.10.2026 12:00 MSK</b>\n"
+                    + "Действие: попросите пользователя пройти регистрацию заново."),
+            any());
+    verify(messageSender, times(1))
+        .sendHtmlMessageWithoutWebPreview(eq(1L), any(String.class), any());
+    verify(profileClient, times(1)).confirmRegistration(any());
   }
 
   @Test

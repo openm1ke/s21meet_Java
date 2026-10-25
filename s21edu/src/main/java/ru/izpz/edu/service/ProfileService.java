@@ -20,8 +20,10 @@ import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileRequest;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.ProjectsDto;
+import ru.izpz.dto.RegistrationErrorDto;
 import ru.izpz.edu.exception.EntityNotFoundException;
 import ru.izpz.edu.exception.PlatformClientException;
+import ru.izpz.edu.exception.RegistrationValidationException;
 import ru.izpz.edu.mapper.ProfileMapper;
 import ru.izpz.edu.mapper.ProfileVerificationMapper;
 import ru.izpz.edu.model.Participant;
@@ -175,7 +177,7 @@ public class ProfileService {
     return profileVerificationMapper.toProfileCodeResponse(validation);
   }
 
-  @Transactional
+  @Transactional(dontRollbackOn = RegistrationValidationException.class)
   public ProfileDto confirmRegistration(String telegramId, String secretCode) {
     Profile profile =
         profileRepository
@@ -186,13 +188,27 @@ public class ProfileService {
     if (pendingLogin == null
         || profile.getPendingRegistrationExpiresAt() == null
         || !profile.getPendingRegistrationExpiresAt().isAfter(now)) {
-      throw new IllegalStateException("Попытка регистрации истекла");
+      OffsetDateTime expiresAt = profile.getPendingRegistrationExpiresAt();
+      expireRegistration(profile, pendingLogin);
+      throw new RegistrationValidationException(
+          RegistrationErrorDto.REGISTRATION_EXPIRED_CODE,
+          "Срок регистрации истек. Начните регистрацию заново",
+          pendingLogin,
+          expiresAt);
     }
     ProfileValidation validation =
-        profileValidationRepository
-            .findByS21login(pendingLogin)
-            .filter(value -> value.getExpiresAt() != null && value.getExpiresAt().isAfter(now))
-            .orElseThrow(() -> new IllegalStateException("Код подтверждения истек"));
+        profileValidationRepository.findByS21login(pendingLogin).orElse(null);
+    if (validation == null
+        || validation.getExpiresAt() == null
+        || !validation.getExpiresAt().isAfter(now)) {
+      OffsetDateTime expiresAt = validation == null ? null : validation.getExpiresAt();
+      expireRegistration(profile, pendingLogin);
+      throw new RegistrationValidationException(
+          RegistrationErrorDto.VERIFICATION_CODE_EXPIRED_CODE,
+          "Код подтверждения истек. Начните регистрацию заново",
+          pendingLogin,
+          expiresAt);
+    }
     if (!validation.getSecretCode().equals(secretCode)) {
       throw new IllegalStateException("Введенный код не совпадает");
     }
@@ -206,6 +222,16 @@ public class ProfileService {
     ProfileDto result = profileMapper.toDto(profileRepository.save(profile));
     profileValidationRepository.deleteByS21login(pendingLogin);
     return result;
+  }
+
+  private void expireRegistration(Profile profile, String pendingLogin) {
+    profile.setPendingS21login(null);
+    profile.setPendingRegistrationExpiresAt(null);
+    profile.setStatus(ProfileStatus.CREATED);
+    profileRepository.save(profile);
+    if (pendingLogin != null) {
+      profileValidationRepository.deleteByS21login(pendingLogin);
+    }
   }
 
   @Transactional

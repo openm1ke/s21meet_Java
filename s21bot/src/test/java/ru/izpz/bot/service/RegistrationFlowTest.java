@@ -18,6 +18,7 @@ import feign.Request;
 import feign.RequestTemplate;
 import feign.Response;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +61,7 @@ class RegistrationFlowTest {
   @InjectMocks private RegistrationFlow registrationFlow;
 
   private final Long chatId = 10L;
+  private final OffsetDateTime expiresAt = OffsetDateTime.parse("2026-10-28T12:00:00+03:00");
 
   @BeforeEach
   void setUp() {
@@ -123,6 +125,57 @@ class RegistrationFlowTest {
   }
 
   @Test
+  void startValidation_expiredRegistration_sendsFriendlyUserAndAdminMessages() {
+    ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.VALIDATION, null);
+    ReplyKeyboard removeKeyboard = mock(ReplyKeyboard.class);
+    String body =
+        "{\"status\":400,\"exceptionUUID\":\"expired-id\","
+            + "\"code\":\"REGISTRATION_EXPIRED\","
+            + "\"message\":\"Срок регистрации истек. Начните регистрацию заново\","
+            + "\"s21login\":\"abc\",\"expiresAt\":\"2026-10-28T12:00:00+03:00\"}";
+    FeignException exception = createFeignException(400, body);
+    when(profileService.confirmRegistration(chatId, "1234")).thenThrow(exception);
+    when(telegramKeyboardFactory.removeReplyKeyboard()).thenReturn(removeKeyboard);
+
+    registrationFlow.startValidation(chatId, profile, "1234");
+
+    verify(messageSender)
+        .sendMessage(
+            chatId,
+            "Срок регистрации истек. Нажмите «Регистрация», чтобы получить новый код",
+            removeKeyboard);
+    verify(messageSender)
+        .sendHtmlMessageWithoutWebPreview(
+            999L,
+            "⏰ <b>Регистрация истекла</b>\n"
+                + "🔎 <a href=\"https://t.me/test_bot?start=login_abc\">Открыть профиль abc</a>\n"
+                + "Логин: <code>abc</code>\n"
+                + "Причина: истёк срок регистрации\n"
+                + "Срок действия до: <b>28.10.2026 12:00 MSK</b>\n"
+                + "Действие: попросите пользователя пройти регистрацию заново.",
+            null);
+  }
+
+  @Test
+  void startValidation_expiredVerificationCode_explainsCodeExpiryToAdmin() {
+    ProfileDto profile = new ProfileDto(chatId.toString(), null, ProfileStatus.VALIDATION, null);
+    ReplyKeyboard removeKeyboard = mock(ReplyKeyboard.class);
+    String body =
+        "{\"status\":400,\"code\":\"VERIFICATION_CODE_EXPIRED\","
+            + "\"message\":\"Код подтверждения истек. Начните регистрацию заново\","
+            + "\"s21login\":\"abc\",\"expiresAt\":\"2026-10-28T12:00:00+03:00\"}";
+    FeignException exception = createFeignException(400, body);
+    when(profileService.confirmRegistration(chatId, "1234")).thenThrow(exception);
+    when(telegramKeyboardFactory.removeReplyKeyboard()).thenReturn(removeKeyboard);
+
+    registrationFlow.startValidation(chatId, profile, "1234");
+
+    verify(messageSender)
+        .sendHtmlMessageWithoutWebPreview(
+            eq(999L), contains("Причина: истёк код подтверждения"), eq(null));
+  }
+
+  @Test
   void startRegistration_invalidLogin_sendsError() {
     registrationFlow.startRegistration(chatId, "12");
 
@@ -163,7 +216,8 @@ class RegistrationFlowTest {
     when(profileService.checkAndSetLogin(chatId, "abc"))
         .thenReturn(new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null));
     when(profileService.sendVerificationCode("abc"))
-        .thenReturn(new RocketChatSendResponse(true, "ok"));
+        .thenReturn(
+            new VerificationCodeDelivery(new RocketChatSendResponse(true, "ok"), expiresAt));
 
     registrationFlow.startRegistration(chatId, "abc");
 
@@ -181,7 +235,8 @@ class RegistrationFlowTest {
     when(profileService.checkAndSetLogin(chatId, "abc"))
         .thenReturn(new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null));
     when(profileService.sendVerificationCode("abc"))
-        .thenReturn(new RocketChatSendResponse(true, "ok"));
+        .thenReturn(
+            new VerificationCodeDelivery(new RocketChatSendResponse(true, "ok"), expiresAt));
 
     registrationFlow.startRegistration(chatId, "AbC");
 
@@ -266,10 +321,8 @@ class RegistrationFlowTest {
     ProfileDto updated = new ProfileDto(chatId.toString(), "abc", ProfileStatus.REGISTRATION, null);
     when(profileService.checkAndSetLogin(chatId, "abc")).thenReturn(updated);
     when(profileService.sendVerificationCode("abc"))
-        .thenReturn(new RocketChatSendResponse(true, "ok"));
-
-    RocketChatSendResponse rc = new RocketChatSendResponse(true, "ok");
-    when(profileService.sendVerificationCode("abc")).thenReturn(rc);
+        .thenReturn(
+            new VerificationCodeDelivery(new RocketChatSendResponse(true, "ok"), expiresAt));
 
     registrationFlow.startRegistration(chatId, "abc");
 
@@ -279,7 +332,10 @@ class RegistrationFlowTest {
         .sendHtmlMessageWithoutWebPreview(
             999L,
             "🔎 <a href=\"https://t.me/test_bot?start=login_abc\">Открыть профиль abc</a>\n"
-                + "В Rocket.Chat отправлено сообщение: ok",
+                + "Логин: <code>abc</code>\n"
+                + "✅ Код отправлен в Rocket.Chat\n"
+                + "⏳ Действует до: <b>28.10.2026 12:00 MSK</b>\n"
+                + "Сообщение: ok",
             null);
     verify(profileService).updateProfileStatus(chatId, ProfileStatus.VALIDATION);
   }
@@ -294,7 +350,8 @@ class RegistrationFlowTest {
     ProfileDto updated = new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null);
     when(profileService.checkAndSetLogin(chatId, "abc")).thenReturn(updated);
     when(profileService.sendVerificationCode("abc"))
-        .thenReturn(new RocketChatSendResponse(true, "ok"));
+        .thenReturn(
+            new VerificationCodeDelivery(new RocketChatSendResponse(true, "ok"), expiresAt));
 
     registrationFlow.startRegistration(chatId, "abc");
 

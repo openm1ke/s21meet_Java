@@ -370,7 +370,7 @@ public class StudentProjectsScheduler {
             result: success=%d, skipped_no_provider=%d, failed=%d, timeout=%d, completion=%s%%
             timing: elapsed_ms=%d, avg_ms_per_login=%s
             ==================================================================
-            """,
+        """,
         context.pageNumber(),
         context.batchNo(),
         context.totalBatches(),

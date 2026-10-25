@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import ru.izpz.bot.client.ProfileClient;
 import ru.izpz.bot.client.RocketChatClient;
 import ru.izpz.bot.exception.EduLoginCheckException;
+import ru.izpz.bot.exception.RegistrationExpiredException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.dto.*;
 import ru.izpz.utils.FeignErrorParser;
@@ -94,11 +95,19 @@ public class ProfileService {
   @Retry(name = PROFILE_EDU)
   @CircuitBreaker(name = PROFILE_EDU)
   public ProfileDto confirmRegistration(Long chatId, String secretCode) {
-    return profileClient.confirmRegistration(
-        new ProfileRegistrationConfirmationRequest(chatId.toString(), secretCode));
+    try {
+      return profileClient.confirmRegistration(
+          new ProfileRegistrationConfirmationRequest(chatId.toString(), secretCode));
+    } catch (FeignException e) {
+      RegistrationErrorDto error = FeignErrorParser.parseRegistrationError(e);
+      if (FeignErrorParser.isRegistrationExpired(error, e)) {
+        throw new RegistrationExpiredException(error);
+      }
+      throw e;
+    }
   }
 
-  public RocketChatSendResponse sendVerificationCode(String s21login) {
+  public VerificationCodeDelivery sendVerificationCode(String s21login) {
     try {
       ProfileCodeResponse code = getVerificationCode(s21login);
       String message =
@@ -107,7 +116,7 @@ public class ProfileService {
           RocketChatSendRequest.builder().username(code.getS21login()).message(message).build();
       var response = rocketChatClient.sendMessage(rocketChatSendRequest);
       if (response.isSuccess()) {
-        return response;
+        return new VerificationCodeDelivery(response, code.getExpiresAt());
       } else {
         throw new RocketChatSendException(response);
       }

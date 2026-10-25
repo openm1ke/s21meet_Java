@@ -82,7 +82,7 @@ public class GraphQLService {
             __typename
           }
         }
-        """;
+      """;
 
   private static final String GET_CREDENTIALS_QUERY =
       """
@@ -99,7 +99,7 @@ public class GraphQLService {
             __typename
           }
         }
-        """;
+      """;
 
   private static final String GET_STUDENT_PROJECTS_QUERY =
       """
@@ -135,7 +135,7 @@ public class GraphQLService {
           localCourseId
           __typename
         }
-        """;
+      """;
 
   private static final String GET_STUDENT_COALITION_QUERY =
       """
@@ -171,7 +171,7 @@ public class GraphQLService {
             __typename
           }
         }
-        """;
+      """;
 
   public GraphQLService(
       PlatformGraphQlFacade client,

@@ -57,7 +57,7 @@ class NotifyControllerIntegrationTest {
                                     }
                                   ]
                                 }
-                                """))
+                    """))
         .andExpect(status().isAccepted());
 
     ArgumentCaptor<List<StatusChange>> captor = statusChangesCaptor();
@@ -86,7 +86,7 @@ class NotifyControllerIntegrationTest {
                                     }
                                   ]
                                 }
-                                """))
+                    """))
         .andExpect(status().isAccepted());
 
     ArgumentCaptor<List<StatusChange>> captor = statusChangesCaptor();
@@ -115,7 +115,7 @@ class NotifyControllerIntegrationTest {
                                     }
                                   ]
                                 }
-                                """))
+                    """))
         .andExpect(status().isAccepted());
 
     ArgumentCaptor<List<StatusChange>> captor = statusChangesCaptor();

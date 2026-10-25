@@ -32,7 +32,7 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
         from Workplace w
         join Cluster c on c.clusterId = w.id.clusterId
         group by c.campusId
-        """)
+      """)
   List<CampusCountView> countParticipantsByCampus();
 
   @Query(
@@ -41,7 +41,7 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
         from Workplace w
         join Cluster c on c.clusterId = w.id.clusterId
         group by c.campusId, w.stageGroupName
-        """)
+      """)
   List<CampusStageGroupCountView> countParticipantsByCampusAndStageGroup();
 
   @Query(
@@ -50,7 +50,7 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
         from Workplace w
         join Cluster c on c.clusterId = w.id.clusterId
         group by c.campusId, w.stageName
-        """)
+      """)
   List<CampusStageNameCountView> countParticipantsByCampusAndStageName();
 
   @Query(
@@ -60,7 +60,7 @@ public interface WorkplaceRepository extends JpaRepository<Workplace, WorkplaceI
         join Cluster c on c.clusterId = w.id.clusterId
         where c.campusId = :campusId
         group by w.stageName
-        """)
+      """)
   List<StageNameCountView> countParticipantsByCampusIdAndStageName(
       @Param("campusId") String campusId);
 

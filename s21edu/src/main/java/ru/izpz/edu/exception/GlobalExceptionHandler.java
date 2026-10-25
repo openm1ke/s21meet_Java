@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import ru.izpz.dto.RegistrationErrorDto;
 import ru.izpz.dto.ServiceErrorDto;
 
 /** Глобальный обработчик исключений REST-слоя. */
@@ -184,6 +186,25 @@ public class GlobalExceptionHandler {
   public ResponseEntity<String> handleIllegalStateException(IllegalStateException e) {
     log.warn("IllegalStateException: {}", e.getMessage());
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+  }
+
+  @ExceptionHandler(RegistrationValidationException.class)
+  public ResponseEntity<RegistrationErrorDto> handleRegistrationValidationException(
+      RegistrationValidationException e) {
+    log.warn(
+        "Registration validation failed: code={}, login={}, expiresAt={}",
+        e.getCode(),
+        e.getS21login(),
+        e.getExpiresAt());
+    RegistrationErrorDto body =
+        new RegistrationErrorDto(
+            HttpStatus.BAD_REQUEST.value(),
+            UUID.randomUUID().toString(),
+            e.getCode(),
+            e.getMessage(),
+            e.getS21login(),
+            e.getExpiresAt());
+    return ResponseEntity.badRequest().body(body);
   }
 
   /**

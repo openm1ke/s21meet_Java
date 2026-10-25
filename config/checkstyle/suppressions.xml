@@ -48,7 +48,7 @@
       checks="MissingJavadocType|MissingJavadocMethod|AvoidStarImport"/>
   <suppress
       files=".*/src/main/java/ru/izpz/edu/scheduler/.*"
-      checks="MissingJavadocType|MissingJavadocMethod|LineLength|VariableDeclarationUsageDistance|MissingSwitchDefault|AbbreviationAsWordInName"/>
+      checks="MissingJavadocType|MissingJavadocMethod|LineLength|VariableDeclarationUsageDistance|MissingSwitchDefault|AbbreviationAsWordInName|TextBlockGoogleStyleFormatting"/>
   <suppress
       files=".*/src/main/java/ru/izpz/edu/utils/.*"
       checks="MissingJavadocType|MissingJavadocMethod|NeedBraces"/>
