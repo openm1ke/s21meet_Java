@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import ru.izpz.dto.ProjectExecutorDto;
+import ru.izpz.dto.ProjectExecutorsPageDto;
 import ru.izpz.dto.ProjectExecutorsPageRequest;
 import ru.izpz.dto.ProjectExecutorsRequest;
 import ru.izpz.edu.repository.StudentCredentialsRepository;
@@ -171,14 +172,8 @@ class ProjectDirectoryServiceTest {
     ProjectDirectoryService service =
         new ProjectDirectoryService(
             studentProjectRepository, studentCredentialsRepository, campusCatalog);
-    when(studentProjectRepository.findExecutorsByProjectNamePaged(
-            org.mockito.ArgumentMatchers.eq("A\\_100\\%\\\\core"),
-            org.mockito.ArgumentMatchers.eq(List.of("MSK")),
-            org.mockito.ArgumentMatchers.eq(false),
-            org.mockito.ArgumentMatchers.eq(List.of("IN_PROGRESS")),
-            org.mockito.ArgumentMatchers.eq(false),
-            org.mockito.ArgumentMatchers.any(Pageable.class)))
-        .thenReturn(new PageImpl<>(List.of(), Pageable.ofSize(20), 0));
+    when(studentProjectRepository.findExecutorsByProjectName("A\\_100\\%\\\\core"))
+        .thenReturn(List.of());
     when(studentProjectRepository.findDistinctCampusesByProjectName("A\\_100\\%\\\\core"))
         .thenReturn(List.of());
     when(studentProjectRepository.findDistinctStatusesByProjectName("A\\_100\\%\\\\core"))
@@ -190,13 +185,58 @@ class ProjectDirectoryServiceTest {
                 "A_100%\\core", 0, 20, List.of(" msk "), List.of("IN_PROGRESS"), "invalid"));
 
     assertEquals(0, result.totalItems());
-    verify(studentProjectRepository)
+    verify(studentProjectRepository).findExecutorsByProjectName("A\\_100\\%\\\\core");
+  }
+
+  @Test
+  void getProjectExecutorsPage_shouldFilterAfterCampusEnrichment() {
+    ProjectDirectoryService service =
+        new ProjectDirectoryService(
+            studentProjectRepository, studentCredentialsRepository, campusCatalog);
+    String escapedProjectName = "A1\\_Maze\\_C";
+    when(studentProjectRepository.findExecutorsByProjectName(escapedProjectName))
+        .thenReturn(
+            List.of(
+                new ProjectExecutorDto("quarkron", null, "IN_PROGRESS", null, "22_10_MSK"),
+                new ProjectExecutorDto("kzn-user", "KZN", "IN_PROGRESS", null, "25_04_KZN")));
+    when(studentCredentialsRepository.findSchoolIdsByLogins(List.of("quarkron", "kzn-user")))
+        .thenReturn(
+            List.of(
+                new StudentCredentialsRepository.LoginSchoolIdView() {
+                  @Override
+                  public String getLogin() {
+                    return "quarkron";
+                  }
+
+                  @Override
+                  public String getSchoolId() {
+                    return "msk-id";
+                  }
+                }));
+    when(campusCatalog.campusName("msk-id")).thenReturn("MSK");
+    when(studentProjectRepository.findDistinctCampusesByProjectName(escapedProjectName))
+        .thenReturn(List.of("MSK", "KZN"));
+    when(studentProjectRepository.findDistinctStatusesByProjectName(escapedProjectName))
+        .thenReturn(List.of("IN_PROGRESS"));
+
+    ProjectExecutorsPageDto result =
+        service.getProjectExecutorsPage(
+            new ProjectExecutorsPageRequest(
+                "A1_Maze_C", 0, 20, List.of("MSK"), List.of("IN_PROGRESS"), "asc"));
+
+    assertEquals(
+        List.of(new ProjectExecutorDto("quarkron", "MSK", "IN_PROGRESS", null, "22_10_MSK")),
+        result.items());
+    assertEquals(1, result.totalItems());
+    assertEquals(1, result.totalPages());
+    verify(studentProjectRepository).findExecutorsByProjectName(escapedProjectName);
+    verify(studentProjectRepository, never())
         .findExecutorsByProjectNamePaged(
-            org.mockito.ArgumentMatchers.eq("A\\_100\\%\\\\core"),
-            org.mockito.ArgumentMatchers.eq(List.of("MSK")),
-            org.mockito.ArgumentMatchers.eq(false),
-            org.mockito.ArgumentMatchers.eq(List.of("IN_PROGRESS")),
-            org.mockito.ArgumentMatchers.eq(false),
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyList(),
+            org.mockito.ArgumentMatchers.anyBoolean(),
+            org.mockito.ArgumentMatchers.anyList(),
+            org.mockito.ArgumentMatchers.anyBoolean(),
             org.mockito.ArgumentMatchers.any(Pageable.class));
   }
 }
