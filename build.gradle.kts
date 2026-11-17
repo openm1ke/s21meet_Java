@@ -71,6 +71,10 @@ subprojects {
 
     val springCloudVersion: String by project
     val springBootVersion: String by project
+    val tomcatVersion: String by project
+    val log4jVersion: String by project
+    val commonsLangVersion: String by project
+    val bouncyCastleVersion: String by project
     val jacksonVersion: String by project
     val spotbugsVersion: String by project
     val spotbugsAnnotationsVersion: String by project
@@ -87,9 +91,14 @@ subprojects {
                 bomProperty("mockito.version", mockitoVersion)
                 bomProperty("postgresql.version", postgresqlVersion)
                 bomProperty("slf4j.version", slf4jVersion)
+                bomProperty("tomcat.version", tomcatVersion)
+                bomProperty("log4j2.version", log4jVersion)
             }
             mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
             mavenBom("io.github.resilience4j:resilience4j-bom:${property("resilience4jVersion")}")
+            dependencies {
+                dependency("org.apache.commons:commons-lang3:$commonsLangVersion")
+            }
         }
     }
 
@@ -127,10 +136,17 @@ subprojects {
         annotationProcessor("org.projectlombok:lombok")
         add("mockitoAgent", "org.mockito:mockito-core:$mockitoVersion")
         add("spotbugs", "com.github.spotbugs:spotbugs:$spotbugsVersion")
-        // SpotBugs 4.10.x uses Strings, which is unavailable in the
-        // commons-lang3 version managed by the Spring Boot BOM.
-        add("spotbugs", "org.apache.commons:commons-lang3:3.20.0")
+        // SpotBugs 4.10.x uses Strings, so keep its isolated configuration
+        // aligned with the application dependency version.
+        add("spotbugs", "org.apache.commons:commons-lang3:$commonsLangVersion")
         add("spotbugs", "org.slf4j:slf4j-nop:$slf4jVersion")
+
+        constraints {
+            add("implementation", "org.apache.commons:commons-lang3:$commonsLangVersion")
+            add("implementation", "org.bouncycastle:bcprov-jdk18on:$bouncyCastleVersion")
+            add("implementation", "org.apache.logging.log4j:log4j-api:$log4jVersion")
+            add("implementation", "org.apache.logging.log4j:log4j-to-slf4j:$log4jVersion")
+        }
     }
 
     tasks.withType<Test>().configureEach {
