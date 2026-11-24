@@ -208,8 +208,12 @@ public class CallbackHandler {
   public void updateMessageAndChangeStatusRegistration(
       Long chatId, Integer messageId, String newText) {
     try {
-      messageSender.updateMessage(chatId, messageId, newText, null);
-      profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
+      ProfileDto profile = profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION);
+      String text =
+          profile.status() == ProfileStatus.CONFIRMED
+              ? "Ваш аккаунт уже зарегистрирован. Нажмите /start, чтобы открыть меню"
+              : newText;
+      messageSender.updateMessage(chatId, messageId, text, null);
     } catch (FeignException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_UPDATE, REASON_FEIGN_EXCEPTION);
       log.error("Ошибка обработки профиля", e);
