@@ -45,6 +45,7 @@ import ru.izpz.dto.LastCommandState;
 import ru.izpz.dto.LastCommandType;
 import ru.izpz.dto.ParticipantDto;
 import ru.izpz.dto.ParticipantStatusEnum;
+import ru.izpz.dto.ProfileDto;
 import ru.izpz.dto.ProfileStatus;
 import ru.izpz.dto.ProjectsDto;
 import ru.izpz.dto.ServiceErrorDto;
@@ -198,6 +199,8 @@ class CallbackHandlerTest {
     when(callbackPayloadSerializer.deserialize("data"))
         .thenReturn(
             new CallbackPayload(ru.izpz.bot.keyboard.TelegramButtons.REGISTRATION_CODE, null));
+    when(profileService.updateProfileStatus(chatId, ProfileStatus.REGISTRATION))
+        .thenReturn(new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null));
 
     callbackHandler.handleCallbackMessage(chatId, "data", 5, "cb");
 
@@ -484,7 +487,7 @@ class CallbackHandlerTest {
 
     callbackHandler.updateMessageAndChangeStatusRegistration(chatId, 1, "t");
 
-    verify(messageSender).updateMessage(chatId, 1, "t", null);
+    verifyNoInteractions(messageSender);
   }
 
   private FeignException createFeignException(int status, String message) {

@@ -9,6 +9,7 @@ import org.telegram.telegrambots.meta.api.objects.message.Message;
 import ru.izpz.bot.keyboard.SlashCommandEnum;
 import ru.izpz.bot.property.BotProperties;
 import ru.izpz.dto.ProfileDto;
+import ru.izpz.dto.ProfileStatus;
 
 @Slf4j
 @Service
@@ -81,6 +82,13 @@ public class MessageProcessor {
   }
 
   public void parseMessage(Long chatId, ProfileDto profile, String text) {
+    if (profile.status() != ProfileStatus.CONFIRMED
+        && SlashCommandEnum.parse(text)
+            .filter(parsed -> parsed.command() == SlashCommandEnum.START)
+            .isPresent()) {
+      registrationFlow.startOnboarding(chatId);
+      return;
+    }
     switch (profile.status()) {
       case CREATED -> registrationFlow.startOnboarding(chatId);
       case REGISTRATION -> registrationFlow.startRegistration(chatId, text);

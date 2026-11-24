@@ -96,6 +96,9 @@ public class ProfileService {
         .findByTelegramId(request.getTelegramId())
         .map(
             existing -> {
+              if (existing.getStatus() == ProfileStatus.CONFIRMED) {
+                return existing;
+              }
               existing.setStatus(request.getStatus());
               return profileRepository.save(existing);
             })
@@ -111,12 +114,13 @@ public class ProfileService {
             .findByTelegramId(telegramId)
             .orElseThrow(() -> new EntityNotFoundException(PROFILE_NOT_FOUND_MESSAGE + telegramId));
     if (profile.getS21login() != null) {
-      if (profile.getS21login().equals(s21login)) {
+      if (!profile.getS21login().equals(s21login)) {
+        throw new IllegalStateException("Профиль уже привязан к логину " + profile.getS21login());
+      }
+      if (profile.getStatus() == ProfileStatus.CONFIRMED) {
         return profileMapper.toDto(profile);
       }
-      throw new IllegalStateException("Профиль уже привязан к логину " + profile.getS21login());
-    }
-    if (profileRepository.existsByS21login(s21login)) {
+    } else if (profileRepository.existsByS21login(s21login)) {
       throw new IllegalStateException("Логин " + s21login + " уже привязан к другому профилю");
     }
     if (profileRepository.existsByPendingS21login(s21login)
@@ -126,6 +130,8 @@ public class ProfileService {
     if (profile.getPendingS21login() != null && !s21login.equals(profile.getPendingS21login())) {
       profileValidationRepository.deleteByS21login(profile.getPendingS21login());
     }
+    // Recover legacy/inconsistent profiles through code verification, never auto-confirm them.
+    profile.setS21login(null);
     profile.setPendingS21login(s21login);
     profile.setPendingRegistrationExpiresAt(OffsetDateTime.now().plus(REGISTRATION_TTL));
     try {
@@ -183,11 +189,20 @@ public class ProfileService {
         profileRepository
             .findByTelegramId(telegramId)
             .orElseThrow(() -> new EntityNotFoundException(PROFILE_NOT_FOUND_MESSAGE + telegramId));
+    if (profile.getStatus() == ProfileStatus.CONFIRMED && profile.getS21login() != null) {
+      return profileMapper.toDto(profile);
+    }
     OffsetDateTime now = OffsetDateTime.now();
     String pendingLogin = profile.getPendingS21login();
-    if (pendingLogin == null
-        || profile.getPendingRegistrationExpiresAt() == null
-        || !profile.getPendingRegistrationExpiresAt().isAfter(now)) {
+    if (pendingLogin == null || profile.getPendingRegistrationExpiresAt() == null) {
+      expireRegistration(profile, pendingLogin);
+      throw new RegistrationValidationException(
+          RegistrationErrorDto.REGISTRATION_NOT_STARTED_CODE,
+          "Активная регистрация не найдена. Начните регистрацию заново",
+          pendingLogin,
+          null);
+    }
+    if (!profile.getPendingRegistrationExpiresAt().isAfter(now)) {
       OffsetDateTime expiresAt = profile.getPendingRegistrationExpiresAt();
       expireRegistration(profile, pendingLogin);
       throw new RegistrationValidationException(
