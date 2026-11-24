@@ -8,6 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegistrationErrorDto {
+  public static final String REGISTRATION_NOT_STARTED_CODE = "REGISTRATION_NOT_STARTED";
   public static final String REGISTRATION_EXPIRED_CODE = "REGISTRATION_EXPIRED";
   public static final String VERIFICATION_CODE_EXPIRED_CODE = "VERIFICATION_CODE_EXPIRED";
 

@@ -12,6 +12,7 @@ import org.springframework.web.util.HtmlUtils;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.RegistrationExpiredException;
+import ru.izpz.bot.exception.RegistrationNotStartedException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.bot.keyboard.MenuCommandEnum;
 import ru.izpz.bot.keyboard.TelegramButtons;
@@ -47,10 +48,14 @@ public class RegistrationFlow {
   private final TelegramWebAppMenuService telegramWebAppMenuService;
 
   public void startOnboarding(Long chatId) {
+    sendRegistrationPrompt(chatId, "Для регистрации нажмите кнопку ниже");
+  }
+
+  private void sendRegistrationPrompt(Long chatId, String text) {
     InlineKeyboardMarkup keyboard =
         telegramKeyboardFactory.createInlineKeyboardMarkup(
             telegramButtons.getRegistrationButton(), 1);
-    messageSender.sendMessage(chatId, "Для регистрации нажмите кнопку ниже", keyboard);
+    messageSender.sendMessage(chatId, text, keyboard);
   }
 
   public void startValidation(Long chatId, ProfileDto profile, String text) {
@@ -61,12 +66,18 @@ public class RegistrationFlow {
           chatId,
           "Ваш аккаунт был успешно зарегистрирован",
           telegramKeyboardFactory.createReplyKeyboard(MenuCommandEnum.getAllMenuCommands(), 3));
+    } catch (RegistrationNotStartedException e) {
+      handleMissingRegistration(chatId);
     } catch (RegistrationExpiredException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, "registration_expired");
       handleExpiredRegistration(chatId, profile, e.getError());
     } catch (FeignException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, REASON_FEIGN_EXCEPTION);
       RegistrationErrorDto error = FeignErrorParser.parseRegistrationError(e);
+      if (RegistrationErrorDto.REGISTRATION_NOT_STARTED_CODE.equals(error.getCode())) {
+        handleMissingRegistration(chatId);
+        return;
+      }
       if (FeignErrorParser.isRegistrationExpired(error, e)) {
         handleExpiredRegistration(chatId, profile, error);
         return;
@@ -118,7 +129,12 @@ public class RegistrationFlow {
     }
 
     try {
-      profileService.checkAndSetLogin(chatId, login);
+      ProfileDto profile = profileService.checkAndSetLogin(chatId, login);
+      if (profile.status() == ProfileStatus.CONFIRMED) {
+        messageSender.sendMessage(
+            chatId, "Ваш аккаунт уже зарегистрирован. Нажмите /start, чтобы открыть меню", null);
+        return;
+      }
     } catch (FeignException e) {
       metricsService.recordProcessingError(STAGE_REGISTRATION_FLOW, REASON_FEIGN_EXCEPTION);
       messageSender.sendMessage(chatId, "Ошибка обработки профиля, попробуйте позже", null);
@@ -171,6 +187,12 @@ public class RegistrationFlow {
     // телеграм айди и
     // пытаемся начать валидацию
 
+  }
+
+  private void handleMissingRegistration(Long chatId) {
+    metricsService.recordProcessingError(STAGE_REGISTRATION_VALIDATION, "registration_not_started");
+    sendRegistrationPrompt(
+        chatId, "Активная регистрация не найдена. Нажмите «Регистрация», чтобы получить код");
   }
 
   private void handleExpiredRegistration(
