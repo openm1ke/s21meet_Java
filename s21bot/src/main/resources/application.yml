@@ -48,6 +48,7 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: ${PROFILE_EDU_CB_HALF_OPEN_CALLS:3}
         ignoreExceptions:
           - ru.izpz.bot.exception.RegistrationExpiredException
+          - ru.izpz.bot.exception.RegistrationNotStartedException
   ratelimiter:
     instances:
       telegram:
@@ -69,6 +70,7 @@ resilience4j:
         exponentialBackoffMultiplier: ${PROFILE_EDU_RETRY_EXPONENTIAL_MULTIPLIER:2}
         ignoreExceptions:
           - ru.izpz.bot.exception.RegistrationExpiredException
+          - ru.izpz.bot.exception.RegistrationNotStartedException
         retryExceptions:
           - feign.FeignException
 

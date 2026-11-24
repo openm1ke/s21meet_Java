@@ -407,6 +407,8 @@ class ProfileServiceTest {
 
   @Test
   void checkAndSetLogin_shouldReturnProfile_whenSameLoginAlreadyBoundToSameTelegram() {
+    testProfile.setStatus(ProfileStatus.CONFIRMED);
+    testProfileDto = new ProfileDto("123456", "testuser", ProfileStatus.CONFIRMED, null);
     when(profileRepository.findByTelegramId("123456")).thenReturn(Optional.of(testProfile));
     when(profileMapper.toDto(testProfile)).thenReturn(testProfileDto);
 

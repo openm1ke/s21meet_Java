@@ -455,6 +455,92 @@ class RegistrationFlowIntegrationTest {
         .sendMessage(eq(chatId), eq("Ошибка обработки профиля, попробуйте позже"), any());
   }
 
+  @Test
+  void validation_startCommandDoesNotSubmitCodeOrNotifyAdmin() {
+    Long chatId = 51L;
+    ProfileDto pending = new ProfileDto(chatId.toString(), null, ProfileStatus.VALIDATION, null);
+    when(profileClient.getOrCreateProfile(chatId.toString())).thenReturn(pending);
+
+    messageProcessor.handleTextMessage(textMessage(chatId, "/start"));
+    messageProcessor.handleTextMessage(textMessage(chatId, "/start@test_bot login_legacyuser"));
+
+    verify(profileClient, never()).confirmRegistration(any());
+    verify(profileClient, never()).updateProfileStatus(any());
+    verify(messageSender, times(2))
+        .sendMessage(eq(chatId), eq("Для регистрации нажмите кнопку ниже"), any());
+    verify(messageSender, never()).sendHtmlMessageWithoutWebPreview(any(), any(), any());
+  }
+
+  @Test
+  void validation_missingAttemptOffersRegistrationWithoutExpiryAlert() {
+    Long chatId = 52L;
+    when(profileClient.getOrCreateProfile(chatId.toString()))
+        .thenReturn(
+            new ProfileDto(chatId.toString(), "legacyuser", ProfileStatus.VALIDATION, null));
+    when(profileClient.confirmRegistration(any()))
+        .thenThrow(
+            createFeignException(
+                400,
+                "{\"status\":400,\"code\":\"REGISTRATION_NOT_STARTED\","
+                    + "\"message\":\"Активная регистрация не найдена\"}"));
+
+    messageProcessor.handleTextMessage(textMessage(chatId, "1234"));
+
+    verify(profileClient).confirmRegistration(any());
+    verify(messageSender)
+        .sendMessage(
+            eq(chatId),
+            eq("Активная регистрация не найдена. Нажмите «Регистрация», чтобы получить код"),
+            any());
+    verify(messageSender, never()).sendMessage(eq(1L), any(), any());
+    verify(messageSender, never()).sendHtmlMessageWithoutWebPreview(any(), any(), any());
+  }
+
+  @Test
+  void registration_oldButtonForConfirmedAccountDoesNotPromptForLogin() {
+    Long chatId = 53L;
+    when(profileClient.updateProfileStatus(any()))
+        .thenReturn(new ProfileDto(chatId.toString(), "legacyuser", ProfileStatus.CONFIRMED, null));
+
+    messageProcessor.handleCallbackMessage(
+        chatId,
+        callbackPayloadSerializer.serialize(
+            new CallbackPayload(TelegramButtons.REGISTRATION_CODE, null)),
+        101,
+        "old-button");
+
+    verify(messageSender)
+        .updateMessage(
+            chatId,
+            101,
+            "Ваш аккаунт уже зарегистрирован. Нажмите /start, чтобы открыть меню",
+            null);
+    verify(rocketChatClient, never()).sendMessage(any());
+  }
+
+  @Test
+  void registration_confirmedProfileReturnedDuringRegistrationDoesNotResendCode() {
+    Long chatId = 54L;
+    when(profileClient.getOrCreateProfile(chatId.toString()))
+        .thenReturn(new ProfileDto(chatId.toString(), null, ProfileStatus.REGISTRATION, null));
+    ParticipantDto participant = new ParticipantDto();
+    participant.setStatus(ParticipantStatusEnum.ACTIVE);
+    participant.setParallelName("Core program");
+    when(profileClient.checkEduLogin("legacyuser")).thenReturn(participant);
+    when(profileClient.checkAndSetLogin(any()))
+        .thenReturn(new ProfileDto(chatId.toString(), "legacyuser", ProfileStatus.CONFIRMED, null));
+
+    messageProcessor.handleTextMessage(textMessage(chatId, "legacyuser"));
+
+    verify(profileClient, never()).getProfileCode(any());
+    verify(profileClient, never()).updateProfileStatus(any());
+    verify(rocketChatClient, never()).sendMessage(any());
+    verify(messageSender)
+        .sendMessage(
+            chatId, "Ваш аккаунт уже зарегистрирован. Нажмите /start, чтобы открыть меню", null);
+    verify(messageSender, never()).sendHtmlMessageWithoutWebPreview(any(), any(), any());
+  }
+
   private List<ProfileStatus> capturedStatuses() {
     List<ProfileStatus> statuses = new ArrayList<>();
     verify(profileClient, atLeastOnce()).updateProfileStatus(any(ProfileRequest.class));

@@ -12,6 +12,7 @@ import ru.izpz.bot.client.ProfileClient;
 import ru.izpz.bot.client.RocketChatClient;
 import ru.izpz.bot.exception.EduLoginCheckException;
 import ru.izpz.bot.exception.RegistrationExpiredException;
+import ru.izpz.bot.exception.RegistrationNotStartedException;
 import ru.izpz.bot.exception.RocketChatSendException;
 import ru.izpz.dto.*;
 import ru.izpz.utils.FeignErrorParser;
@@ -100,6 +101,9 @@ public class ProfileService {
           new ProfileRegistrationConfirmationRequest(chatId.toString(), secretCode));
     } catch (FeignException e) {
       RegistrationErrorDto error = FeignErrorParser.parseRegistrationError(e);
+      if (RegistrationErrorDto.REGISTRATION_NOT_STARTED_CODE.equals(error.getCode())) {
+        throw new RegistrationNotStartedException(error.getMessage());
+      }
       if (FeignErrorParser.isRegistrationExpired(error, e)) {
         throw new RegistrationExpiredException(error);
       }
